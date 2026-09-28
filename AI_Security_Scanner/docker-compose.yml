@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  ai-scanner:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ai_security_scanner
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - SCANNER_TARGET_URL=http://ollama:11434
+      - SCANNER_TARGET_MODEL=llama3
+      - SCANNER_TIMEOUT=60
+      - SCANNER_REQUIRE_AUTH=false
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./scanner.db:/app/scanner.db
+      - ./reports:/app/reports
+      - ./logs:/app/logs
+    depends_on:
+      - ollama
+    networks:
+      - scanner-network
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ai_scanner_ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama
+    networks:
+      - scanner-network
+
+networks:
+  scanner-network:
+    driver: bridge
+
+volumes:
+  ollama_models:
+    driver: local

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Security Scan Report</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1117;color:#e6edf3;padding:0}
+    .header{background:linear-gradient(135deg,#1a1f2e,#0d1117);padding:40px;border-bottom:1px solid #30363d}
+    .header h1{font-size:24px;font-weight:800;color:#58a6ff;margin-bottom:8px}
+    .header .meta{font-size:13px;color:#8b949e}
+    .container{max-width:1200px;margin:0 auto;padding:32px 40px}
+    h2{font-size:16px;font-weight:700;color:#e6edf3;margin:32px 0 16px;padding-bottom:8px;border-bottom:1px solid #30363d}
+    table{width:100%;border-collapse:collapse;font-size:12px}
+    th{background:#1c2128;color:#8b949e;padding:10px 12px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid #30363d}
+    td{padding:10px 12px;border-bottom:1px solid #21262d;vertical-align:top}
+    tr.finding-row:hover td{background:rgba(88,166,255,0.04)}
+    .stat-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:32px}
+    .footer{text-align:center;padding:24px;color:#555;font-size:12px;border-top:1px solid #21262d;margin-top:40px}
+  </style>
+  <script>
+    function toggleDetails(id) {
+      var el = document.getElementById(id);
+      if (el.style.display === "none") {
+        el.style.display = "table-row";
+      } else {
+        el.style.display = "none";
+      }
+    }
+  </script>
+</head>
+<body>
+  <div class="header">
+    <div style="max-width:1200px;margin:0 auto">
+      <h1>Báo Cáo Kiểm Thử An Toàn Hệ Thống AI</h1>
+      <div class="meta">
+        Target: <strong style="color:#e6edf3">N/A</strong> &nbsp;·&nbsp;
+        Ngày tạo: <strong style="color:#e6edf3">28/09/2026 13:30:14</strong> &nbsp;·&nbsp;
+        Tổng cộng: <strong style="color:#ff6b35">0</strong> lỗ hổng
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <h2>Tổng quan theo mức độ nghiêm trọng</h2>
+    <div class="stat-grid">
+            <div style="text-align:center;padding:20px;background:#1c2128;border:1px solid #30363d;border-radius:8px">
+              <div style="font-size:30px;font-weight:800;color:#ff4757">0</div>
+              <div style="font-size:11px;color:#8b949e;margin-top:4px;text-transform:uppercase;letter-spacing:0.5px">CRITICAL</div>
+            </div>
+            <div style="text-align:center;padding:20px;background:#1c2128;border:1px solid #30363d;border-radius:8px">
+              <div style="font-size:30px;font-weight:800;color:#ff6b35">0</div>
+              <div style="font-size:11px;color:#8b949e;margin-top:4px;text-transform:uppercase;letter-spacing:0.5px">HIGH</div>
+            </div>
+            <div style="text-align:center;padding:20px;background:#1c2128;border:1px solid #30363d;border-radius:8px">
+              <div style="font-size:30px;font-weight:800;color:#ffa726">0</div>
+              <div style="font-size:11px;color:#8b949e;margin-top:4px;text-transform:uppercase;letter-spacing:0.5px">MEDIUM</div>
+            </div>
+            <div style="text-align:center;padding:20px;background:#1c2128;border:1px solid #30363d;border-radius:8px">
+              <div style="font-size:30px;font-weight:800;color:#26c6da">0</div>
+              <div style="font-size:11px;color:#8b949e;margin-top:4px;text-transform:uppercase;letter-spacing:0.5px">LOW</div>
+            </div>
+            <div style="text-align:center;padding:20px;background:#1c2128;border:1px solid #30363d;border-radius:8px">
+              <div style="font-size:30px;font-weight:800;color:#42a5f5">0</div>
+              <div style="font-size:11px;color:#8b949e;margin-top:4px;text-transform:uppercase;letter-spacing:0.5px">INFO</div>
+            </div></div>
+
+    <h2>Chi tiết Lỗ hổng phát hiện</h2>
+    <p style='color:#8b949e;padding:24px 0'>Chưa phát hiện lỗ hổng nào.</p>
+
+    <h2>Khuyến nghị Khắc phục</h2>
+    <p style='color:#8b949e'>Không có khuyến nghị (chưa có findings).</p>
+
+    <div class="footer">
+      AI Security Scanner v2.0 · OWASP LLM Top 10 · MITRE ATLAS<br>
+      Báo cáo được tạo tự động vào 28/09/2026 13:30:14
+    </div>
+  </div>
+</body>
+</html>

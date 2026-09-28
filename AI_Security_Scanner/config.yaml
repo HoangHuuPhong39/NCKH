@@ -1,0 +1,53 @@
+# ==============================================================================
+# AI Security Scanner - Central Configuration File
+# ==============================================================================
+# All settings can be overridden by environment variables:
+# e.g., SCANNER_TARGET_URL overrides scanner.target_url
+# ==============================================================================
+
+scanner:
+  # Target LLM server settings
+  target_url: "http://localhost:11434"
+  target_model: "llama3"
+  timeout: 60
+  api_key: ""
+
+  # Resilience & Network
+  max_retries: 3
+  backoff_factor: 1.5
+  retry_status_codes: [429, 500, 502, 503, 504]
+  pool_connections: 10
+  pool_maxsize: 20
+
+  # Circuit Breaker pattern
+  circuit_breaker:
+    failure_threshold: 5       # Trip circuit after 5 consecutive errors
+    recovery_timeout: 30       # Wait 30 seconds before half-open retry
+
+web:
+  # Server settings
+  host: "0.0.0.0"
+  port: 5000
+  debug: false
+
+  # Security & Hardening
+  require_auth: false          # Set to true in production
+  jwt_secret_key: "ai-security-scanner-secret-key-change-in-production"
+  jwt_access_token_expires_minutes: 1440 # 24 hours
+  admin_api_key: "ai-scanner-admin-secret-token"
+
+  # Rate Limiting
+  rate_limit_enabled: true
+  rate_limit_per_minute: 120
+  rate_limit_scan_start_per_minute: 10
+
+logging:
+  level: "INFO"                # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  format: "text"               # text or json
+  log_file: "logs/scanner.log"
+  max_bytes: 10485760          # 10MB
+  backup_count: 5
+
+storage:
+  database_path: "data/scanner.db"
+  reports_dir: "reports"
