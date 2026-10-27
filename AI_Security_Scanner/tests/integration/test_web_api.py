@@ -171,3 +171,22 @@ def test_api_report_generate_and_json_with_filters(client):
     assert data["filter"]["severity"] == "CRITICAL"
     assert data["filter"]["module"] == "jailbreak"
 
+
+def test_api_logs_endpoint(client):
+    res = client.get("/api/logs?limit=10")
+    assert res.status_code == 200
+    data = res.get_json()
+    assert data["success"] is True
+    assert "logs" in data
+    assert isinstance(data["logs"], list)
+
+
+def test_api_incidents_endpoint(client):
+    res = client.get("/api/incidents")
+    assert res.status_code == 200
+    data = res.get_json()
+    assert data["success"] is True
+    assert "incidents" in data
+    assert "count" in data
+
+

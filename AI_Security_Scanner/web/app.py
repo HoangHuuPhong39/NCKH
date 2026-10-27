@@ -14,6 +14,7 @@ if sys.platform == "win32":
         pass
 
 import json
+import re
 import time
 import queue
 import threading
@@ -1204,6 +1205,96 @@ def api_integrations_status():
         },
     ]
     return jsonify({"tools": tools})
+
+
+@app.route("/api/logs", methods=["GET"])
+def api_logs():
+    """Retrieve structured real-time operational logs from scanner.log."""
+    limit = min(int(request.args.get("limit", 60)), 300)
+    level_filter = request.args.get("level", "").strip().upper()
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    log_path = os.path.join(project_root, "logs", "scanner.log")
+
+    logs = []
+    total_lines = 0
+    if os.path.exists(log_path):
+        try:
+            with open(log_path, "r", encoding="utf-8", errors="ignore") as f:
+                raw_lines = f.readlines()
+            total_lines = len(raw_lines)
+            log_regex = re.compile(
+                r"^\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\] \[([A-Z]+)\] \[([^\]]+)\] (.*)$"
+            )
+            for line in raw_lines[-limit * 3:]:
+                line = line.strip()
+                if not line:
+                    continue
+                m = log_regex.match(line)
+                if m:
+                    lvl = m.group(2)
+                    if level_filter and lvl != level_filter:
+                        continue
+                    logs.append({
+                        "timestamp": m.group(1),
+                        "level": lvl,
+                        "logger": m.group(3),
+                        "message": m.group(4),
+                    })
+                else:
+                    if not level_filter or level_filter == "INFO":
+                        logs.append({
+                            "timestamp": "",
+                            "level": "INFO",
+                            "logger": "system",
+                            "message": line,
+                        })
+            logs = logs[-limit:]
+        except Exception as e:
+            logger.warning(f"Error reading scanner.log: {e}")
+
+    return jsonify({
+        "success": True,
+        "total_lines": total_lines,
+        "count": len(logs),
+        "logs": logs,
+    })
+
+
+@app.route("/api/incidents", methods=["GET"])
+def api_incidents():
+    """Correlate critical & high severity findings into security incident clusters."""
+    try:
+        findings = get_findings(limit=250)
+        clusters = {}
+        for f in findings:
+            if f.get("severity") in ("CRITICAL", "HIGH"):
+                key = (f.get("module_name"), f.get("mitre_code"))
+                if key not in clusters:
+                    clusters[key] = []
+                clusters[key].append(f)
+
+        incidents = []
+        idx = 1
+        for (mod, mitre), f_list in clusters.items():
+            incidents.append({
+                "id": f"INC-{idx:03d}",
+                "title": f"Correlated {f_list[0].get('severity')} Attack Vector: {mod}",
+                "module": mod,
+                "mitre": mitre or "AML.T0051",
+                "owasp": f_list[0].get("owasp_code", "LLM01"),
+                "severity": f_list[0].get("severity", "HIGH"),
+                "count": len(f_list),
+                "target_url": f_list[0].get("target_url", app_config["target_url"]),
+                "last_seen": f_list[0].get("timestamp", "N/A"),
+                "first_seen": f_list[-1].get("timestamp", "N/A"),
+                "sample_payload": (f_list[0].get("payload") or "")[:120],
+                "finding_ids": [x.get("id") for x in f_list],
+            })
+            idx += 1
+        return jsonify({"success": True, "incidents": incidents, "count": len(incidents)})
+    except Exception as e:
+        logger.error(f"Incident correlation error: {e}")
+        return jsonify({"success": False, "incidents": [], "count": 0, "error": str(e)}), 500
 
 
 # ─────────────────────────────────────────────

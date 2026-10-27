@@ -29,39 +29,53 @@ SWAGGER_UI_HTML = """<!DOCTYPE html>
        DESIGN SYSTEM - EXACT SYNCHRONIZATION WITH MAIN APPLICATION
        ══════════════════════════════════════════════════════════════════ */
     :root {
-      /* Dark Theme: Cyber SOC Navy & Sapphire Glow */
-      --bg-base: #060b17;
-      --bg-surface: #0a1021;
-      --bg-surface-hover: #101a35;
-      --bg-card: #0c1428;
-      --bg-card-secondary: #080e1c;
-      --bg-input: #070d1a;
-      --border-color: #162444;
-      --border-light: #223764;
+      /* Dark Theme: Cyber SOC Navy & Neon Cyan Tokens */
+      --app-bg: #07111F;
+      --sidebar-bg: #081321;
+      --card-surface: #111F32;
+      --elevated-surface: #15243A;
+      --border-color-token: #20334D;
+      --primary-blue: #1685FF;
+      --neon-cyan: #22D3EE;
+      --success: #34D399;
+      --warning: #FBBF24;
+      --critical: #FB7185;
+      --main-text: #E6F1FF;
+      --secondary-text: #9CB0CA;
+      --muted-text: #7186A3;
 
-      --text-primary: #f8fafc;
-      --text-secondary: #94a3b8;
-      --text-muted: #64748b;
-      --text-heading: #f8fafc;
-      --text-body: #cbd5e1;
+      --bg-base: #07111F;
+      --bg-surface: #081321;
+      --bg-surface-hover: #15243A;
+      --bg-card: #111F32;
+      --bg-card-secondary: #15243A;
+      --bg-input: #0b182b;
+      --border-color: #20334D;
+      --border-light: #20334D;
 
-      /* Primary Cyber Blue Accent */
-      --accent: #0284c7;
-      --accent-hover: #0369a1;
-      --accent-cyan: #38bdf8;
-      --accent-subtle: rgba(2, 132, 199, 0.14);
-      --accent-glow: rgba(2, 132, 199, 0.35);
+      --text-primary: #E6F1FF;
+      --text-secondary: #9CB0CA;
+      --text-muted: #7186A3;
+      --text-heading: #E6F1FF;
+      --text-body: #9CB0CA;
+
+      /* Primary Cyber Blue & Neon Cyan Accent */
+      --accent: #1685FF;
+      --accent-hover: #126fd6;
+      --accent-cyan: #22D3EE;
+      --accent-subtle: rgba(22, 133, 255, 0.15);
+      --accent-glow: rgba(34, 211, 238, 0.28);
 
       /* Severity Colors */
-      --sev-critical: #ef4444;
-      --sev-high: #f97316;
-      --sev-medium: #f59e0b;
-      --sev-low: #0ea5e9;
+      --sev-critical: #FB7185;
+      --sev-high: #F97316;
+      --sev-medium: #FBBF24;
+      --sev-low: #22D3EE;
 
-      --status-success: #10b981;
-      --status-danger: #ef4444;
+      --status-success: #34D399;
+      --status-danger: #FB7185;
 
-      --code-bg: #040812;
+      --code-bg: #081321;
       --topbar-height: 64px;
       --font-mono: "JetBrains Mono", Consolas, Menlo, monospace;
       --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -1255,6 +1269,30 @@ def get_openapi_spec() -> dict:
                     "description": "Checks connectivity with local and remote inference runtimes such as Ollama, vLLM, and LangChain agents.",
                     "responses": {
                         "200": {"description": "Operational status of supported AI integrations"}
+                    }
+                }
+            },
+            "/api/logs": {
+                "get": {
+                    "tags": ["System & Health"],
+                    "summary": "Retrieve Operational Logs Stream",
+                    "description": "Fetches real-time log records from scanner.log with level filtering.",
+                    "parameters": [
+                        {"name": "limit", "in": "query", "schema": {"type": "integer", "default": 60}},
+                        {"name": "level", "in": "query", "schema": {"type": "string", "enum": ["INFO", "WARNING", "ERROR"]}}
+                    ],
+                    "responses": {
+                        "200": {"description": "Structured real-time system log records"}
+                    }
+                }
+            },
+            "/api/incidents": {
+                "get": {
+                    "tags": ["Findings & Telemetry"],
+                    "summary": "Correlate Critical & High Security Incidents",
+                    "description": "Groups critical and high severity findings into correlated attack clusters.",
+                    "responses": {
+                        "200": {"description": "List of correlated security incident clusters"}
                     }
                 }
             }
