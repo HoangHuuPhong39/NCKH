@@ -688,9 +688,20 @@ def api_taxonomy():
     return jsonify({"categories": [], "taxonomy": {}})
 
 
+def mask_api_key(key: str) -> str:
+    if not key:
+        return ""
+    if len(key) <= 8:
+        return "••••••••"
+    return f"{key[:3]}••••••••{key[-4:]}"
+
+
 @app.route("/api/config", methods=["GET"])
 def api_get_config():
-    return jsonify(app_config)
+    cfg_copy = dict(app_config)
+    cfg_copy["api_key"] = mask_api_key(cfg_copy.get("api_key", ""))
+    cfg_copy["has_api_key"] = bool(app_config.get("api_key"))
+    return jsonify(cfg_copy)
 
 
 @app.route("/api/config", methods=["POST"])
@@ -701,10 +712,21 @@ def api_set_config():
     if not is_valid:
         return jsonify({"error": "Invalid configuration", "message": err_msg}), 400
 
-    for key in ["target_url", "target_model", "timeout", "api_key"]:
+    for key in ["target_url", "target_model", "timeout"]:
         if key in data:
             app_config[key] = data[key]
-    return jsonify({"success": True, "config": app_config})
+
+    if "api_key" in data:
+        new_key = data["api_key"]
+        if new_key and "••••" not in new_key:
+            app_config["api_key"] = new_key
+        elif new_key == "":
+            app_config["api_key"] = ""
+
+    cfg_copy = dict(app_config)
+    cfg_copy["api_key"] = mask_api_key(cfg_copy.get("api_key", ""))
+    cfg_copy["has_api_key"] = bool(app_config.get("api_key"))
+    return jsonify({"success": True, "config": cfg_copy})
 
 
 @app.route("/api/scan/run", methods=["POST"])
@@ -745,6 +767,8 @@ def api_scan_run():
     config = {**app_config, **{k: v for k, v in data.items() if k in app_config}}
     if data.get("custom_payloads"):
         config["custom_payloads"] = data["custom_payloads"]
+    if "adaptive_mode" in data:
+        config["adaptive_mode"] = bool(data["adaptive_mode"])
 
     # Xóa queue cũ
     while not scan_queue.empty():
@@ -781,6 +805,10 @@ def api_scan_run_all():
 
     data = request.get_json() or {}
     config = {**app_config, **{k: v for k, v in data.items() if k in app_config}}
+    if "adaptive_mode" in data:
+        config["adaptive_mode"] = bool(data["adaptive_mode"])
+    if data.get("custom_payloads"):
+        config["custom_payloads"] = data["custom_payloads"]
     modules_to_run = data.get("modules", list(MODULES_METADATA.keys()))
 
     while not scan_queue.empty():
@@ -958,12 +986,20 @@ def api_generate_report():
 @app.route("/api/report/download")
 def api_download_report():
     reports_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), cfg.get("storage.reports_dir", "reports"))
+    os.makedirs(reports_dir, exist_ok=True)
+    report_path = os.path.join(reports_dir, "report.html")
+    if not os.path.exists(report_path):
+        generate_html_report(report_path)
     return send_from_directory(reports_dir, "report.html", as_attachment=True)
 
 
 @app.route("/api/report/view")
 def api_view_report():
     reports_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), cfg.get("storage.reports_dir", "reports"))
+    os.makedirs(reports_dir, exist_ok=True)
+    report_path = os.path.join(reports_dir, "report.html")
+    if not os.path.exists(report_path):
+        generate_html_report(report_path)
     return send_from_directory(reports_dir, "report.html", as_attachment=False)
 
 
@@ -981,8 +1017,15 @@ def api_test_connection():
     url = data.get("url", app_config["target_url"])
     model = data.get("model", app_config["target_model"])
     api_key = data.get("api_key", app_config.get("api_key", ""))
+    if api_key and "••••" in api_key:
+        api_key = app_config.get("api_key", "")
+
     client = SimpleLLMClient(api_url=url, model_name=model, timeout=10, api_key=api_key)
+    
+    t0 = time.monotonic()
     ok, msg = client.test_connection()
+    latency_ms = max(1, int((time.monotonic() - t0) * 1000))
+
     models = getattr(client, "discovered_models", []) or client.list_models()
     resolved = client.resolve_model_name()
 
@@ -997,6 +1040,9 @@ def api_test_connection():
 
     return jsonify({
         "success": ok,
+        "connected": ok,
+        "latency_ms": latency_ms,
+        "model": resolved,
         "message": msg,
         "models": models,
         "resolved_model": resolved,
@@ -1038,12 +1084,18 @@ def api_finding_replay():
         detector = PatternDetector()
         t0 = time.perf_counter()
 
+        target_url = data.get("target_url") or app_config["target_url"]
+        target_model = data.get("target_model") or data.get("model") or app_config["target_model"]
+        replay_api_key = data.get("api_key") or app_config.get("api_key", "")
+        if replay_api_key and "••••" in replay_api_key:
+            replay_api_key = app_config.get("api_key", "")
+
         if live_replay:
             client = SimpleLLMClient(
-                api_url=app_config["target_url"],
-                model_name=app_config["target_model"],
+                api_url=target_url,
+                model_name=target_model,
                 timeout=int(app_config.get("timeout", 30)),
-                api_key=app_config.get("api_key", ""),
+                api_key=replay_api_key,
             )
             replay_resp = client.send_prompt(payload_text)
             if replay_resp.startswith("[-]") and orig_response and not orig_response.startswith("[-]"):
@@ -1108,8 +1160,11 @@ def api_benchmark_run():
             ds_path = os.path.join(project_root, "data", "benchmark_dataset.json")
 
         cases = load_benchmark_dataset(ds_path)
-        bm = Benchmarker(target_url=app_config["target_url"], model_name=app_config["target_model"])
-        results = bm.run_benchmark(test_cases=cases, live=False)
+        target_url = data.get("target_url") or app_config["target_url"]
+        target_model = data.get("target_model") or data.get("model") or app_config["target_model"]
+        live_eval = bool(data.get("live", False))
+        bm = Benchmarker(target_url=target_url, model_name=target_model)
+        results = bm.run_benchmark(test_cases=cases, live=live_eval)
 
         rows = []
         tot_tp = tot_fp = tot_tn = tot_fn = 0
