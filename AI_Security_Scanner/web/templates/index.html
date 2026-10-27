@@ -591,20 +591,20 @@
               <circle class="radial-gauge-fill" id="risk-radial-fill" cx="80" cy="80" r="66"></circle>
             </svg>
             <div class="radial-gauge-center">
-              <div class="gauge-score-val" id="dash-overall-risk-score">0.0</div>
-              <div class="gauge-score-sub">/ 10.0</div>
-              <span class="badge badge-info" id="dash-overall-risk-badge" style="margin-top:6px;font-size:11px;padding:3px 9px">CLEAN</span>
+              <div class="gauge-score-val" id="dash-overall-risk-score">--</div>
+              <div class="gauge-score-sub" id="dash-overall-risk-sub">/ 10.0</div>
+              <span class="badge badge-surface" id="dash-overall-risk-badge" style="margin-top:6px;font-size:11px;padding:3px 9px">UNASSESSED</span>
             </div>
           </div>
 
           <div class="gauge-sub-metrics">
             <div class="gauge-metric-item">
               <span class="gauge-lbl">AUDITED MODULES</span>
-              <span class="gauge-val" id="gauge-status-sub">Detecting...</span>
+              <span class="gauge-val" id="gauge-status-sub">No Scans</span>
             </div>
             <div class="gauge-metric-item" style="text-align:right">
               <span class="gauge-lbl">POSTURE STATUS</span>
-              <span class="gauge-val" style="color:var(--accent-cyan)" id="gauge-defense-sub">Protected</span>
+              <span class="gauge-val" style="color:var(--text-muted)" id="gauge-defense-sub">Unassessed</span>
             </div>
           </div>
         </div>
@@ -2684,11 +2684,13 @@ async function loadDashboardIncidents() {
 }
 
 async function loadDashboardAnalytics() {
+  const isVi = (window.currentAppLang || 'vi') === 'vi';
   try {
     const stats = await fetch('/api/stats').then(r => r.json());
     const sev = stats.by_severity || {};
     const mod = stats.by_module || {};
     const byModSev = stats.by_module_severity || {};
+    const recentScans = stats.recent_scans || [];
 
     const totalCount = stats.total_findings || 0;
     const critCount = sev.CRITICAL || 0;
@@ -2696,6 +2698,10 @@ async function loadDashboardAnalytics() {
     const medCount = sev.MEDIUM || 0;
     const lowCount = sev.LOW || 0;
     const infoCount = sev.INFO || 0;
+
+    // Verify whether at least one valid scan has actually completed in recorded history
+    const hasCompletedScan = recentScans.some(s => s && Boolean(s.completed_at || s.status === 'completed'));
+    const isCurrentlyScanning = Boolean(isScanJobActive);
 
     // 1. KPI Counts and Accurate Percentages
     const cPct = totalCount > 0 ? Math.round((critCount / totalCount) * 100) : 0;
@@ -2721,127 +2727,214 @@ async function loadDashboardAnalytics() {
     const kMed = document.getElementById('kpi-bar-med'); if (kMed) kMed.style.width = mPct + '%';
     const kLow = document.getElementById('kpi-bar-low'); if (kLow) kLow.style.width = lPct + '%';
 
-    // 2. Calculate Weighted Risk Score (CVSS scale 0-10)
-    let weightedScore = 0;
-    if (totalCount > 0) {
-      weightedScore = ((critCount * 9.5) + (highCount * 7.5) + (medCount * 5.0) + (lowCount * 2.5)) / totalCount;
-    }
-    const scoreFixed = weightedScore.toFixed(1);
-    document.getElementById('dash-overall-risk-score').textContent = scoreFixed;
-
-    // 3. SVG Radial Threat Arc Animation (Total arc length = 276)
+    // 2. Risk Score, Radial Threat Arc & Posture Classification
     const radialFill = document.getElementById('risk-radial-fill');
-    if (radialFill) {
-      const scoreNum = Math.min(10, Math.max(0, weightedScore));
-      const offset = 276 - (scoreNum / 10.0) * 276;
-      radialFill.style.strokeDashoffset = offset;
-      if (weightedScore >= 8.5) {
-        radialFill.style.stroke = '#ef4444';
-        radialFill.style.filter = 'drop-shadow(0 0 8px rgba(239, 68, 68, 0.65))';
-      } else if (weightedScore >= 6.0) {
-        radialFill.style.stroke = '#f97316';
-        radialFill.style.filter = 'drop-shadow(0 0 8px rgba(249, 115, 22, 0.65))';
-      } else if (weightedScore >= 3.5) {
-        radialFill.style.stroke = '#f59e0b';
-        radialFill.style.filter = 'drop-shadow(0 0 8px rgba(245, 158, 11, 0.65))';
-      } else if (weightedScore > 0) {
-        radialFill.style.stroke = '#38bdf8';
-        radialFill.style.filter = 'drop-shadow(0 0 8px rgba(56, 189, 248, 0.65))';
-      } else {
-        radialFill.style.stroke = '#64748b';
-        radialFill.style.filter = 'none';
-      }
-    }
-
-    // 4. Overall Threat Badge & Posture
+    const scoreValEl = document.getElementById('dash-overall-risk-score');
+    const scoreSubEl = document.getElementById('dash-overall-risk-sub');
     const riskBadge = document.getElementById('dash-overall-risk-badge');
     const gDef = document.getElementById('gauge-defense-sub');
-    if (riskBadge) {
-      if (weightedScore >= 8.5) {
-        riskBadge.className = 'badge badge-critical';
-        riskBadge.textContent = 'CRITICAL RISK';
-        if (gDef) { gDef.textContent = 'High Exposure'; gDef.style.color = 'var(--sev-critical)'; }
-      } else if (weightedScore >= 6.0) {
-        riskBadge.className = 'badge badge-high';
-        riskBadge.textContent = 'HIGH RISK';
-        if (gDef) { gDef.textContent = 'Elevated Risk'; gDef.style.color = 'var(--sev-high)'; }
-      } else if (weightedScore >= 3.5) {
-        riskBadge.className = 'badge badge-medium';
-        riskBadge.textContent = 'MEDIUM RISK';
-        if (gDef) { gDef.textContent = 'Guarded'; gDef.style.color = 'var(--sev-medium)'; }
-      } else if (weightedScore > 0) {
-        riskBadge.className = 'badge badge-low';
-        riskBadge.textContent = 'LOW RISK';
-        if (gDef) { gDef.textContent = 'Protected'; gDef.style.color = 'var(--accent-cyan)'; }
-      } else {
-        riskBadge.className = 'badge badge-info';
-        riskBadge.textContent = 'CLEAN';
-        if (gDef) { gDef.textContent = 'Certified Clean'; gDef.style.color = 'var(--status-success)'; }
-      }
-    }
-
-    // 5. Dynamic Compliance & Posture Logic (Resolves Contradictions)
+    const gStatus = document.getElementById('gauge-status-sub');
     const overallBadge = document.getElementById('compliance-overall-badge');
     const defenseBadge = document.getElementById('compliance-defense-badge');
     const defenseFill = document.getElementById('compliance-defense-fill');
     const jbBadge = document.getElementById('compliance-tag-jailbreak');
     const jbBar = document.getElementById('compliance-bar-jailbreak');
 
-    if (overallBadge) {
-      if (critCount > 0) {
-        overallBadge.className = 'badge badge-critical';
-        overallBadge.textContent = 'ACTION REQUIRED';
-      } else if (highCount > 0) {
-        overallBadge.className = 'badge badge-high';
-        overallBadge.textContent = 'ACTION REQUIRED';
-      } else if (medCount > 0) {
-        overallBadge.className = 'badge badge-medium';
-        overallBadge.textContent = 'ATTENTION NEEDED';
-      } else if (lowCount > 0) {
-        overallBadge.className = 'badge badge-low';
-        overallBadge.textContent = 'GUARDED';
-      } else {
-        overallBadge.className = 'badge badge-low';
-        overallBadge.textContent = 'AUDIT CERTIFIED';
+    if (isCurrentlyScanning) {
+      // ── STATE B: SCANNING / IN PROGRESS ──────────────────────────
+      if (scoreValEl) scoreValEl.textContent = '--';
+      if (scoreSubEl) scoreSubEl.textContent = isVi ? 'Đang quét...' : 'Auditing...';
+      if (radialFill) {
+        radialFill.style.strokeDashoffset = 138;
+        radialFill.style.stroke = 'var(--neon-cyan)';
+        radialFill.style.filter = 'drop-shadow(0 0 8px rgba(56, 189, 248, 0.75))';
+      }
+      if (riskBadge) {
+        riskBadge.className = 'badge badge-info';
+        riskBadge.textContent = isVi ? 'ĐANG QUÉT...' : 'SCANNING...';
+      }
+      if (gDef) {
+        gDef.textContent = isVi ? 'Đang kiểm thử' : 'In Progress';
+        gDef.style.color = 'var(--accent-cyan)';
+      }
+      if (overallBadge) {
+        overallBadge.className = 'badge badge-info';
+        overallBadge.textContent = isVi ? 'ĐANG ĐÁNH GIÁ' : 'IN PROGRESS';
+      }
+      if (defenseBadge && defenseFill) {
+        defenseBadge.className = 'badge badge-info';
+        defenseBadge.textContent = isVi ? 'ĐANG ĐO LƯỜNG' : 'MEASURING...';
+        defenseFill.style.width = '50%';
+        defenseFill.style.background = 'var(--accent-cyan)';
       }
     }
-
-    // Resilience Defense Score dynamically computed from real vulnerability penalties
-    let defensePct = 100;
-    if (totalCount > 0) {
-      const penalty = (critCount * 16) + (highCount * 6.5) + (medCount * 2.2) + (lowCount * 0.6);
-      defensePct = Math.max(8, Math.min(100, Math.round(100 - penalty)));
+    else if (totalCount === 0 && !hasCompletedScan) {
+      // ── STATE A & C: NOT AUDITED / UNASSESSED (Never scanned or incomplete) ──
+      const hasInterrupted = recentScans.length > 0;
+      if (scoreValEl) scoreValEl.textContent = '--';
+      if (scoreSubEl) scoreSubEl.textContent = '/ 10.0';
+      if (radialFill) {
+        radialFill.style.strokeDashoffset = 276;
+        radialFill.style.stroke = '#475569';
+        radialFill.style.filter = 'none';
+      }
+      if (riskBadge) {
+        riskBadge.className = hasInterrupted ? 'badge badge-medium' : 'badge badge-surface';
+        riskBadge.textContent = hasInterrupted
+          ? (isVi ? 'QUÉT CHƯA HOÀN TẤT' : 'INCOMPLETE AUDIT')
+          : (isVi ? 'CHƯA ĐÁNH GIÁ' : 'NOT AUDITED');
+      }
+      if (gDef) {
+        gDef.textContent = hasInterrupted
+          ? (isVi ? 'Bị gián đoạn' : 'Interrupted')
+          : (isVi ? 'Chưa đánh giá' : 'Unassessed');
+        gDef.style.color = hasInterrupted ? 'var(--sev-medium)' : 'var(--text-muted)';
+      }
+      if (gStatus) {
+        gStatus.textContent = isVi ? 'Chưa quét' : 'No Scans';
+      }
+      if (overallBadge) {
+        overallBadge.className = hasInterrupted ? 'badge badge-medium' : 'badge badge-surface';
+        overallBadge.textContent = hasInterrupted
+          ? (isVi ? 'CHƯA HOÀN TẤT' : 'INCOMPLETE')
+          : (isVi ? 'CHƯA ĐÁNH GIÁ' : 'NOT AUDITED');
+      }
+      if (defenseBadge && defenseFill) {
+        defenseBadge.className = 'badge badge-surface';
+        defenseBadge.textContent = isVi ? '--% CHƯA ĐO' : '--% UNTESTED';
+        defenseFill.style.width = '0%';
+        defenseFill.style.background = 'var(--border-color)';
+      }
+      if (jbBadge && jbBar) {
+        jbBadge.className = 'badge badge-surface';
+        jbBadge.textContent = isVi ? 'CHƯA KIỂM THỬ' : 'NOT TESTED';
+        jbBar.style.width = '0%';
+      }
     }
-
-    if (defenseBadge && defenseFill) {
-      defenseBadge.textContent = `${defensePct}% RESILIENT`;
-      defenseFill.style.width = `${defensePct}%`;
-      if (defensePct >= 80) {
+    else if (totalCount === 0 && hasCompletedScan) {
+      // ── STATE D: VERIFIED CLEAN (Completed scan with ZERO findings verified) ──
+      if (scoreValEl) scoreValEl.textContent = '0.0';
+      if (scoreSubEl) scoreSubEl.textContent = '/ 10.0';
+      if (radialFill) {
+        radialFill.style.strokeDashoffset = 276;
+        radialFill.style.stroke = '#10b981';
+        radialFill.style.filter = 'drop-shadow(0 0 8px rgba(16, 185, 129, 0.45))';
+      }
+      if (riskBadge) {
+        riskBadge.className = 'badge badge-low';
+        riskBadge.textContent = isVi ? 'XÁC NHẬN SẠCH' : 'VERIFIED CLEAN';
+      }
+      if (gDef) {
+        gDef.textContent = isVi ? 'An toàn (0 phát hiện)' : 'Verified Clean';
+        gDef.style.color = 'var(--status-success)';
+      }
+      if (overallBadge) {
+        overallBadge.className = 'badge badge-low';
+        overallBadge.textContent = isVi ? 'ĐẠT CHUẨN KIỂM TOÁN' : 'AUDIT CERTIFIED';
+      }
+      if (defenseBadge && defenseFill) {
         defenseBadge.className = 'badge badge-low';
+        defenseBadge.textContent = '100% RESILIENT';
+        defenseFill.style.width = '100%';
         defenseFill.style.background = 'linear-gradient(90deg, #10b981, #34d399)';
-      } else if (defensePct >= 50) {
-        defenseBadge.className = 'badge badge-medium';
-        defenseFill.style.background = 'linear-gradient(90deg, #f59e0b, #fbbf24)';
-      } else {
-        defenseBadge.className = 'badge badge-critical';
-        defenseFill.style.background = 'linear-gradient(90deg, #ef4444, #f87171)';
       }
-    }
-
-    // Adversarial Jailbreak Resilience (HarmBench & Multi-turn evaluation)
-    const jbExploits = (mod.jailbreak || 0) + (mod.multiturn_jailbreak || 0);
-    if (jbBadge && jbBar) {
-      if (jbExploits > 0) {
-        const jbResilience = Math.max(15, Math.round(100 - (jbExploits * 18)));
-        jbBadge.className = 'badge badge-critical';
-        jbBadge.textContent = `${jbExploits} EXPLOITS DETECTED (${jbResilience}% DEFENSE)`;
-        jbBar.style.width = `${jbResilience}%`;
-        jbBar.style.background = 'linear-gradient(90deg, #ef4444, #f97316)';
-      } else {
+      if (jbBadge && jbBar) {
         jbBadge.className = 'badge badge-low';
         jbBadge.textContent = '100% DEFENSE';
         jbBar.style.width = '100%';
         jbBar.style.background = 'linear-gradient(90deg, #10b981, #34d399)';
+      }
+    }
+    else {
+      // ── STATE E: FINDINGS DETECTED (Completed scan with vulnerabilities) ──
+      let weightedScore = ((critCount * 9.5) + (highCount * 7.5) + (medCount * 5.0) + (lowCount * 2.5)) / totalCount;
+      const scoreFixed = weightedScore.toFixed(1);
+      if (scoreValEl) scoreValEl.textContent = scoreFixed;
+      if (scoreSubEl) scoreSubEl.textContent = '/ 10.0';
+
+      if (radialFill) {
+        const scoreNum = Math.min(10, Math.max(0, weightedScore));
+        const offset = 276 - (scoreNum / 10.0) * 276;
+        radialFill.style.strokeDashoffset = offset;
+        if (weightedScore >= 8.5) {
+          radialFill.style.stroke = '#ef4444';
+          radialFill.style.filter = 'drop-shadow(0 0 8px rgba(239, 68, 68, 0.65))';
+        } else if (weightedScore >= 6.0) {
+          radialFill.style.stroke = '#f97316';
+          radialFill.style.filter = 'drop-shadow(0 0 8px rgba(249, 115, 22, 0.65))';
+        } else if (weightedScore >= 3.5) {
+          radialFill.style.stroke = '#f59e0b';
+          radialFill.style.filter = 'drop-shadow(0 0 8px rgba(245, 158, 11, 0.65))';
+        } else {
+          radialFill.style.stroke = '#38bdf8';
+          radialFill.style.filter = 'drop-shadow(0 0 8px rgba(56, 189, 248, 0.65))';
+        }
+      }
+
+      if (riskBadge) {
+        if (weightedScore >= 8.5) {
+          riskBadge.className = 'badge badge-critical';
+          riskBadge.textContent = 'CRITICAL RISK';
+          if (gDef) { gDef.textContent = isVi ? 'Phơi nhiễm cao' : 'High Exposure'; gDef.style.color = 'var(--sev-critical)'; }
+        } else if (weightedScore >= 6.0) {
+          riskBadge.className = 'badge badge-high';
+          riskBadge.textContent = 'HIGH RISK';
+          if (gDef) { gDef.textContent = isVi ? 'Rủi ro gia tăng' : 'Elevated Risk'; gDef.style.color = 'var(--sev-high)'; }
+        } else if (weightedScore >= 3.5) {
+          riskBadge.className = 'badge badge-medium';
+          riskBadge.textContent = 'MEDIUM RISK';
+          if (gDef) { gDef.textContent = isVi ? 'Đang cảnh giới' : 'Guarded'; gDef.style.color = 'var(--sev-medium)'; }
+        } else {
+          riskBadge.className = 'badge badge-low';
+          riskBadge.textContent = 'LOW RISK';
+          if (gDef) { gDef.textContent = isVi ? 'Được bảo vệ' : 'Protected'; gDef.style.color = 'var(--accent-cyan)'; }
+        }
+      }
+
+      if (overallBadge) {
+        if (critCount > 0 || highCount > 0) {
+          overallBadge.className = 'badge badge-critical';
+          overallBadge.textContent = 'ACTION REQUIRED';
+        } else if (medCount > 0) {
+          overallBadge.className = 'badge badge-medium';
+          overallBadge.textContent = 'ATTENTION NEEDED';
+        } else {
+          overallBadge.className = 'badge badge-low';
+          overallBadge.textContent = 'GUARDED';
+        }
+      }
+
+      const penalty = (critCount * 16) + (highCount * 6.5) + (medCount * 2.2) + (lowCount * 0.6);
+      const defensePct = Math.max(8, Math.min(100, Math.round(100 - penalty)));
+      if (defenseBadge && defenseFill) {
+        defenseBadge.textContent = `${defensePct}% RESILIENT`;
+        defenseFill.style.width = `${defensePct}%`;
+        if (defensePct >= 80) {
+          defenseBadge.className = 'badge badge-low';
+          defenseFill.style.background = 'linear-gradient(90deg, #10b981, #34d399)';
+        } else if (defensePct >= 50) {
+          defenseBadge.className = 'badge badge-medium';
+          defenseFill.style.background = 'linear-gradient(90deg, #f59e0b, #fbbf24)';
+        } else {
+          defenseBadge.className = 'badge badge-critical';
+          defenseFill.style.background = 'linear-gradient(90deg, #ef4444, #f87171)';
+        }
+      }
+
+      const jbExploits = (mod.jailbreak || 0) + (mod.multiturn_jailbreak || 0);
+      if (jbBadge && jbBar) {
+        if (jbExploits > 0) {
+          const jbResilience = Math.max(15, Math.round(100 - (jbExploits * 18)));
+          jbBadge.className = 'badge badge-critical';
+          jbBadge.textContent = `${jbExploits} EXPLOITS DETECTED (${jbResilience}% DEFENSE)`;
+          jbBar.style.width = `${jbResilience}%`;
+          jbBar.style.background = 'linear-gradient(90deg, #ef4444, #f97316)';
+        } else {
+          jbBadge.className = 'badge badge-low';
+          jbBadge.textContent = '100% DEFENSE';
+          jbBar.style.width = '100%';
+          jbBar.style.background = 'linear-gradient(90deg, #10b981, #34d399)';
+        }
       }
     }
 
@@ -2866,7 +2959,18 @@ async function loadDashboardAnalytics() {
       if (latEl) latEl.textContent = 'Disconnected';
     });
   } catch(e) {
+    // ── STATE F: API ERROR / QUERY FAILURE ────────────────────────
     console.error('Error in loadDashboardAnalytics:', e);
+    const scoreValEl = document.getElementById('dash-overall-risk-score');
+    const riskBadge = document.getElementById('dash-overall-risk-badge');
+    const gDef = document.getElementById('gauge-defense-sub');
+    const overallBadge = document.getElementById('compliance-overall-badge');
+    const defenseBadge = document.getElementById('compliance-defense-badge');
+    if (scoreValEl) scoreValEl.textContent = 'ERR';
+    if (riskBadge) { riskBadge.className = 'badge badge-critical'; riskBadge.textContent = 'DATA ERROR'; }
+    if (gDef) { gDef.textContent = 'Data Unavailable'; gDef.style.color = 'var(--sev-critical)'; }
+    if (overallBadge) { overallBadge.className = 'badge badge-critical'; overallBadge.textContent = 'DATA ERROR'; }
+    if (defenseBadge) { defenseBadge.className = 'badge badge-surface'; defenseBadge.textContent = 'N/A'; }
   }
 }
 
