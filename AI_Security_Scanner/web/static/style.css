@@ -2919,3 +2919,152 @@ table.data-table tr.clickable-row:hover { background-color: var(--bg-surface-hov
     color: var(--neon-cyan);
     margin: 2px 4px 2px 0;
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   PHASE 1: ENTERPRISE SHARED SHELL, ACCESSIBILITY & LOCALIZATION
+   ══════════════════════════════════════════════════════════════════ */
+
+/* Focus Visibility & Accessibility */
+:focus-visible {
+    outline: 2px solid var(--neon-cyan) !important;
+    outline-offset: 2px !important;
+}
+
+[data-theme="light"] :focus-visible {
+    outline: 2px solid #0284c7 !important;
+    outline-offset: 2px !important;
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+    *, ::before, ::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* Language Toggle Button in Topbar */
+.btn-lang-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 12px;
+    background: var(--card-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    color: var(--main-text);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    white-space: nowrap;
+}
+
+.btn-lang-toggle:hover {
+    background: var(--elevated-surface);
+    border-color: var(--neon-cyan);
+    color: var(--neon-cyan);
+    box-shadow: 0 0 10px rgba(34, 211, 238, 0.2);
+}
+
+.btn-lang-toggle .lang-badge {
+    background: rgba(34, 211, 238, 0.15);
+    color: var(--neon-cyan);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 11px;
+    border: 1px solid rgba(34, 211, 238, 0.3);
+}
+
+[data-theme="light"] .btn-lang-toggle {
+    background: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #0f172a !important;
+}
+
+[data-theme="light"] .btn-lang-toggle:hover {
+    background: #f1f5f9 !important;
+    border-color: #0284c7 !important;
+    color: #0284c7 !important;
+}
+
+[data-theme="light"] .btn-lang-toggle .lang-badge {
+    background: #e0f2fe !important;
+    color: #0284c7 !important;
+    border-color: #bae6fd !important;
+}
+
+/* Enhanced Active Nav State with Cyber Indicator */
+.nav-item.active {
+    background: linear-gradient(90deg, rgba(22, 133, 255, 0.25) 0%, rgba(21, 36, 58, 0.6) 100%) !important;
+    border-left: 3px solid var(--neon-cyan) !important;
+    color: var(--main-text) !important;
+    box-shadow: 0 2px 12px rgba(22, 133, 255, 0.2) !important;
+}
+
+.nav-item.active .nav-icon-wrap {
+    color: var(--neon-cyan) !important;
+}
+
+[data-theme="light"] .nav-item.active {
+    background: linear-gradient(90deg, #e0f2fe 0%, #f0f9ff 100%) !important;
+    border-left: 3px solid #0284c7 !important;
+    color: #0284c7 !important;
+    box-shadow: 0 2px 8px rgba(2, 132, 199, 0.12) !important;
+}
+
+[data-theme="light"] .nav-item.active .nav-icon-wrap {
+    color: #0284c7 !important;
+}
+
+/* Sidebar Badges */
+.nav-badge {
+    margin-left: auto;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 10px;
+    background: rgba(34, 211, 238, 0.15);
+    color: var(--neon-cyan);
+    border: 1px solid rgba(34, 211, 238, 0.3);
+}
+
+[data-theme="light"] .nav-badge {
+    background: #e0f2fe !important;
+    color: #0284c7 !important;
+    border: 1px solid #bae6fd !important;
+}
+
+/* Responsive Shell Breakpoints */
+@media (max-width: 1200px) {
+    .topbar {
+        padding: 10px 16px;
+    }
+    .topbar-right {
+        gap: 6px;
+    }
+    .btn-topbar-custom span:not(.collapse-icon) {
+        font-size: 12px;
+    }
+}
+
+@media (max-width: 860px) {
+    .topbar {
+        flex-wrap: wrap;
+        gap: 10px;
+        min-height: auto;
+        padding: 10px 14px;
+    }
+    .connection-pill {
+        padding: 3px 10px;
+        font-size: 12px;
+    }
+    .topbar-right {
+        width: 100%;
+        justify-content: flex-end;
+        overflow-x: auto;
+        padding-bottom: 4px;
+    }
+}
