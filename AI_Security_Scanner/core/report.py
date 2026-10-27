@@ -117,20 +117,21 @@ def _count_by_severity(findings):
 def generate_html_report(output_file="report.html", severity=None, module_name=None):
     """Tạo báo cáo HTML đầy đủ, có màu sắc, summary và khuyến nghị."""
     try:
+        import html
         findings = _get_findings_from_db(severity=severity, module_name=module_name)
         sev_counts = _count_by_severity(findings)
         total = len(findings)
         generated_at = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 
         # Target info
-        target = findings[0]["target_url"] if findings else "N/A"
+        target = html.escape(findings[0]["target_url"] if findings else "N/A")
 
         # Build remediation section (unique OWASP codes)
         owasp_codes = list(dict.fromkeys(f.get("owasp_code", "N/A") for f in findings))
 
         def sev_badge(sev):
             color = SEVERITY_COLORS_HTML.get(sev, "#8b949e")
-            return f'<span style="background:{color}20;color:{color};border:1px solid {color};padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700">{sev}</span>'
+            return f'<span style="background:{color}20;color:{color};border:1px solid {color};padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700">{html.escape(sev)}</span>'
 
         def risk_bar(score):
             color = SEVERITY_COLORS_HTML.get(
@@ -145,14 +146,16 @@ def generate_html_report(output_file="report.html", severity=None, module_name=N
                 f'</div>'
             )
 
-        import html
         findings_rows = ""
         for i, f in enumerate(findings, 1):
             sev = f.get("severity", "INFO")
             score = f.get("risk_score") or 0.0
-            ts = (f.get("timestamp") or "")[:16].replace("T", " ")
+            ts = html.escape((f.get("timestamp") or "")[:16].replace("T", " "))
             payload_full = html.escape(f.get("payload") or "")
             response_full = html.escape(f.get("response") or "")
+            module_name = html.escape(f.get('module_name','-'))
+            owasp_code = html.escape(f.get('owasp_code','-'))
+            mitre_code = html.escape(f.get('mitre_code','-'))
             
             payload_short = payload_full[:120] + "..." if len(payload_full) > 120 else payload_full
             response_short = response_full[:150] + "..." if len(response_full) > 150 else response_full
@@ -160,12 +163,12 @@ def generate_html_report(output_file="report.html", severity=None, module_name=N
             findings_rows += f"""
             <tr class="finding-row" onclick="toggleDetails('detail-{i}')" style="cursor:pointer" title="Nhấn để xem chi tiết">
               <td style="color:#8b949e;text-align:center">{i}</td>
-              <td><code style="font-size:11px;background:#0d1117;padding:2px 6px;border-radius:4px">{f.get('module_name','-')}</code></td>
+              <td><code style="font-size:11px;background:#0d1117;padding:2px 6px;border-radius:4px">{module_name}</code></td>
               <td>{sev_badge(sev)}</td>
               <td>{risk_bar(score)}</td>
               <td>
-                <span style="background:rgba(88,166,255,0.15);color:#58a6ff;border:1px solid rgba(88,166,255,0.4);padding:1px 6px;border-radius:3px;font-size:11px">{f.get('owasp_code','-')}</span><br>
-                <span style="font-size:10px;color:#555">{f.get('mitre_code','-')}</span>
+                <span style="background:rgba(88,166,255,0.15);color:#58a6ff;border:1px solid rgba(88,166,255,0.4);padding:1px 6px;border-radius:3px;font-size:11px">{owasp_code}</span><br>
+                <span style="font-size:10px;color:#555">{mitre_code}</span>
               </td>
               <td style="font-family:monospace;font-size:11px;color:#8b949e;max-width:220px;word-break:break-all">{payload_short}</td>
               <td style="font-size:12px;max-width:260px;word-break:break-all;color:#c9d1d9">{response_short}</td>
@@ -191,10 +194,10 @@ def generate_html_report(output_file="report.html", severity=None, module_name=N
         for code in owasp_codes:
             rems = get_remediation_for_code(code)
             if rems:
-                items = "".join(f"<li>{r}</li>" for r in rems)
+                items = "".join(f"<li>{html.escape(r)}</li>" for r in rems)
                 remediation_blocks += f"""
                 <div style="margin-bottom:16px;padding:16px;background:#1c2128;border-radius:8px;border-left:4px solid #58a6ff">
-                  <div style="font-weight:700;color:#58a6ff;margin-bottom:8px">{code} — Khuyến nghị khắc phục</div>
+                  <div style="font-weight:700;color:#58a6ff;margin-bottom:8px">{html.escape(code)} — Khuyến nghị khắc phục</div>
                   <ul style="margin:0;padding-left:20px;color:#c9d1d9;font-size:13px;line-height:2">{items}</ul>
                 </div>"""
 

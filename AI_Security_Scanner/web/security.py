@@ -15,6 +15,8 @@ import hmac
 import json
 import re
 import time
+import ipaddress
+import socket
 from functools import wraps
 from typing import Dict, List, Optional, Tuple, Any
 from urllib.parse import urlparse
@@ -149,7 +151,14 @@ def rate_limit(limit: int = 60, window: int = 60):
             if not cfg.get("web.rate_limit_enabled", True):
                 return f(*args, **kwargs)
 
-            client_ip = request.headers.get("X-Forwarded-For", request.remote_addr or "127.0.0.1")
+            # Only trust X-Forwarded-For behind a known reverse proxy
+            # In direct deployment, always use remote_addr to prevent IP spoofing
+            if cfg.get("web.trust_proxy", False):
+                forwarded = request.headers.get("X-Forwarded-For", "")
+                client_ip = forwarded.split(",")[0].strip() if forwarded else (request.remote_addr or "127.0.0.1")
+            else:
+                client_ip = request.remote_addr or "127.0.0.1"
+
             allowed, remaining = _limiter.is_allowed(client_ip, limit, window)
             if not allowed:
                 logger.warning("Rate limit exceeded for IP %s on %s", client_ip, request.path)
@@ -172,10 +181,29 @@ ALLOWED_MODULES_WHITELIST = {
     "prompt_injection", "jailbreak", "sensitive_disclosure",
     "output_handling", "excessive_agency", "prompt_leak",
     "rag_security", "misinformation", "model_dos", "port_scan",
+    "model_fingerprint", "multiturn_jailbreak",
+    "agent_testing", "ml_adversarial",
 }
 
 
-def validate_scan_request(data: dict) -> Tuple[bool, Optional[str]]:
+def is_internal_ip(hostname: str) -> bool:
+    """Blocks internal IPs to prevent SSRF."""
+    forbidden_hosts = {"localhost", "metadata.google.internal"}
+    if hostname.lower() in forbidden_hosts:
+        return True
+    
+    try:
+        ip = socket.gethostbyname(hostname)
+        ip_obj = ipaddress.ip_address(ip)
+        
+        if ip_obj.is_loopback or ip_obj.is_private or ip_obj.is_link_local or ip_obj.is_multicast or ip_obj.is_unspecified:
+            return True
+        return False
+    except Exception:
+        # If we cannot resolve, fail closed to prevent obscure SSRF bypasses via DNS
+        return True
+
+def validate_scan_request(data: dict, allow_local_target: bool = True) -> Tuple[bool, Optional[str]]:
     """Strictly validates scan initiation payload."""
     if not isinstance(data, dict):
         return False, "Payload must be a valid JSON object."
@@ -192,6 +220,12 @@ def validate_scan_request(data: dict) -> Tuple[bool, Optional[str]]:
             return False, f"Invalid URL scheme '{parsed.scheme}'. Only http and https are allowed."
         if not parsed.netloc:
             return False, "Target URL must contain a valid host and port."
+        hostname = parsed.hostname
+        if not hostname:
+            return False, "Could not extract hostname from URL."
+        is_local = hostname.lower() in {"localhost", "127.0.0.1", "::1"}
+        if not (allow_local_target and is_local) and is_internal_ip(hostname):
+            return False, "Internal IP or hostname is not allowed (SSRF protection)."
     except Exception as exc:
         return False, f"Malformed target URL: {exc}"
 
@@ -236,6 +270,24 @@ def validate_config_request(data: dict) -> Tuple[bool, Optional[str]]:
             return False, "Timeout must be an integer."
     return True, None
 
+def validate_custom_payloads(payloads: Any) -> Tuple[bool, Optional[str]]:
+    """Validates custom payload input."""
+    if not isinstance(payloads, list):
+        return False, "Custom payloads must be a list."
+    if len(payloads) > 50:
+        return False, "Maximum 50 custom payloads allowed."
+    
+    for item in payloads:
+        if not isinstance(item, dict):
+            return False, "Each custom payload must be a dictionary."
+        if 'name' not in item or 'payload' not in item:
+            return False, "Each custom payload must have 'name' and 'payload' keys."
+        if not isinstance(item['payload'], str):
+            return False, "Payload must be a string."
+        if len(item['payload']) > 10000:
+            return False, "Payload length must not exceed 10000 characters."
+    
+    return True, None
 
 # ==============================================================================
 # 4. Security Headers Middleware
@@ -247,4 +299,8 @@ def add_security_headers(response):
     response.headers["X-Frame-Options"] = "SAMEORIGIN"
     response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    response.headers["Cache-Control"] = "no-store"
     return response

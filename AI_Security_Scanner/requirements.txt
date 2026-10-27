@@ -22,3 +22,8 @@ gunicorn>=21.2.0
 # ------------------------------------------------------------------------------
 # garak>=0.9.0.1          # NVIDIA Generative AI Red-teaming Architecture
 # pyrit>=0.4.0            # Microsoft Python Risk Identification Tool
+pydantic>=2.0.0
+adversarial-robustness-toolbox>=1.15.0
+giskard>=2.0.0
+deepteam>=0.1.0
+

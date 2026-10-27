@@ -1,0 +1,236 @@
+name: AI Security Scanner - Test Suite
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run nightly at 2 AM UTC
+    - cron: '0 2 * * *'
+
+jobs:
+  # ===========================================================================
+  # Unit Tests
+  # ===========================================================================
+  unit-tests:
+    name: Unit Tests (Python ${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: ['3.10', '3.11', '3.12']
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov pytest-timeout
+      
+      - name: Run unit tests
+        run: |
+          pytest tests/unit/ -v --cov=core --cov=modules --cov-report=xml --cov-report=term
+      
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
+          flags: unittests
+          name: codecov-${{ matrix.os }}-py${{ matrix.python-version }}
+
+  # ===========================================================================
+  # Integration Tests
+  # ===========================================================================
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-timeout
+      
+      - name: Run integration tests
+        run: |
+          pytest tests/integration/ -v --timeout=300
+      
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: integration-test-results
+          path: tests/integration/results/
+
+  # ===========================================================================
+  # Linting & Code Quality
+  # ===========================================================================
+  lint:
+    name: Linting & Code Quality
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install linting tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 black isort mypy
+      
+      - name: Run flake8
+        run: |
+          flake8 core/ modules/ experiments/ --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 core/ modules/ experiments/ --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+      
+      - name: Check code formatting (black)
+        run: |
+          black --check core/ modules/ experiments/
+      
+      - name: Check import sorting (isort)
+        run: |
+          isort --check-only core/ modules/ experiments/
+      
+      - name: Type checking (mypy)
+        run: |
+          mypy core/ modules/ --ignore-missing-imports || true
+
+  # ===========================================================================
+  # Security Scanning
+  # ===========================================================================
+  security:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install security tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install bandit safety
+      
+      - name: Run bandit (security linter)
+        run: |
+          bandit -r core/ modules/ -f json -o bandit-report.json || true
+      
+      - name: Check dependencies for vulnerabilities
+        run: |
+          safety check --json || true
+      
+      - name: Upload security reports
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: security-reports
+          path: |
+            bandit-report.json
+
+  # ===========================================================================
+  # Benchmark Regression Tests
+  # ===========================================================================
+  benchmark:
+    name: Benchmark Regression Tests
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Run baseline benchmark
+        run: |
+          python experiments/benchmark.py --mode offline --dataset data/vietnamese_benchmark.json --output results/benchmark_ci.json
+      
+      - name: Check for performance regression
+        run: |
+          python scripts/check_regression.py results/benchmark_ci.json
+      
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v3
+        with:
+          name: benchmark-results
+          path: results/benchmark_ci.json
+
+  # ===========================================================================
+  # Documentation Build
+  # ===========================================================================
+  docs:
+    name: Documentation Build
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Check documentation files exist
+        run: |
+          test -f README.md
+          test -f docs/METHODOLOGY.md
+          test -f CONTRIBUTING.md
+      
+      - name: Validate markdown links
+        uses: gaurav-nelson/github-action-markdown-link-check@v1
+        with:
+          use-quiet-mode: 'yes'
+          config-file: '.github/workflows/mlc_config.json'
+
+  # ===========================================================================
+  # Notification on Success
+  # ===========================================================================
+  notify-success:
+    name: Notify Success
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-tests, lint, security, benchmark, docs]
+    if: success()
+    
+    steps:
+      - name: Success message
+        run: |
+          echo "✅ All CI checks passed!"
+          echo "Unit tests, integration tests, linting, security scans, and benchmarks completed successfully."

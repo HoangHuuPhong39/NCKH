@@ -11,7 +11,7 @@ from core.config import Config, cfg
 def test_config_defaults():
     assert cfg.get("scanner.target_url") is not None
     assert cfg.get("scanner.target_model") is not None
-    assert cfg.get("scanner.timeout") == 60
+    assert cfg.get("scanner.timeout") == 90
     assert cfg.get("web.port") == 5000
 
 

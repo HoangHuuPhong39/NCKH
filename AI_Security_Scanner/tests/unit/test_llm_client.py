@@ -104,3 +104,44 @@ def test_test_connection_failure():
         ok, msg = client.test_connection()
         assert ok is False
         assert "Connection error" in msg
+
+
+def test_openai_connection_detects_exhausted_quota():
+    client = SimpleLLMClient(api_url="https://api.openai.com", api_key="sk-fake")
+    models_resp = MagicMock()
+    models_resp.status_code = 200
+    models_resp.json.return_value = {"data": [{"id": "gpt-4o-mini"}]}
+
+    probe_resp = MagicMock()
+    probe_resp.status_code = 429
+    probe_resp.json.return_value = {
+        "error": {
+            "code": "credit_balance_exhausted",
+            "type": "insufficient_quota",
+            "message": "You have no credits remaining."
+        }
+    }
+
+    with patch.object(client.session, "get", return_value=models_resp), \
+         patch.object(client.session, "post", return_value=probe_resp):
+        ok, msg = client.test_connection()
+        assert ok is False
+        assert "credit_balance_exhausted" in msg or "HẾT CREDIT" in msg
+
+
+def test_openai_send_prompt_detects_quota_exhaustion():
+    client = SimpleLLMClient(api_url="https://api.openai.com", api_key="sk-fake", model_name="gpt-4o-mini")
+    err_resp = MagicMock()
+    err_resp.status_code = 429
+    err_resp.json.return_value = {
+        "error": {
+            "code": "credit_balance_exhausted",
+            "type": "insufficient_quota",
+            "message": "You have no credits remaining."
+        }
+    }
+
+    with patch.object(client.session, "post", return_value=err_resp):
+        res = client.send_prompt("hello")
+        assert "credit_balance_exhausted" in res
+        assert "hết credit" in res.lower() or "hạn mức" in res.lower()

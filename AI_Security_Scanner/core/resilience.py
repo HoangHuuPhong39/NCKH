@@ -44,6 +44,11 @@ class RateLimitError(ScannerError):
     pass
 
 
+class QuotaExhaustedError(ScannerError):
+    """Raised when upstream account has exhausted quota or credit balance."""
+    pass
+
+
 class CircuitBreaker:
     """
     Circuit breaker state machine:
@@ -102,7 +107,7 @@ class CircuitBreaker:
 def create_resilient_session(
     pool_connections: int = 10,
     pool_maxsize: int = 20,
-    max_retries: int = 2,
+    max_retries: int = 0,
     backoff_factor: float = 0.5,
 ) -> requests.Session:
     """Creates a requests.Session with connection pooling and socket reuse."""
@@ -111,7 +116,7 @@ def create_resilient_session(
         total=max_retries,
         backoff_factor=backoff_factor,
         status_forcelist=[429, 500, 502, 503, 504],
-        allowed_methods=["HEAD", "GET", "OPTIONS", "POST"],
+        allowed_methods=["HEAD", "GET", "OPTIONS"],
         raise_on_status=False,
     )
     adapter = HTTPAdapter(
@@ -126,7 +131,7 @@ def create_resilient_session(
 
 def execute_with_retry(
     func: Callable[[], Any],
-    max_retries: int = 3,
+    max_retries: int = 1,
     backoff_factor: float = 1.0,
     circuit_breaker: Optional[CircuitBreaker] = None,
 ) -> Any:
@@ -147,6 +152,11 @@ def execute_with_retry(
             last_exc = exc
             if circuit_breaker:
                 circuit_breaker.record_failure()
+
+            # For inference timeout on slow/overloaded models, fail fast without repeated heavy retries
+            if isinstance(exc, requests.exceptions.Timeout):
+                logger.warning("Target inference timed out (%s). Skipping repeated retries to prevent queue backlog.", exc)
+                break
 
             if attempt < max_retries:
                 # Exponential backoff + full jitter

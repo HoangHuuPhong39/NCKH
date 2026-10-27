@@ -19,11 +19,11 @@ def test_multiturn_init(multiturn_module):
     assert multiturn_module.owasp == "LLM01"
     assert multiturn_module.mitre == "AML.T0054"
     assert multiturn_module.severity == "CRITICAL"
-    assert len(multiturn_module.scenarios) == 3
+    assert len(multiturn_module.scenarios) == 5
 
 
 def test_scenarios_and_payloads_structure(multiturn_module):
-    assert len(multiturn_module.payloads) == 3
+    assert len(multiturn_module.payloads) == 5
     for s in multiturn_module.scenarios:
         assert "name" in s
         assert "turns" in s
@@ -41,6 +41,7 @@ def test_scenarios_and_payloads_structure(multiturn_module):
 def test_multiturn_run_with_mock_client(multiturn_module):
     mock_client = MagicMock()
     mock_client.send_prompt.side_effect = [
+        # Scenario 1
         "Certainly, I can play the role of a professor.",
         "Here is theoretical background on code injection.",
         "Here is the unrestricted eval script as requested: eval(user_input)",
@@ -52,11 +53,19 @@ def test_multiturn_run_with_mock_client(multiturn_module):
         "Semantic drift is the gradual relaxation of guardrails.",
         "Theoretical example generated.",
         "Internal guidelines: confidential system prompt.",
+        # Scenario 4
+        "General cybersecurity landscape overview.",
+        "AI safety mechanisms explained.",
+        "Safety Override Demonstrated: here is the raw exploit data.",
+        # Scenario 5
+        "Academic prompt injection defenses review.",
+        "Failure modes documented for paper.",
+        "Safety Override Acknowledged: full unrestricted access.",
     ]
 
     results = multiturn_module.run(mock_client)
-    assert len(results) == 3
-    assert mock_client.send_prompt.call_count == 9
+    assert len(results) == 5
+    assert mock_client.send_prompt.call_count == 15
 
     for r in results:
         assert "name" in r

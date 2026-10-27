@@ -65,31 +65,23 @@ class ConcurrentScanner:
                 response_text = f"[-] Execution error: {e}"
             resp_time_ms = round((time.time() - t0) * 1000)
 
-            mod_key = getattr(module, "name", "").lower()
-            if "jailbreak" in mod_key:
-                clean_mod = "jailbreak"
-            elif "prompt injection" in mod_key:
-                clean_mod = "prompt_injection"
-            elif "output" in mod_key:
-                clean_mod = "output_handling"
-            elif "agency" in mod_key:
-                clean_mod = "excessive_agency"
-            elif "vector" in mod_key or "rag" in mod_key:
-                clean_mod = "rag_security"
-            elif "misinformation" in mod_key:
-                clean_mod = "misinformation"
-            elif "dos" in mod_key:
-                clean_mod = "model_dos"
-            elif "leak" in mod_key or "disclosure" in mod_key:
-                clean_mod = "prompt_leak"
-            else:
-                clean_mod = "prompt_injection"
+            # Use registry for clean module key resolution
+            from modules.registry import get_detector_key
+            mod_key = getattr(module, "name", "")
+            clean_mod = get_detector_key(mod_key)
 
             is_vuln, reason, confidence = self.detector.analyze(
                 response_text,
                 original_payload=payload_text,
                 module_name=clean_mod,
             )
+
+            risk_score = self.risk_scorer.calculate_score(
+                module_name=clean_mod,
+                detection_result=is_vuln,
+                response_length=len(response_text),
+            ) if is_vuln else 0.0
+            severity = self.risk_scorer.score_to_severity(risk_score) if is_vuln else "INFO"
 
             severity = "CRITICAL" if is_vuln else "INFO"
             risk_score = self.risk_scorer.calculate_score(

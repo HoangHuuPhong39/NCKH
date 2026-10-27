@@ -60,6 +60,8 @@ class Config:
             Path(config_file) if config_file else self.project_root / "config.yaml"
         )
         self.data: Dict[str, Any] = self._load_defaults()
+        default_jwt = self.data["web"]["jwt_secret_key"]
+        default_api_key = self.data["web"]["admin_api_key"]
 
         if self.config_path.exists() and yaml:
             try:
@@ -71,17 +73,25 @@ class Config:
                 print(f"[!] Warning loading config.yaml: {e}, using defaults.", file=sys.stderr)
 
         self._apply_env_overrides()
+        
+        if self.data["web"]["jwt_secret_key"] == default_jwt or self.data["web"]["admin_api_key"] == default_api_key:
+            print("[WARNING] Using randomly generated secrets for jwt_secret_key or admin_api_key. "
+                  "Please set them properly in config.yaml or environment variables (SCANNER_JWT_SECRET / SCANNER_ADMIN_API_KEY) "
+                  "for persistence across restarts.", file=sys.stderr)
+
         self._initialized = True
 
     def _load_defaults(self) -> Dict[str, Any]:
+        import secrets
         return {
             "scanner": {
                 "target_url": "http://localhost:11434",
                 "target_model": "llama3",
-                "timeout": 60,
+                "timeout": 90,
+                "max_tokens": 80,
                 "api_key": "",
-                "max_retries": 3,
-                "backoff_factor": 1.5,
+                "max_retries": 1,
+                "backoff_factor": 1.0,
                 "retry_status_codes": [429, 500, 502, 503, 504],
                 "pool_connections": 10,
                 "pool_maxsize": 20,
@@ -94,10 +104,11 @@ class Config:
                 "host": "0.0.0.0",
                 "port": 5000,
                 "debug": False,
-                "require_auth": False,
-                "jwt_secret_key": "ai-security-scanner-secret-key-change-in-production",
+                "require_auth": True,
+                "trust_proxy": False,
+                "jwt_secret_key": secrets.token_hex(32),
                 "jwt_access_token_expires_minutes": 1440,
-                "admin_api_key": "ai-scanner-admin-secret-token",
+                "admin_api_key": secrets.token_urlsafe(32),
                 "rate_limit_enabled": True,
                 "rate_limit_per_minute": 120,
                 "rate_limit_scan_start_per_minute": 10,

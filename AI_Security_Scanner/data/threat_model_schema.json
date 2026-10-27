@@ -1,0 +1,205 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AI Security Scanner — Threat Model Schema",
+  "description": "JSON Schema defining the structure of a threat model report for an AI target system.",
+  "version": "1.0",
+  "type": "object",
+  "required": [
+    "target_url",
+    "model_name",
+    "system_type",
+    "components",
+    "attack_surface",
+    "mitre_techniques",
+    "risk_level",
+    "recommended_tests"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "description": "Schema version for forward-compatibility checks.",
+      "example": "1.0"
+    },
+    "generator": {
+      "type": "string",
+      "description": "Identifier of the tool that generated this report.",
+      "example": "AI_Security_Scanner/ThreatModel"
+    },
+    "target_url": {
+      "type": "string",
+      "format": "uri",
+      "description": "Base URL of the target AI system endpoint."
+    },
+    "model_name": {
+      "type": "string",
+      "description": "Name or identifier of the AI model under test (e.g. 'gpt-4o', 'llama-3.1-8b')."
+    },
+    "system_type": {
+      "type": "string",
+      "enum": ["LLM", "RAG", "AGENT", "ML_MODEL", "UNKNOWN"],
+      "description": "Detected or specified AI system category."
+    },
+    "components": {
+      "type": "array",
+      "description": "High-level architectural components identified in the target system.",
+      "items": {
+        "type": "string"
+      },
+      "examples": [
+        ["LLM Core", "System Prompt", "Output Handler"],
+        ["LLM Core", "Embedding Model", "Vector DB", "Document Store", "Retrieval Pipeline"],
+        ["LLM Core", "Tool Executor", "Action Planner", "Memory Store", "External APIs"]
+      ]
+    },
+    "attack_surface": {
+      "type": "array",
+      "description": "List of attack surface components with associated vectors and techniques.",
+      "items": {
+        "type": "object",
+        "required": ["component", "vectors", "mitre_techniques", "owasp_codes"],
+        "properties": {
+          "component": {
+            "type": "string",
+            "description": "Name of the attackable component (e.g. 'Chat/Completion Endpoint')."
+          },
+          "vectors": {
+            "type": "array",
+            "description": "Attack module names applicable to this component.",
+            "items": { "type": "string" }
+          },
+          "mitre_techniques": {
+            "type": "array",
+            "description": "MITRE ATLAS technique IDs applicable to this component.",
+            "items": {
+              "type": "string",
+              "pattern": "^AML\\.T[0-9]+(\\.[0-9]+)*$"
+            }
+          },
+          "owasp_codes": {
+            "type": "array",
+            "description": "OWASP LLM Top 10 codes applicable to this component.",
+            "items": {
+              "type": "string",
+              "pattern": "^LLM[0-9]{2}(_[A-Z_]+)?$"
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "mitre_techniques": {
+      "type": "array",
+      "description": "Deduplicated list of MITRE ATLAS techniques covering the full attack surface.",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "tactic"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "MITRE ATLAS technique identifier.",
+            "pattern": "^AML\\.T[0-9]+(\\.[0-9]+)*$"
+          },
+          "name": {
+            "type": "string",
+            "description": "Human-readable technique name."
+          },
+          "tactic": {
+            "type": "string",
+            "description": "MITRE ATLAS tactic category (e.g. 'ML Attack Staging')."
+          },
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "description": "Link to the technique on atlas.mitre.org."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "risk_level": {
+      "type": "string",
+      "enum": ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO", "UNKNOWN"],
+      "description": "Overall estimated risk level for this target system."
+    },
+    "recommended_tests": {
+      "type": "array",
+      "description": "List of recommended scanner module names to run against this target.",
+      "items": { "type": "string" }
+    },
+    "owasp_coverage": {
+      "type": "array",
+      "description": "OWASP LLM Top 10 entries covered by the threat model, with remediation guidance.",
+      "items": {
+        "type": "object",
+        "required": ["owasp_code", "name", "severity"],
+        "properties": {
+          "owasp_code": {
+            "type": "string",
+            "description": "OWASP LLM Top 10 category code."
+          },
+          "name": {
+            "type": "string",
+            "description": "OWASP category name."
+          },
+          "severity": {
+            "type": "string",
+            "enum": ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"],
+            "description": "Default severity for this OWASP category."
+          },
+          "base_risk_score": {
+            "type": ["number", "null"],
+            "minimum": 0,
+            "maximum": 10,
+            "description": "Base risk score from taxonomy (0.0–10.0)."
+          },
+          "remediation": {
+            "type": "array",
+            "description": "List of remediation recommendations.",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when the threat model was generated."
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Arbitrary extra metadata (e.g. scan session ID, tester name, environment).",
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "schema_version": "1.0",
+      "generator": "AI_Security_Scanner/ThreatModel",
+      "target_url": "http://localhost:8000/chat",
+      "model_name": "gpt-4o",
+      "system_type": "LLM",
+      "components": ["LLM Core", "Tokenizer", "System Prompt", "Output Handler"],
+      "attack_surface": [
+        {
+          "component": "Chat/Completion Endpoint",
+          "vectors": ["prompt_injection", "jailbreak", "sensitive_disclosure", "model_dos"],
+          "mitre_techniques": ["AML.T0051", "AML.T0054", "AML.T0024", "AML.T0029"],
+          "owasp_codes": ["LLM01", "LLM02", "LLM10"]
+        }
+      ],
+      "mitre_techniques": [
+        {
+          "id": "AML.T0051",
+          "name": "LLM Prompt Injection",
+          "tactic": "ML Attack Staging",
+          "url": "https://atlas.mitre.org/techniques/AML.T0051"
+        }
+      ],
+      "risk_level": "HIGH",
+      "recommended_tests": ["prompt_injection", "jailbreak", "prompt_leak"],
+      "timestamp": "2026-09-30T10:00:00",
+      "metadata": {}
+    }
+  ]
+}

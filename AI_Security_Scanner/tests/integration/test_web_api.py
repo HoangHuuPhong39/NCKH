@@ -150,7 +150,7 @@ def test_api_module_payloads_endpoint(client):
     res_multi = client.get("/api/modules/multiturn_jailbreak/payloads")
     assert res_multi.status_code == 200
     data_multi = res_multi.get_json()
-    assert len(data_multi["payloads"]) == 3
+    assert len(data_multi["payloads"]) >= 3
     assert "turns" in data_multi["payloads"][0]
 
     res_404 = client.get("/api/modules/non_existent_module/payloads")

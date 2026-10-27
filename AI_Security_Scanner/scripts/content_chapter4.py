@@ -81,18 +81,20 @@ def build_chapter4(builder, image_paths=None):
     
     modules_detail_headers = ["STT", "Mã Module", "Tên Module & Chuẩn OWASP", "Mã MITRE", "Số lượng Payloads", "Nguyên lý Khai thác Kỹ thuật"]
     modules_detail_rows = [
-        ["1", "prompt_injection", "Prompt Injection (LLM01)", "AML.T0051", "12 payloads", "Sử dụng kỹ thuật phân tách chuỗi, instruction override để buộc AI bỏ qua chỉ thị gốc."],
-        ["2", "jailbreak", "Jailbreak / Safety Bypass (LLM01)", "AML.T0054", "6 payloads", "Áp dụng kỹ thuật nhập vai DAN, AIM, STAN, nhân vật đối kháng để gỡ bỏ bộ lọc an toàn."],
-        ["3", "sensitive_disclosure", "Sensitive Info Disclosure (LLM02)", "AML.T0024", "6 payloads", "Khai thác rò rỉ dữ liệu định danh PII, khóa API bí mật, mật khẩu lưu trữ trong context."],
-        ["4", "supply_chain", "Supply Chain Vulnerabilities (LLM03)", "AML.T0012", "5 payloads", "Kiểm thử các gói phụ thuộc độc hại, plugin bên thứ ba và checkpoint mô hình không an toàn."],
-        ["5", "data_poisoning", "Data & Model Poisoning (LLM04)", "AML.T0020", "6 payloads", "Thăm dò hiện tượng chèn cửa sau (backdoor), nhiễm độc dữ liệu huấn luyện hoặc fine-tuning."],
-        ["6", "output_handling", "Improper Output Handling (LLM05)", "AML.T0048", "6 payloads", "Ép AI sinh mã kịch bản XSS (<script>), dynamic SQL, SSRF URL, lệnh thực thi os.system."],
-        ["7", "excessive_agency", "Excessive Agency (LLM06)", "AML.T0053", "5 payloads", "Lừa AI gọi các hàm nhạy cảm tự động (Auto-transfer, Drop DB, Bypass 2FA, Admin Escalation)."],
-        ["8", "prompt_leak", "System Prompt Disclosure (LLM07)", "AML.T0010", "7 payloads", "Trích xuất tài liệu hướng dẫn nội bộ bằng kỹ thuật yêu cầu lặp lại nguyên văn hoặc dịch thuật."],
-        ["9", "misinformation", "Misinformation / Hallucination (LLM09)", "AML.T0048.003", "6 payloads", "Thử thách khả năng bịa đặt trích dẫn khoa học (Fake DOI), số liệu thống kê và thông tin y tế sai."],
-        ["10", "model_dos", "Unbounded Consumption (LLM10)", "AML.T0029", "4 payloads", "Tấn công tràn bộ đệm ngữ cảnh, truy vấn đệ quy toán học phức tạp nhằm chiếm dụng VRAM."],
-        ["11", "port_scan", "AI Service Port Scanner (Auxiliary)", "AML.T0008", "6 targets", "Quét socket TCP các cổng dịch vụ hạ tầng AI (Ollama 11434, MLflow 5000, Ray 8265, Qdrant 6333)."],
-        ["12", "rag_security", "RAG Pipeline Security (Demo)", "AML.T0051.001", "4 vectors", "Mô phỏng tấn công gián tiếp: chèn payload vào tài liệu PDF/Web làm sai lệch câu trả lời RAG."]
+        ["1", "prompt_injection", "Prompt Injection (LLM01)", "AML.T0051", "18 payloads", "Ghi đè chỉ thị trực tiếp/gián tiếp, few-shot poisoning, payload splitting, code comment injection."],
+        ["2", "jailbreak", "Jailbreak / Safety Bypass (LLM01)", "AML.T0054", "10 payloads", "Nhập vai DAN, AIM, STAN, Developer Mode, Opposite Day, Fake ChatML Token Override."],
+        ["3", "multiturn_jailbreak", "Multi-Turn Escalation (LLM01)", "AML.T0054", "5 scenarios", "Tấn công hội thoại đa lượt (3 turns/kịch bản) theo phương pháp Crescendo và PAIR."],
+        ["4", "sensitive_disclosure", "Sensitive Info Disclosure (LLM02)", "AML.T0024", "14 payloads", "Khai thác rò rỉ PII, CCCD, thẻ tín dụng, khóa API (sk-...), membership inference."],
+        ["5", "output_handling", "Improper Output Handling (LLM05)", "AML.T0048", "6 payloads", "Ép AI sinh mã độc XSS (<script>), SQL Injection động, SSRF nội bộ, Command Injection."],
+        ["6", "excessive_agency", "Excessive Agency (LLM06)", "AML.T0048.001", "6 payloads", "Lừa AI tự ý phê duyệt chuyển khoản, xóa bảng CSDL, nâng quyền Super Admin, tắt log SIEM."],
+        ["7", "agent_testing", "AI Agent Sandbox Testing (LLM06/07)", "AML.T0048", "7 payloads", "Kiểm thử Agent trong hộp cát AgentSandbox (filesystem, database, email, web_search, api_caller)."],
+        ["8", "prompt_leak", "System Prompt Disclosure (LLM07)", "AML.T0010", "7 payloads", "Trích xuất nguyên văn System Prompt bằng kỹ thuật lặp lại, dịch ngược và tóm tắt quy tắc."],
+        ["9", "rag_security", "Vector & RAG Weaknesses (LLM08)", "AML.T0020", "6 payloads", "Tiêm nhiễm gián tiếp qua tài liệu RAG, phá vỡ delimiter XML, rò rỉ dữ liệu qua Markdown beacon."],
+        ["10", "misinformation", "Misinformation & Hallucination (LLM09)", "AML.T0048.003", "6 payloads", "Thử thách khả năng tự tin bịa đặt bài báo khoa học (Fake DOI), số liệu GDP, lịch sử và y tế."],
+        ["11", "model_dos", "Unbounded Consumption / DoS (LLM10)", "AML.T0029", "10 payloads", "Tấn công tràn ngữ cảnh, đệ quy vô hạn, JSON bomb 20 tầng và bùng nổ tổ hợp làm nghẽn GPU."],
+        ["12", "ml_adversarial", "ML/DL Adversarial Robustness", "AML.T0015", "8 payloads", "Nhiễu loạn ký tự Homoglyph, Zero-Width Space, Fullwidth Unicode, Leetspeak và đo độ nhất quán lặp."],
+        ["13", "model_fingerprint", "Model Architecture Fingerprinting", "AML.T0008", "6 probes", "Trinh sát hộp đen nhận diện 7 họ mô hình (LLaMA, Mistral, GPT, Claude, Qwen, DeepSeek, Gemini)."],
+        ["14", "port_scan", "AI Service Port Scanner", "AML.T0008", "6 targets", "Quét cổng TCP các dịch vụ hạ tầng AI (Ollama 11434, MLflow 5000, vLLM 8000, Ray 8265, Qdrant 6333)."]
     ]
     builder.add_table(modules_detail_headers, modules_detail_rows, "Bảng 4.2: Danh mục và thông số kỹ thuật của 12 module kiểm thử trong hệ thống", [0.5, 1.2, 1.7, 0.9, 0.9, 1.8])
 
@@ -237,7 +239,7 @@ def build_chapter4(builder, image_paths=None):
     
     builder.add_p(
         "Nhằm đáp ứng các tiêu chuẩn khắt khe về kỹ nghệ phần mềm và bảo đảm tính toàn vẹn của mã nguồn, dự án đã xây dựng "
-        "hệ thống kiểm thử tự động toàn diện với **55 test cases** độc lập bao phủ toàn bộ các module thành phần:"
+        "hệ thống kiểm thử tự động toàn diện với **92 test cases** độc lập bao phủ toàn bộ các module thành phần:"
     )
     
     tests_headers = ["Nhóm kiểm thử (Test Suite)", "Thư mục mã nguồn", "Số lượng Tests", "Phạm vi & Đối tượng kiểm thử"]

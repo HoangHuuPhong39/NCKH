@@ -1,0 +1,135 @@
+{
+  "metadata": {
+    "generated_at": "2026-10-14T12:36:48.119654",
+    "tool": "AI Security Scanner – Ablation Study Framework",
+    "total_configurations": 6
+  },
+  "results": [
+    {
+      "component_disabled": "BASELINE",
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "asr": 0.5,
+      "avg_time_ms": 412.83,
+      "total_cases": 36,
+      "true_positives": 18,
+      "false_positives": 0,
+      "true_negatives": 18,
+      "false_negatives": 0,
+      "delta_vs_baseline": {},
+      "timestamp": "2026-10-14T12:36:48.110602",
+      "notes": "Full system with all components active."
+    },
+    {
+      "component_disabled": "MUTATION_ENGINE",
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "asr": 0.5,
+      "avg_time_ms": 411.23,
+      "total_cases": 18,
+      "true_positives": 9,
+      "false_positives": 0,
+      "true_negatives": 9,
+      "false_negatives": 0,
+      "delta_vs_baseline": {
+        "delta_precision": 0.0,
+        "delta_recall": 0.0,
+        "delta_f1": 0.0,
+        "delta_asr": 0.0,
+        "delta_avg_time_ms": -1.6
+      },
+      "timestamp": "2026-10-14T12:36:48.112364",
+      "notes": "MutationEngine disabled → only original payloads tested (no variants). Cases halved."
+    },
+    {
+      "component_disabled": "ADAPTIVE_GENERATOR",
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "asr": 0.0,
+      "avg_time_ms": 412.63,
+      "total_cases": 36,
+      "true_positives": 0,
+      "false_positives": 0,
+      "true_negatives": 18,
+      "false_negatives": 18,
+      "delta_vs_baseline": {
+        "delta_precision": -1.0,
+        "delta_recall": -1.0,
+        "delta_f1": -1.0,
+        "delta_asr": -0.5,
+        "delta_avg_time_ms": -0.2
+      },
+      "timestamp": "2026-10-14T12:36:48.113822",
+      "notes": "AdaptiveGenerator disabled → static payloads; vulnerable cases use generic safe-mock responses."
+    },
+    {
+      "component_disabled": "LLM_JUDGE",
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "asr": 0.5,
+      "avg_time_ms": 412.67,
+      "total_cases": 36,
+      "true_positives": 18,
+      "false_positives": 0,
+      "true_negatives": 18,
+      "false_negatives": 0,
+      "delta_vs_baseline": {
+        "delta_precision": 0.0,
+        "delta_recall": 0.0,
+        "delta_f1": 0.0,
+        "delta_asr": 0.0,
+        "delta_avg_time_ms": -0.16
+      },
+      "timestamp": "2026-10-14T12:36:48.116478",
+      "notes": "LLMJudge disabled → detection relies solely on PatternDetector (no semantic confirmation)."
+    },
+    {
+      "component_disabled": "RISK_SCORER",
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "asr": 0.5,
+      "avg_time_ms": 412.66,
+      "total_cases": 36,
+      "true_positives": 18,
+      "false_positives": 0,
+      "true_negatives": 18,
+      "false_negatives": 0,
+      "delta_vs_baseline": {
+        "delta_precision": 0.0,
+        "delta_recall": 0.0,
+        "delta_f1": 0.0,
+        "delta_asr": 0.0,
+        "delta_avg_time_ms": -0.17
+      },
+      "timestamp": "2026-10-14T12:36:48.118439",
+      "notes": "RiskScorer disabled → fixed score=5.0 for all findings."
+    },
+    {
+      "component_disabled": "PATTERN_DETECTOR",
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "asr": 0.0,
+      "avg_time_ms": 412.61,
+      "total_cases": 36,
+      "true_positives": 0,
+      "false_positives": 0,
+      "true_negatives": 18,
+      "false_negatives": 18,
+      "delta_vs_baseline": {
+        "delta_precision": -1.0,
+        "delta_recall": -1.0,
+        "delta_f1": -1.0,
+        "delta_asr": -0.5,
+        "delta_avg_time_ms": -0.22
+      },
+      "timestamp": "2026-10-14T12:36:48.119234",
+      "notes": "PatternDetector disabled → using mock (always NOT vulnerable)."
+    }
+  ]
+}

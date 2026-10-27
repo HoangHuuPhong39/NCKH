@@ -109,6 +109,27 @@ def build_chapter5(builder):
         "Trong đó, $\\mathcal{V}_{\\text{Scanner}}$ là tập hợp các lỗ hổng do AI Security Scanner phát hiện, "
         "và $\\mathcal{V}_{\\text{PyRIT}}$ là tập hợp các lỗ hổng do Microsoft PyRIT phát hiện trên cùng một hệ thống đích."
     )
+    builder.add_heading_2("5.3b. Mở Rộng Liên Minh Tích Hợp: Promptfoo, DeepTeam, Giskard OSS và IBM ART")
+    builder.add_p(
+        "Bên cạnh NVIDIA Garak và Microsoft PyRIT, nhằm đáp ứng trọn vẹn định hướng kiểm thử đa tầng từ LLM, RAG, Agent đến ML/DL truyền thống, "
+        "hệ thống đã phát triển thêm 4 bộ điều hợp (Integration Wrappers) chuẩn hóa trong thư mục `modules/integrations/`:"
+    )
+    builder.add_bullet(
+        "Tích hợp qua Node.js CLI (`npx promptfoo eval`), tự động sinh cấu hình YAML động để kiểm thử CI/CD cho các plugin prompt_injection, jailbreak, pii_extraction và system_prompt_leak.",
+        "1. PromptfooWrapper (modules/integrations/promptfoo_wrapper.py)"
+    )
+    builder.add_bullet(
+        "Kết nối với khung red-teaming của Confident AI (`python -m deepteam attack`), chuyên sâu đánh giá lỗ hổng Agent (excessive_agency) và nhiễm độc RAG (rag_injection).",
+        "2. DeepTeamWrapper (modules/integrations/deepteam_wrapper.py)"
+    )
+    builder.add_bullet(
+        "Đóng gói mô hình mục tiêu thành `giskard.Model` và chạy quét tự động `giskard.scan()` để phát hiện đồng thời ảo giác (hallucination), thiên lệch (stereotypes) và rò rỉ dữ liệu.",
+        "3. GiskardWrapper (modules/integrations/giskard_wrapper.py)"
+    )
+    builder.add_bullet(
+        "Tích hợp thư viện IBM Adversarial Robustness Toolbox (ART) hỗ trợ các thuật toán tấn công dựa trên đạo hàm (FGSM, PGD với tham số epsilon) và tấn công văn bản NLP (TextFooler) để đánh giá độ bền vững của tầng ML/DL.",
+        "4. ARTWrapper (modules/integrations/art_wrapper.py)"
+    )
 
     # -------------------------------------------------------------
     # 5.4. Bảng so sánh tính năng toàn diện

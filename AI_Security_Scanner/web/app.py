@@ -47,7 +47,13 @@ app = Flask(
     template_folder=os.path.join(BASE_DIR, "templates"),
     static_folder=os.path.join(BASE_DIR, "static"),
 )
-CORS(app)
+app.config["TEMPLATES_AUTO_RELOAD"] = True
+CORS(app, origins=[
+    "http://localhost:5000",
+    "http://127.0.0.1:5000",
+    "https://localhost:5000",
+    "https://127.0.0.1:5000",
+])
 
 @app.after_request
 def apply_security_headers(response):
@@ -76,7 +82,8 @@ SERVER_START_TIME = time.time()
 app_config = {
     "target_url": cfg.get("scanner.target_url", "http://localhost:11434"),
     "target_model": cfg.get("scanner.target_model", "llama3"),
-    "timeout": cfg.get("scanner.timeout", 60),
+    "timeout": cfg.get("scanner.timeout", 90),
+    "max_tokens": cfg.get("scanner.max_tokens", 80),
     "api_key": cfg.get("scanner.api_key", ""),
 }
 
@@ -87,7 +94,7 @@ MODULES_METADATA = {
         "owasp": "LLM01",
         "mitre": "AML.T0051",
         "severity": "HIGH",
-        "payloads_count": 12,
+        "payloads_count": 18,
         "icon": "🎯",
         "category": "exploits",
     },
@@ -97,7 +104,7 @@ MODULES_METADATA = {
         "owasp": "LLM01",
         "mitre": "AML.T0054",
         "severity": "CRITICAL",
-        "payloads_count": 6,
+        "payloads_count": 10,
         "icon": "🔓",
         "category": "exploits",
     },
@@ -117,7 +124,7 @@ MODULES_METADATA = {
         "owasp": "LLM02",
         "mitre": "AML.T0024",
         "severity": "HIGH",
-        "payloads_count": 6,
+        "payloads_count": 14,
         "icon": "🔍",
         "category": "exploits",
     },
@@ -127,7 +134,7 @@ MODULES_METADATA = {
         "owasp": "LLM10",
         "mitre": "AML.T0029",
         "severity": "MEDIUM",
-        "payloads_count": 4,
+        "payloads_count": 10,
         "icon": "💥",
         "category": "exploits",
     },
@@ -177,7 +184,7 @@ MODULES_METADATA = {
         "owasp": "LLM01",
         "mitre": "AML.T0054",
         "severity": "CRITICAL",
-        "payloads_count": 3,
+        "payloads_count": 5,
         "icon": "🪜",
         "category": "exploits",
     },
@@ -200,6 +207,26 @@ MODULES_METADATA = {
         "payloads_count": 6,
         "icon": "🔭",
         "category": "auxiliary",
+    },
+    "agent_testing": {
+        "name": "AI Agent Security & Sandbox Testing",
+        "description": "Kiểm thử lỗ hổng AI Agent trong môi trường Sandbox: Tool Injection, Privilege Escalation, Data Exfiltration.",
+        "owasp": "LLM06",
+        "mitre": "AML.T0048",
+        "severity": "CRITICAL",
+        "payloads_count": 7,
+        "icon": "🕵️",
+        "category": "exploits",
+    },
+    "ml_adversarial": {
+        "name": "ML/DL Adversarial Robustness",
+        "description": "Kiểm thử tính bền vững trước mẫu đối kháng: Homoglyph, Zero-Width, Unicode Normalization, Perturbation.",
+        "owasp": "LLM01",
+        "mitre": "AML.T0015",
+        "severity": "HIGH",
+        "payloads_count": 8,
+        "icon": "🛡️",
+        "category": "exploits",
     },
 }
 
@@ -246,7 +273,15 @@ def scan_worker(module_name: str, config: dict, scan_id: int, is_batch: bool = F
 
         detector = PatternDetector()
         from modules.detectors.llm_judge import LLMJudge
-        judge = LLMJudge(judge_client=client)
+        # Use a separate judge model to avoid confirmation bias (Zheng et al., 2023)
+        # Try to use a different model; fall back to same model if only one available
+        judge_model = cfg.get("scanner.judge_model", "")
+        if judge_model and judge_model != resolved_model:
+            judge = LLMJudge.create_with_separate_model(
+                api_url=config["target_url"], judge_model=judge_model
+            )
+        else:
+            judge = LLMJudge(judge_client=client)
 
         meta = MODULES_METADATA.get(module_name, {})
         display_name = meta.get("name", module_name)
@@ -306,41 +341,10 @@ def scan_worker(module_name: str, config: dict, scan_id: int, is_batch: bool = F
                 emit("progress", progress_data)
 
         else:
-            # Load attack module
-            if module_name == "prompt_injection":
-                from modules.exploits.prompt_injection import PromptInjection
-                module = PromptInjection()
-            elif module_name == "jailbreak":
-                from modules.exploits.jailbreak import JailbreakDAN
-                module = JailbreakDAN()
-            elif module_name == "prompt_leak":
-                from modules.exploits.prompt_leak import PromptLeak
-                module = PromptLeak()
-            elif module_name == "model_dos":
-                from modules.exploits.model_dos import ModelDoS
-                module = ModelDoS()
-            elif module_name == "sensitive_disclosure":
-                from modules.exploits.sensitive_disclosure import SensitiveDisclosure
-                module = SensitiveDisclosure()
-            elif module_name == "output_handling":
-                from modules.exploits.output_handling import OutputHandling
-                module = OutputHandling()
-            elif module_name == "misinformation":
-                from modules.exploits.misinformation import Misinformation
-                module = Misinformation()
-            elif module_name == "excessive_agency":
-                from modules.exploits.excessive_agency import ExcessiveAgency
-                module = ExcessiveAgency()
-            elif module_name == "rag_security":
-                from modules.exploits.rag_security import RAGSecurity
-                module = RAGSecurity()
-            elif module_name == "multiturn_jailbreak":
-                from modules.exploits.multiturn_jailbreak import MultiTurnJailbreak
-                module = MultiTurnJailbreak()
-            elif module_name == "model_fingerprint":
-                from modules.auxiliary.model_fingerprint import ModelFingerprint
-                module = ModelFingerprint()
-            else:
+            # ── Dynamic module loading via registry ──────────────────
+            from modules.registry import load_module
+            module = load_module(module_name)
+            if module is None:
                 emit("error", {"message": f"Module không tồn tại: {module_name}"})
                 return
 
@@ -348,6 +352,11 @@ def scan_worker(module_name: str, config: dict, scan_id: int, is_batch: bool = F
                 payloads = config["custom_payloads"]
             else:
                 payloads = getattr(module, "payloads", [])
+                if config.get("adaptive_mode"):
+                    from core.adaptive_generator import AdaptiveGenerator
+                    ag = AdaptiveGenerator(seed=42)
+                    payloads = ag.mutate_batch(list(payloads), max_variants_per_payload=1)
+                    emit("status", {"message": f"[*] [Adaptive Engine] Đã kích hoạt đột biến payload: mở rộng lên {len(payloads)} kịch bản.", "level": "info"})
             total_payloads = len(payloads)
             scan_status["total"] = total_payloads
 
@@ -433,11 +442,25 @@ def scan_worker(module_name: str, config: dict, scan_id: int, is_batch: bool = F
                 mitre = p.get("mitre", meta.get("mitre", "N/A"))
 
                 if is_vuln:
-                    save_finding(
+                    fid = save_finding(
                         scan_id, config["target_url"], module_name,
                         payload_text, response_text,
                         severity, risk_score, owasp, mitre
                     )
+                    try:
+                        from core.evidence_store import EvidenceStore
+                        EvidenceStore().record_evidence(
+                            finding_id=str(fid),
+                            payload=payload_text,
+                            response=response_text,
+                            module_name=module_name,
+                            detector_result=True,
+                            score=risk_score,
+                            model_version=resolved_model,
+                            run_id=f"scan_{scan_id}",
+                        )
+                    except Exception:
+                        pass
 
                 emit("finding", {
                     "index": i + 1,
@@ -524,42 +547,11 @@ def api_module_payloads(module_name):
     if module_name not in MODULES_METADATA:
         return jsonify({"error": f"Module {module_name} không tồn tại"}), 404
     try:
-        mod_obj = None
-        if module_name == "prompt_injection":
-            from modules.exploits.prompt_injection import PromptInjection
-            mod_obj = PromptInjection()
-        elif module_name == "jailbreak":
-            from modules.exploits.jailbreak import JailbreakDAN
-            mod_obj = JailbreakDAN()
-        elif module_name == "prompt_leak":
-            from modules.exploits.prompt_leak import PromptLeak
-            mod_obj = PromptLeak()
-        elif module_name == "sensitive_disclosure":
-            from modules.exploits.sensitive_disclosure import SensitiveDisclosure
-            mod_obj = SensitiveDisclosure()
-        elif module_name == "output_handling":
-            from modules.exploits.output_handling import OutputHandling
-            mod_obj = OutputHandling()
-        elif module_name == "misinformation":
-            from modules.exploits.misinformation import Misinformation
-            mod_obj = Misinformation()
-        elif module_name == "model_dos":
-            from modules.exploits.model_dos import ModelDoS
-            mod_obj = ModelDoS()
-        elif module_name == "excessive_agency":
-            from modules.exploits.excessive_agency import ExcessiveAgency
-            mod_obj = ExcessiveAgency()
-        elif module_name == "rag_security":
-            from modules.exploits.rag_security import RAGSecurity
-            mod_obj = RAGSecurity()
-        elif module_name == "multiturn_jailbreak":
-            from modules.exploits.multiturn_jailbreak import MultiTurnJailbreak
-            mod_obj = MultiTurnJailbreak()
-        elif module_name == "model_fingerprint":
-            from modules.auxiliary.model_fingerprint import ModelFingerprint
-            mod_obj = ModelFingerprint()
-        elif module_name == "port_scan":
-            return jsonify({"module": module_name, "payloads": []})
+        if module_name == "port_scan":
+            return jsonify({"module": module_name, "payloads": [], "count": 0})
+
+        from modules.registry import load_module
+        mod_obj = load_module(module_name)
 
         if mod_obj:
             payloads = getattr(mod_obj, "payloads", [])
@@ -688,8 +680,11 @@ def api_taxonomy():
     tax_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "taxonomy.json")
     if os.path.exists(tax_path):
         with open(tax_path, "r", encoding="utf-8") as f:
-            return jsonify(json.load(f))
-    return jsonify({"categories": []})
+            data = json.load(f)
+            if "categories" in data and "taxonomy" not in data:
+                data["taxonomy"] = {c.get("id", f"CAT_{i}"): c for i, c in enumerate(data["categories"])}
+            return jsonify(data)
+    return jsonify({"categories": [], "taxonomy": {}})
 
 
 @app.route("/api/config", methods=["GET"])
@@ -938,6 +933,7 @@ def api_clear_findings():
 
 @app.route("/api/stats", methods=["GET"])
 def api_stats():
+    # Return aggregated statistics with module severity breakdown
     stats = get_stats()
     return jsonify(stats)
 
@@ -994,6 +990,220 @@ def api_test_connection():
         "models": models,
         "resolved_model": resolved,
     })
+# ─────────────────────────────────────────────
+# Advanced NCKH Endpoints: Threat Model, Replay, Benchmark & OSS
+# ─────────────────────────────────────────────
+@app.route("/api/threat-model", methods=["POST"])
+def api_threat_model():
+    """Phân tích hồ sơ đe dọa (Threat Model & Attack Surface) cho hệ thống mục tiêu."""
+    data = request.get_json(silent=True) or {}
+    target_url = data.get("target_url", app_config["target_url"])
+    model_name = data.get("target_model", app_config["target_model"])
+    system_type = data.get("system_type", "auto")
+    try:
+        from core.threat_model import ThreatModel
+        tm = ThreatModel()
+        tm.profile_target(target_url=target_url, model_name=model_name, system_type=system_type)
+        report = tm.export_threat_model()
+        return jsonify({"success": True, "report": report})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route("/api/findings/replay", methods=["POST"])
+def api_finding_replay():
+    """Tái lập kiểm thử (Replay Test) một lỗ hổng để kiểm chứng tính tái lập (Reproducibility)."""
+    data = request.get_json(silent=True) or {}
+    payload_text = data.get("payload", "")
+    orig_response = data.get("original_response", "")
+    module_name = data.get("module_name", "prompt_injection")
+    live_replay = data.get("live", True)
+
+    if not payload_text:
+        return jsonify({"success": False, "error": "Thiếu payload để replay."}), 400
+
+    try:
+        from modules.detectors.pattern_match import PatternDetector
+        detector = PatternDetector()
+        t0 = time.perf_counter()
+
+        if live_replay:
+            client = SimpleLLMClient(
+                api_url=app_config["target_url"],
+                model_name=app_config["target_model"],
+                timeout=int(app_config.get("timeout", 30)),
+                api_key=app_config.get("api_key", ""),
+            )
+            replay_resp = client.send_prompt(payload_text)
+            if replay_resp.startswith("[-]") and orig_response and not orig_response.startswith("[-]"):
+                # Fallback sang offline verification nếu server LLM đang tắt
+                replay_resp = orig_response
+                mode_used = "Offline Evidence Verification (Target Offline)"
+            else:
+                mode_used = f"Live Target Replay ({client.resolve_model_name()})"
+        else:
+            replay_resp = orig_response
+            mode_used = "Offline Evidence Verification"
+
+        elapsed_ms = round((time.perf_counter() - t0) * 1000, 2)
+        is_vuln, reason, conf = detector.analyze(replay_resp, payload_text, module_name)
+        if conf == "LOW" and live_replay and not replay_resp.startswith("[-]"):
+                    from modules.detectors.llm_judge import LLMJudge
+                    judge_client = SimpleLLMClient(
+                        api_url=app_config["target_url"],
+                        model_name=app_config["target_model"],
+                        timeout=int(app_config.get("timeout", 30)),
+                        api_key=app_config.get("api_key", ""),
+                    )
+                    judge = LLMJudge(judge_client=judge_client)
+                    j_res = judge.evaluate(payload_text, replay_resp, module_name, pattern_result=(is_vuln, reason, conf))
+                    if j_res.get("judge_used"):
+                        is_vuln = j_res["is_exploited"]
+                        reason = f"[Tier-2 LLM-Judge] {j_res['reasoning']}"
+                        conf = f"JUDGE ({int(j_res['confidence']*100)}%)"
+        orig_words = set(orig_response.lower().split())
+        rep_words = set(replay_resp.lower().split())
+        similarity = len(orig_words & rep_words) / max(len(orig_words | rep_words), 1)
+        is_reproducible = bool(is_vuln or similarity >= 0.4)
+
+        return jsonify({
+            "success": True,
+            "mode": mode_used,
+            "replay_response": replay_resp,
+            "is_vulnerable": is_vuln,
+            "reason": reason,
+            "confidence": conf,
+            "similarity_score": round(similarity, 4),
+            "is_reproducible": is_reproducible,
+            "elapsed_ms": elapsed_ms,
+        })
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route("/api/benchmark/run", methods=["POST"])
+def api_benchmark_run():
+    """Chạy nhanh Benchmark (Standard 36 cases hoặc Tiếng Việt 62 cases) từ giao diện Web."""
+    data = request.get_json(silent=True) or {}
+    dataset_type = data.get("dataset", "vietnamese")
+    try:
+        from experiments.benchmark import Benchmarker, load_benchmark_dataset
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        if dataset_type == "vietnamese":
+            ds_path = os.path.join(project_root, "data", "vietnamese_benchmark.json")
+        elif dataset_type == "harmbench":
+            ds_path = os.path.join(project_root, "data", "harmbench_subset.json")
+        else:
+            ds_path = os.path.join(project_root, "data", "benchmark_dataset.json")
+
+        cases = load_benchmark_dataset(ds_path)
+        bm = Benchmarker(target_url=app_config["target_url"], model_name=app_config["target_model"])
+        results = bm.run_benchmark(test_cases=cases, live=False)
+
+        rows = []
+        tot_tp = tot_fp = tot_tn = tot_fn = 0
+        for r in results:
+            tot_tp += r.true_positives
+            tot_fp += r.false_positives
+            tot_tn += r.true_negatives
+            tot_fn += r.false_negatives
+            rows.append({
+                "module": r.module_name,
+                "total": r.total_cases,
+                "tp": r.true_positives,
+                "fp": r.false_positives,
+                "tn": r.true_negatives,
+                "fn": r.false_negatives,
+                "precision": r.precision,
+                "recall": r.recall,
+                "f1": r.f1_score,
+                "latency_ms": r.avg_response_time_ms,
+            })
+
+        prec = tot_tp / max(tot_tp + tot_fp, 1)
+        rec = tot_tp / max(tot_tp + tot_fn, 1)
+        f1 = (2 * prec * rec / max(prec + rec, 1e-9)) if (prec + rec) > 0 else 0.0
+
+        return jsonify({
+            "success": True,
+            "dataset": dataset_type,
+            "total_cases": len(cases),
+            "summary": {
+                "tp": tot_tp, "fp": tot_fp, "tn": tot_tn, "fn": tot_fn,
+                "precision": round(prec, 4),
+                "recall": round(rec, 4),
+                "f1": round(f1, 4),
+            },
+            "modules": rows,
+        })
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route("/api/integrations/status", methods=["GET"])
+def api_integrations_status():
+    """Trả về trạng thái của 6 bộ công cụ mã nguồn mở tích hợp (Nội dung 5)."""
+    from modules.integrations import (
+        GarakWrapper, PyRITWrapper, PromptfooWrapper,
+        DeepTeamWrapper, GiskardWrapper, ARTWrapper
+    )
+    tools = [
+        {
+            "id": "garak",
+            "name": "NVIDIA Garak",
+            "org": "NVIDIA Corporation (Apache 2.0)",
+            "scope": "LLM Probes (PromptInject, DAN, XSS, MalwareGen)",
+            "owasp": "LLM01, LLM05",
+            "installed": GarakWrapper(app_config["target_url"], app_config["target_model"]).is_available(),
+            "cmd": "pip install garak",
+        },
+        {
+            "id": "pyrit",
+            "name": "Microsoft PyRIT",
+            "org": "Microsoft AI Red Team (MIT)",
+            "scope": "Multi-Turn Orchestration & Crescendo Attack",
+            "owasp": "LLM01, LLM02, LLM06",
+            "installed": PyRITWrapper(app_config["target_url"], app_config["target_model"]).is_available(),
+            "cmd": "pip install pyrit",
+        },
+        {
+            "id": "promptfoo",
+            "name": "Promptfoo Red-Team",
+            "org": "Promptfoo Open Source (MIT)",
+            "scope": "CI/CD YAML Evaluation & Red-Teaming Plugins",
+            "owasp": "LLM01, LLM02, LLM07",
+            "installed": PromptfooWrapper().is_available(),
+            "cmd": "npm install -g promptfoo",
+        },
+        {
+            "id": "deepteam",
+            "name": "Confident AI DeepTeam",
+            "org": "Confident AI (Apache 2.0)",
+            "scope": "Agentic AI Security & RAG Poisoning",
+            "owasp": "LLM01, LLM06, LLM08",
+            "installed": DeepTeamWrapper().is_available(),
+            "cmd": "pip install deepteam",
+        },
+        {
+            "id": "giskard",
+            "name": "Giskard OSS Scanner",
+            "org": "Giskard AI (Apache 2.0)",
+            "scope": "Hallucination, Bias, Stereotypes & Data Leakage",
+            "owasp": "LLM02, LLM09",
+            "installed": GiskardWrapper().is_available(),
+            "cmd": "pip install giskard",
+        },
+        {
+            "id": "art",
+            "name": "IBM Adversarial Robustness Toolbox (ART)",
+            "org": "Trusted-AI / Linux Foundation (MIT)",
+            "scope": "ML/DL Evasion (FGSM, PGD, TextFooler)",
+            "owasp": "MITRE AML.T0015 / AML.T0043",
+            "installed": ARTWrapper().is_available(),
+            "cmd": "pip install adversarial-robustness-toolbox",
+        },
+    ]
+    return jsonify({"tools": tools})
 
 
 # ─────────────────────────────────────────────

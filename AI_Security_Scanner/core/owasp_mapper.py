@@ -30,6 +30,8 @@ _MODULE_TO_OWASP: dict[str, str] = {
     "rag_security":         "LLM08",
     # LLM09 – Misinformation
     "misinformation":       "LLM09",
+    "agent_testing":        "LLM06",
+    "ml_adversarial":       "LLM01",
     # LLM10 – Unbounded Consumption (≠ LLM04 which is Data Poisoning!)
     "model_dos":            "LLM10",
     # Infrastructure & Auxiliary – not in OWASP scope

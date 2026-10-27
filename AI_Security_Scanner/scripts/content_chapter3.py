@@ -122,6 +122,25 @@ def build_chapter3(builder):
         "(Recursive expansion), hoặc yêu cầu giải các bài toán tổ hợp có độ phức tạp thuật toán cực lớn $O(2^n)$ hoặc $O(n!)$. Mục tiêu "
         "là chiếm dụng toàn bộ bộ nhớ GPU VRAM, làm nghẽn hàng đợi suy luận (inference queue) và gây tê liệt dịch vụ đối với người dùng hợp lệ."
     )
+    builder.add_heading_3("3.2.7. Bộ Sinh Payload Thích Nghi (Adaptive Feedback Loop) và Chuẩn hóa YAML DSL")
+    builder.add_p(
+        "Để giải quyết khoảng trống G2 (các công cụ truyền thống chỉ dùng tập payload tĩnh), đề tài thiết kế module `core/adaptive_generator.py` "
+        "kế thừa từ `PayloadMutator` (`core/mutation.py`) và kết hợp cùng trình nạp kịch bản `core/testcase_loader.py` (hỗ trợ chỉ thị `!include` và kiểm tra kiểu Pydantic). "
+        "Hệ thống vận hành theo vòng lặp phản hồi thích nghi 4 bước: (1) Khởi tạo payload cơ sở từ thư viện YAML DSL -> (2) Gửi đến Target Adapter -> "
+        "(3) Two-Tier Detector thẩm định phản hồi -> (4) Nếu mô hình từ chối (`detector_result = False`), hệ thống tự động xoay vòng chiến lược khám phá (Explore); "
+        "nếu phát hiện dấu hiệu rò rỉ (`detector_result = True`), hệ thống củng cố (Reinforce) để khai thác sâu hơn."
+    )
+    mutation_rows = [
+        ("Nhóm 1: Đột biến Ngữ nghĩa (Semantic)", "fictional_framing, authority_impersonation, DAN/AIM/STAN roleplay", "Đặt lệnh tấn công vào ngữ cảnh tiểu thuyết giả định, giả danh quản trị viên cấp cao hoặc chế độ Developer Mode."),
+        ("Nhóm 2: Mã hóa & Biểu diễn (Encoding)", "base64_wrap, rot13, unicode_homoglyph, case_variant", "Mã hóa Base64/ROT13 kèm lệnh giải mã, thay thế ký tự Latin bằng ký tự Cyrillic đồng hình (Homoglyph)."),
+        ("Nhóm 3: Cấu trúc & Đa ngôn ngữ (Structural)", "whitespace_inject, separator_inject, markdown_wrap, json_wrap, multilingual_wrap, nested_instruction, token_smuggling", "Chèn ký tự không độ rộng (Zero-Width Space U+200B), gói trong khối JSON/Markdown, lồng ghép chỉ thị và chuyển ngữ Việt-Pháp-Tây Ban Nha.")
+    ]
+    builder.add_table(
+        ["Nhóm Chiến lược Đột biến", "Các Kỹ thuật Hiện thực trong Code (13 Strategies)", "Cơ chế Vượt rào Phòng vệ (Guardrail Evasion)"],
+        mutation_rows,
+        "Bảng 3.1b: Phân loại 13 chiến lược đột biến trong Bộ sinh Payload thích nghi (AdaptiveGenerator)",
+        [1.8, 2.2, 3.0]
+    )
 
     # -------------------------------------------------------------
     # 3.3. Tầng phát hiện thứ nhất: Nhận diện mẫu quy tắc

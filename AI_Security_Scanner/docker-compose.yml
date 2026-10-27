@@ -7,18 +7,23 @@ services:
       dockerfile: Dockerfile
     container_name: ai_security_scanner
     restart: unless-stopped
+    user: "1000:1000"
+    read_only: true
+    security_opt:
+      - "no-new-privileges:true"
     ports:
       - "5000:5000"
     environment:
       - SCANNER_TARGET_URL=http://ollama:11434
       - SCANNER_TARGET_MODEL=llama3
       - SCANNER_TIMEOUT=60
-      - SCANNER_REQUIRE_AUTH=false
+      - SCANNER_REQUIRE_AUTH=true
       - LOG_LEVEL=INFO
     volumes:
       - ./scanner.db:/app/scanner.db
       - ./reports:/app/reports
       - ./logs:/app/logs
+      - /tmp:/tmp
     depends_on:
       - ollama
     networks:

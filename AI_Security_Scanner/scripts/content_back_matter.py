@@ -74,8 +74,9 @@ def build_back_matter(builder):
         "Hạn chế 2: "
     )
     builder.add_bullet(
-        "Kỹ thuật sinh payload đối kháng chủ yếu dựa trên cơ sở mẫu (Template-based): Các payload tuy rất đa dạng và bao phủ tốt các kịch bản nổi tiếng, "
-        "nhưng chưa được tích hợp thuật toán tự động tiến hóa thích ứng (Adaptive Genetic Algorithm) để tự sinh đột biến chuỗi token theo thời gian thực.",
+        "Tối ưu hóa hộp trắng dựa trên Gradient trực tiếp trên LLM tỷ tham số: Bộ sinh thích nghi hiện tại hoạt động theo cơ chế hộp đen (Black-box Feedback Loop) "
+        "và đột biến ngữ nghĩa/cấu trúc để đảm bảo tốc độ thực thi nhanh; việc tính toán Gradient trực tiếp trên trọng số LLM (như GCG hộp trắng) đòi hỏi quyền truy cập "
+        "trọng số nội bộ và tài nguyên tính toán lớn.",
         "Hạn chế 3: "
     )
 

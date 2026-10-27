@@ -208,5 +208,20 @@ def generate_chapter1(b):
         "Đề tài này được xây dựng để lấp đầy chính xác khoảng trống học thuật và thực tiễn đó.",
         "KHOẢNG TRỐNG HỌC THUẬT VÀ ĐÓNG GÓP CỦA ĐỀ TÀI"
     )
+    gap_rows = [
+        ("G1 – Kiểm thử đa tầng", "Các công cụ hiện tại chỉ tập trung vào LLM đơn lẻ; thiếu mô hình thống nhất xuyên suốt từ Input → LLM → RAG → Agent → Tool/API → Data.", "Xây dựng kiến trúc 14 modules đa tầng + ThreatModel + AgentSandbox."),
+        ("G2 – Sinh testcase thích nghi", "Đa số công cụ dùng tập probe tĩnh cố định; thiếu cơ chế học từ phản hồi của mục tiêu để tự động chuyển đổi chiến lược tấn công.", "Phát triển AdaptiveGenerator với vòng lặp phản hồi và 13 chiến lược đột biến."),
+        ("G3 – Threat model thống nhất", "Thiếu ánh xạ tự động và nhất quán giữa loại hình hệ thống, bề mặt tấn công, lỗ hổng OWASP/MITRE, bằng chứng và mức độ tác động.", "Hiện thực SystemProfiler & ThreatModel tự động sinh hồ sơ đe dọa theo chuẩn JSON Schema."),
+        ("G4 – Đo lường định lượng", "Các metric rời rạc giữa các công cụ; thiếu công thức chấm điểm rủi ro chuẩn hóa tương thích CVSS và các chỉ số chuyên biệt cho RAG/Agent.", "Xây dựng công thức toán học CVSS-like (ISS, Impact, Exploitability) & ExtendedMetrics (RMR, URR, TAR, DER)."),
+        ("G5 – An toàn RAG & Agent", "Không gian tấn công thay đổi mạnh khi có Vector DB, Memory và Function Calling; thiếu môi trường hộp cát cô lập để kiểm thử an toàn.", "Xây dựng module rag_security, agent_testing và môi trường giả lập AgentSandbox 5 công cụ."),
+        ("G6 – Tự động hóa & Tái lập", "Thiếu pipeline khép kín từ profiling → sinh testcase → thực thi → phân tích hai tầng → lưu trữ bằng chứng có thể tái lập (Replay).", "Thiết kế kiến trúc Two-Tier Hybrid Detector kết hợp EvidenceStore (SQLite WAL) hỗ trợ Replay Test."),
+        ("G7 – Benchmark Tiếng Việt", "Thiếu hoàn toàn bộ dữ liệu chuẩn hóa có ngữ cảnh tiếng Việt (ngân hàng, y tế, pháp lý, từ lóng, không dấu) để kiểm định guardrail nội địa.", "Xây dựng bộ Vietnamese Benchmark gồm 62 kịch bản chuyên sâu và kiểm định thống kê Cross-lingual Gap.")
+    ]
+    b.add_academic_table(
+        headers=["Khoảng trống khoa học", "Mô tả hạn chế của các nghiên cứu hiện có", "Giải pháp đóng góp của Đề tài"],
+        rows=gap_rows,
+        caption="Tổng hợp 7 khoảng trống khoa học (G1 – G7) và giải pháp giải quyết trong đề tài",
+        col_widths=[1.6, 2.7, 2.7]
+    )
 
     b.add_page_break()

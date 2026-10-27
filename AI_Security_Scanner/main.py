@@ -77,6 +77,26 @@ MODULES_METADATA = {
         "icon": "📤",
         "category": "exploits",
     },
+    "agent_testing": {
+        "name": "AI Agent Security & Sandbox Testing",
+        "description": "Kiểm thử lỗ hổng AI Agent trong môi trường Sandbox: Tool Injection, Privilege Escalation, Data Exfiltration.",
+        "owasp": "LLM06",
+        "mitre": "AML.T0048",
+        "severity": "CRITICAL",
+        "payloads_count": 7,
+        "icon": "🕵️",
+        "category": "exploits",
+    },
+    "ml_adversarial": {
+        "name": "ML/DL Adversarial Robustness",
+        "description": "Kiểm thử tính bền vững trước mẫu đối kháng: Homoglyph, Zero-Width, Unicode Normalization, Perturbation.",
+        "owasp": "LLM01",
+        "mitre": "AML.T0015",
+        "severity": "HIGH",
+        "payloads_count": 8,
+        "icon": "🛡️",
+        "category": "exploits",
+    },
     "sensitive_disclosure": {
         "name": "Sensitive Information Disclosure",
         "description": "Kiểm thử rò rỉ PII, thông tin xác thực, dữ liệu huấn luyện nhạy cảm.",
@@ -450,43 +470,11 @@ class AIScannerCLI:
             console.print(f"[dim]{traceback.format_exc()}[/dim]")
 
     def _load_module(self, name):
-        try:
-            if name == "prompt_injection":
-                from modules.exploits.prompt_injection import PromptInjection
-                return PromptInjection()
-            elif name == "jailbreak":
-                from modules.exploits.jailbreak import JailbreakDAN
-                return JailbreakDAN()
-            elif name == "prompt_leak":
-                from modules.exploits.prompt_leak import PromptLeak
-                return PromptLeak()
-            elif name == "model_dos":
-                from modules.exploits.model_dos import ModelDoS
-                return ModelDoS()
-            elif name == "sensitive_disclosure":
-                from modules.exploits.sensitive_disclosure import SensitiveDisclosure
-                return SensitiveDisclosure()
-            elif name == "output_handling":
-                from modules.exploits.output_handling import OutputHandling
-                return OutputHandling()
-            elif name == "misinformation":
-                from modules.exploits.misinformation import Misinformation
-                return Misinformation()
-            elif name == "excessive_agency":
-                from modules.exploits.excessive_agency import ExcessiveAgency
-                return ExcessiveAgency()
-            elif name == "rag_security":
-                from modules.exploits.rag_security import RAGSecurity
-                return RAGSecurity()
-            elif name == "multiturn_jailbreak":
-                from modules.exploits.multiturn_jailbreak import MultiTurnJailbreak
-                return MultiTurnJailbreak()
-            elif name == "model_fingerprint":
-                from modules.auxiliary.model_fingerprint import ModelFingerprint
-                return ModelFingerprint()
-        except ImportError as e:
-            console.print(f"[red]Không thể load module {name}: {e}[/red]")
-        return None
+        from modules.registry import load_module
+        mod = load_module(name)
+        if mod is None:
+            console.print(f"[red]Không thể load module {name}[/red]")
+        return mod
 
     # ──────────────────────────────────────────
     # Command: show findings

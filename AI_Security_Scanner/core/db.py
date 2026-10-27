@@ -268,6 +268,18 @@ def get_stats() -> dict:
     )
     by_module = {row["module_name"]: row["cnt"] for row in cursor.fetchall()}
 
+    # By module and severity (for stacked bar analytics)
+    cursor.execute(
+        "SELECT module_name, severity, COUNT(*) AS cnt FROM findings GROUP BY module_name, severity"
+    )
+    by_module_severity = {}
+    for row in cursor.fetchall():
+        m_name = row["module_name"]
+        sev_name = row["severity"]
+        if m_name not in by_module_severity:
+            by_module_severity[m_name] = {}
+        by_module_severity[m_name][sev_name] = row["cnt"]
+
     # Recent scans (last 5)
     cursor.execute(
         "SELECT * FROM scans ORDER BY started_at DESC LIMIT 5"
@@ -279,6 +291,7 @@ def get_stats() -> dict:
         "total_findings": total_findings,
         "by_severity": by_severity,
         "by_module": by_module,
+        "by_module_severity": by_module_severity,
         "recent_scans": recent_scans,
     }
 
