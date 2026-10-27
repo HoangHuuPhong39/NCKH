@@ -190,3 +190,32 @@ def test_api_incidents_endpoint(client):
     assert "count" in data
 
 
+def test_api_connection_test_model_validation(client):
+    """Kiểm tra /api/connection/test xác thực model tồn tại trên Ollama và từ chối model không cài đặt."""
+    from unittest.mock import patch, MagicMock
+
+    # Giả lập Ollama trả về danh sách model: llama3:latest, qwen2.5:latest
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.raise_for_status.return_value = None
+    mock_resp.json.return_value = {
+        "models": [{"name": "llama3:latest"}, {"name": "qwen2.5:latest"}]
+    }
+
+    with patch("requests.Session.get", return_value=mock_resp):
+        # 1. Model hợp lệ (cần auto-map)
+        res1 = client.post("/api/connection/test", json={"url": "http://localhost:11434", "model": "llama3"})
+        assert res1.status_code == 200
+        d1 = res1.get_json()
+        assert d1["success"] is True
+        assert d1["resolved_model"] == "llama3:latest"
+
+        # 2. Model không tồn tại trong danh sách
+        res2 = client.post("/api/connection/test", json={"url": "http://localhost:11434", "model": "unknown_ai_model"})
+        assert res2.status_code == 200
+        d2 = res2.get_json()
+        assert d2["success"] is False
+        assert "chưa được cài đặt" in d2["message"]
+
+
+

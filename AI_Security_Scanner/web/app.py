@@ -985,6 +985,16 @@ def api_test_connection():
     ok, msg = client.test_connection()
     models = getattr(client, "discovered_models", []) or client.list_models()
     resolved = client.resolve_model_name()
+
+    # Kiểm tra tính khả dụng thực tế của mô hình trên target
+    if ok and not ("openai" in url.lower() or "api.openai" in url.lower()):
+        if isinstance(models, list) and len(models) == 0:
+            ok = False
+            msg = "Ollama đang chạy nhưng chưa phát hiện mô hình nào được cài đặt (ollama list rỗng). Vui lòng chạy 'ollama pull <model>'."
+        elif isinstance(models, list) and len(models) > 0 and resolved not in models:
+            ok = False
+            msg = f"Mô hình '{model}' chưa được cài đặt trên Ollama. Các mô hình hiện có: {', '.join(models)}"
+
     return jsonify({
         "success": ok,
         "message": msg,

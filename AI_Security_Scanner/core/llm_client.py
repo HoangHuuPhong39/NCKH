@@ -379,6 +379,9 @@ class SimpleLLMClient:
                         return False, "OpenAI API Key không hợp lệ (401 Unauthorized)."
                 except Exception:
                     pass
+            else:
+                if isinstance(models, list) and len(models) > 0 and resolved not in models:
+                    return False, f"Model '{self.model_name}' chưa được cài đặt trên target. Các model hiện có: {', '.join(models)}"
 
             return True, "Connected"
         except requests.exceptions.ConnectionError as exc:
