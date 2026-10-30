@@ -92,48 +92,89 @@ The scanner directly maps detected vulnerabilities to industry standards:
 
 ## 🏛️ System Architecture
 
+### High-Level Architecture Flow
+
+```text
+  ┌────────────────────────────────────────────────────────────────────────────────────────┐
+  │                                     CONTROL LAYER                                      │
+  │     [ 🖥️ Enterprise Web UI (Port 5000) ]     │     [ 💻 Metasploit-Style CLI ]        │
+  └───────────────────────────┬────────────────────────────────────────┬───────────────────┘
+                              ▼                                        ▼
+  ┌────────────────────────────────────────────────────┐  ┌────────────────────────────────┐
+  │            ATTACK ORCHESTRATION ENGINE             │  │       TARGET INTERFACES        │
+  │  • Threat Profiler (MITRE ATLAS & OWASP LLM)       │  │  • 🦙 Local Ollama (Llama 3,   │
+  │  • Adaptive Generator (Feedback-guided Mutations)  │─►│       Mistral, Qwen, DeepSeek) │
+  │  • Mutation Engine (Cipher, Token Bypass, Obfusc)  │  │  • 🌐 Cloud API (OpenAI-compat)│
+  │  • Declarative YAML DSL (62+ VN Domain Benchmarks) │  │  • 📦 Agent Mock Sandbox & RAG │
+  └────────────────────────────────────────────────────┘  └────────────────┬───────────────┘
+                                                                           │ (Raw Traces)
+                                                                           ▼
+  ┌────────────────────────────────────────────────────────────────────────────────────────┐
+  │                           DUAL-STAGE EVALUATION & INTELLIGENCE                         │
+  │  [ ⚡ Stage 1: Regex & Heuristic Signatures ] ──► [ 🧠 Stage 2: LLM-as-a-Judge Evaluator ]
+  │                                      │                                                 │
+  │                                      ▼                                                 │
+  │  [ 📊 Quantitative Risk Engine ] ──► [ 💾 Evidence Store & Replay ] ──► [ 📑 Audit Reports ]
+  │    • ASR (Attack Success Rate)           • SQLite Full Audit Trail           • Live HTML 
+  │    • RMR (Retrieval Manipulation)        • Non-destructive Replay            • JSON Telemetry
+  │    • TAR (Tool Abuse Rate)                                                             │
+  └────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Interactive Pipeline Diagram
+
 ```mermaid
-flowchart TD
-    subgraph UI ["User Interfaces"]
-        WEB["Enterprise Web UI (Port 5000)"]
-        CLI["Metasploit-Style CLI"]
+flowchart LR
+    subgraph ORCH ["1. Attack Orchestration"]
+        direction TB
+        CTRL["🖥️ Web UI / CLI Console"]
+        DSL["📜 YAML Attack DSL<br/>(62+ VN Benchmarks)"]
+        AG["⚡ Adaptive Generator"]
+        MUT["🔄 Mutation Engine"]
+        
+        CTRL --> AG
+        DSL --> AG
+        AG <--> MUT
     end
 
-    subgraph CoreEngine ["Core Evaluation Engine"]
-        TM["Threat Model Profiler"]
-        DSL["Testcase Loader (YAML DSL)"]
-        AG["Adaptive Attack Generator"]
-        MUT["Mutation Engine"]
+    subgraph EXEC ["2. Target Execution"]
+        direction TB
+        OLLAMA["🦙 Local Ollama<br/>(Llama 3, Mistral, Qwen)"]
+        API["🌐 Cloud APIs<br/>(OpenAI Compatible)"]
+        SBX["📦 Agent Sandbox<br/>(Mock Tools & RAG DB)"]
     end
 
-    subgraph Targets ["Target Interfaces"]
-        OLLAMA["Local LLM (Ollama: Llama3, Mistral, Qwen)"]
-        OPENAI["API Target (OpenAI / Compatible)"]
-        SANDBOX["Agent Mock Sandbox"]
+    subgraph EVAL ["3. Detection & Evidence"]
+        direction TB
+        D1["⚡ L1: Pattern Matcher"]
+        D2["🧠 L2: LLM-as-a-Judge"]
+        SCORER["📊 Risk Scorer & Metrics"]
+        STORE[("💾 SQLite Evidence & Replay")]
+        REP["📑 Interactive Audit Report"]
+
+        D1 --> D2 --> SCORER --> STORE --> REP
     end
 
-    subgraph Evaluation ["Detection & Scoring"]
-        DET1["Stage 1: Regex & Heuristic Pattern Match"]
-        DET2["Stage 2: LLM-as-a-Judge Validator"]
-        SCORER["Risk Scoring & Metrics (ASR, RMR, TAR)"]
-    end
+    AG --> OLLAMA
+    AG --> API
+    AG --> SBX
 
-    subgraph Storage ["Evidence & Persistence"]
-        DB[("SQLite Storage")]
-        EV["Evidence Store & Replay Engine"]
-        REP["HTML / JSON Reports"]
-    end
+    OLLAMA --> D1
+    API --> D1
+    SBX --> D1
 
-    UI --> CoreEngine
-    DSL --> AG
-    TM --> AG
-    AG <--> MUT
-    AG --> Targets
-    Targets --> Evaluation
-    DET1 --> DET2
-    DET2 --> SCORER
-    SCORER --> Storage
-    Storage --> REP
+    style ORCH fill:#0f172a,stroke:#38bdf8,stroke-width:2px,stroke-dasharray: 4 4,rx:12
+    style EXEC fill:#0f172a,stroke:#818cf8,stroke-width:2px,stroke-dasharray: 4 4,rx:12
+    style EVAL fill:#0f172a,stroke:#34d399,stroke-width:2px,stroke-dasharray: 4 4,rx:12
+
+    classDef default fill:#1e293b,stroke:#475569,stroke-width:1.5px,color:#f8fafc,font-weight:600,rx:8;
+    classDef cyanNode fill:#0369a1,stroke:#38bdf8,stroke-width:2px,color:#ffffff,font-weight:bold,rx:8;
+    classDef purpleNode fill:#4c1d95,stroke:#a78bfa,stroke-width:2px,color:#ffffff,font-weight:bold,rx:8;
+    classDef greenNode fill:#064e3b,stroke:#34d399,stroke-width:2px,color:#ffffff,font-weight:bold,rx:8;
+
+    class CTRL,AG cyanNode;
+    class OLLAMA,API,SBX purpleNode;
+    class D2,SCORER,STORE,REP greenNode;
 ```
 
 ---
