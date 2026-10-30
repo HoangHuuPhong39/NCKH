@@ -92,37 +92,14 @@ The scanner directly maps detected vulnerabilities to industry standards:
 
 ## 🏛️ System Architecture
 
-<p align="center">
-  <img src="AI_Security_Scanner/docs/architecture.svg" alt="AI Security TestKit System Architecture" width="100%"/>
-</p>
-
-### High-Level Architecture Flow
-
-```text
-  ┌────────────────────────────────────────────────────────────────────────────────────────┐
-  │                                     CONTROL LAYER                                      │
-  │     [ 🖥️ Enterprise Web UI (Port 5000) ]     │     [ 💻 Metasploit-Style CLI ]        │
-  └───────────────────────────┬────────────────────────────────────────┬───────────────────┘
-                              ▼                                        ▼
-  ┌────────────────────────────────────────────────────┐  ┌────────────────────────────────┐
-  │            ATTACK ORCHESTRATION ENGINE             │  │       TARGET INTERFACES        │
-  │  • Threat Profiler (MITRE ATLAS & OWASP LLM)       │  │  • 🦙 Local Ollama (Llama 3,   │
-  │  • Adaptive Generator (Feedback-guided Mutations)  │─►│       Mistral, Qwen, DeepSeek) │
-  │  • Mutation Engine (Cipher, Token Bypass, Obfusc)  │  │  • 🌐 Cloud API (OpenAI-compat)│
-  │  • Declarative YAML DSL (62+ VN Domain Benchmarks) │  │  • 📦 Agent Mock Sandbox & RAG │
-  └────────────────────────────────────────────────────┘  └────────────────┬───────────────┘
-                                                                           │ (Raw Traces)
-                                                                           ▼
-  ┌────────────────────────────────────────────────────────────────────────────────────────┐
-  │                           DUAL-STAGE EVALUATION & INTELLIGENCE                         │
-  │  [ ⚡ Stage 1: Regex & Heuristic Signatures ] ──► [ 🧠 Stage 2: LLM-as-a-Judge Evaluator ]
-  │                                      │                                                 │
-  │                                      ▼                                                 │
-  │  [ 📊 Quantitative Risk Engine ] ──► [ 💾 Evidence Store & Replay ] ──► [ 📑 Audit Reports ]
-  │    • ASR (Attack Success Rate)           • SQLite Full Audit Trail           • Live HTML 
-  │    • RMR (Retrieval Manipulation)        • Non-destructive Replay            • JSON Telemetry
-  │    • TAR (Tool Abuse Rate)                                                             │
-  └────────────────────────────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    Config["Testcases & Config (YAML)"] --> Generator["Attack Generator"]
+    UI["Web UI / CLI Scanner"] --> Generator
+    Generator --> Target["Target System (LLM / RAG / Agent)"]
+    Target --> Detector["Hybrid Detector (Regex + LLM Judge)"]
+    Detector --> Scorer["Risk Scoring & Evidence Store"]
+    Scorer --> Report["Security Report (HTML / JSON)"]
 ```
 
 ---
