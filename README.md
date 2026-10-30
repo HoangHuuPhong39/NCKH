@@ -126,64 +126,67 @@ The scanner directly maps detected vulnerabilities to industry standards:
 ```mermaid
 flowchart TD
     subgraph UI ["User Interfaces"]
-        WEB["🖥️ Enterprise Web UI (Port 5000)"]
-        CLI["💻 Metasploit-Style CLI"]
+        direction LR
+        WEB["🖥️ Enterprise Web UI<br/>Port 5000"]
+        CLI["💻 Metasploit-Style<br/>Interactive CLI"]
     end
 
     subgraph CORE ["Core Evaluation Engine"]
-        TM["🎯 Threat Model Profiler"]
-        DSL["📜 Testcase Loader (YAML DSL)"]
-        AG["⚡ Adaptive Attack Generator"]
-        MUT["🔄 Mutation Engine"]
+        direction TB
+        TM["🎯 Threat Profiler<br/>MITRE ATLAS"]
+        DSL["📜 Testcase Loader<br/>YAML Test DSL"]
+        MUT["🔄 Mutation Engine<br/>Payload Obfuscator"]
+        AG["⚡ Adaptive Attack Generator<br/>Automated Feedback Loop"]
 
         TM --> AG
         DSL --> AG
-        AG <--> MUT
+        MUT --> AG
     end
 
     subgraph TARGETS ["Target Interfaces"]
-        SBX["📦 Agent Mock Sandbox & RAG"]
-        OLLAMA["🦙 Local LLM (Ollama: Llama3, Mistral)"]
-        API["🌐 Cloud API (OpenAI Compatible)"]
+        direction LR
+        SBX["📦 Agent Sandbox<br/>Mock Tools & RAG"]
+        OLLAMA["🦙 Local Ollama<br/>Llama3, Mistral, Qwen"]
+        API["🌐 Cloud APIs<br/>OpenAI & Custom"]
     end
 
     subgraph DETECT ["Detection & Scoring"]
-        DET1["⚡ Stage 1: Regex & Heuristic Pattern Match"]
-        DET2["🧠 Stage 2: LLM-as-a-Judge Validator"]
-        SCORER["📊 Risk Scoring & Metrics (ASR, RMR, TAR)"]
+        direction TB
+        DET1["⚡ Stage 1: Heuristics<br/>Regex & Pattern Match"]
+        DET2["🧠 Stage 2: LLM Judge<br/>Evaluator LLM Audit"]
+        SCORER["📊 Risk Scorer<br/>ASR, RMR, TAR Metrics"]
 
         DET1 --> DET2 --> SCORER
     end
 
     subgraph STORAGE ["Evidence & Persistence"]
-        DB[("💾 SQLite Database")]
-        EV["🔍 Evidence Store & Replay Engine"]
-        REP["📑 HTML / JSON Audit Reports"]
+        direction LR
+        DB[("💾 Findings DB<br/>SQLite Storage")]
+        EV["🔍 Evidence Store<br/>Replay Session Log"]
+        REP["📑 Report Engine<br/>HTML & JSON Audit"]
     end
 
-    %% Direct Node-to-Node Connections (Symmetrical & Aligned)
+    %% Symmetrical node-to-node routing
     WEB & CLI --> AG
     AG --> SBX & OLLAMA & API
     SBX & OLLAMA & API --> DET1
     SCORER --> DB & EV & REP
 
     %% Container & Node Styling
-    style UI fill:#f8fafc,stroke:#94a3b8,stroke-width:1.5px,rx:8
-    style CORE fill:#f8fafc,stroke:#94a3b8,stroke-width:1.5px,rx:8
-    style TARGETS fill:#f8fafc,stroke:#94a3b8,stroke-width:1.5px,rx:8
-    style DETECT fill:#f8fafc,stroke:#94a3b8,stroke-width:1.5px,rx:8
-    style STORAGE fill:#f8fafc,stroke:#94a3b8,stroke-width:1.5px,rx:8
+    style UI fill:#f8fafc,stroke:#94a3b8,stroke-width:1.5px,rx:10
+    style CORE fill:#f8fafc,stroke:#94a3b8,stroke-width:1.5px,rx:10
+    style TARGETS fill:#f8fafc,stroke:#94a3b8,stroke-width:1.5px,rx:10
+    style DETECT fill:#f8fafc,stroke:#94a3b8,stroke-width:1.5px,rx:10
+    style STORAGE fill:#f8fafc,stroke:#94a3b8,stroke-width:1.5px,rx:10
 
-    classDef default fill:#ffffff,stroke:#64748b,stroke-width:1.5px,color:#0f172a,rx:6;
-    classDef highlight fill:#eff6ff,stroke:#2563eb,stroke-width:2px,color:#1e3a8a,font-weight:bold,rx:6;
-    classDef targetNode fill:#f0fdf4,stroke:#16a34a,stroke-width:2px,color:#14532d,font-weight:bold,rx:6;
-    classDef judgeNode fill:#fdf4ff,stroke:#a855f7,stroke-width:2px,color:#581c87,font-weight:bold,rx:6;
-    classDef storeNode fill:#faf5ff,stroke:#7c3aed,stroke-width:2px,color:#4c1d95,font-weight:bold,rx:6;
+    classDef default fill:#ffffff,stroke:#64748b,stroke-width:1.5px,color:#0f172a,rx:8;
+    classDef blueCard fill:#f0f9ff,stroke:#0284c7,stroke-width:2px,color:#0369a1,font-weight:bold,rx:8;
+    classDef greenCard fill:#f0fdf4,stroke:#16a34a,stroke-width:2px,color:#15803d,font-weight:bold,rx:8;
+    classDef purpleCard fill:#faf5ff,stroke:#9333ea,stroke-width:2px,color:#7e22ce,font-weight:bold,rx:8;
 
-    class WEB,CLI,AG highlight;
-    class SBX,OLLAMA,API targetNode;
-    class DET1,DET2,SCORER judgeNode;
-    class DB,EV,REP storeNode;
+    class WEB,CLI,AG,TM,DSL,MUT blueCard;
+    class SBX,OLLAMA,API greenCard;
+    class DET1,DET2,SCORER,DB,EV,REP purpleCard;
 ```
 
 ---
