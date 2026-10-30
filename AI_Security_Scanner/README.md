@@ -92,6 +92,10 @@ The scanner directly maps detected vulnerabilities to industry standards:
 
 ## 🏛️ System Architecture
 
+<p align="center">
+  <img src="AI_Security_Scanner/docs/architecture.svg" alt="AI Security TestKit System Architecture" width="100%"/>
+</p>
+
 ### High-Level Architecture Flow
 
 ```text
@@ -119,74 +123,6 @@ The scanner directly maps detected vulnerabilities to industry standards:
   │    • RMR (Retrieval Manipulation)        • Non-destructive Replay            • JSON Telemetry
   │    • TAR (Tool Abuse Rate)                                                             │
   └────────────────────────────────────────────────────────────────────────────────────────┘
-```
-
-### Detailed Multi-Tier Architecture Diagram
-
-```mermaid
-flowchart TD
-    subgraph UI ["User Interfaces"]
-        direction LR
-        WEB["🖥️ Enterprise Web UI<br/>Port 5000"]
-        CLI["💻 Metasploit-Style<br/>Interactive CLI"]
-    end
-
-    subgraph CORE ["Core Evaluation Engine"]
-        direction TB
-        TM["🎯 Threat Profiler<br/>MITRE ATLAS"]
-        DSL["📜 Testcase Loader<br/>YAML Test DSL"]
-        MUT["🔄 Mutation Engine<br/>Payload Obfuscator"]
-        AG["⚡ Adaptive Attack Generator<br/>Automated Feedback Loop"]
-
-        TM --> AG
-        DSL --> AG
-        MUT --> AG
-    end
-
-    subgraph TARGETS ["Target Interfaces"]
-        direction LR
-        SBX["📦 Agent Sandbox<br/>Mock Tools & RAG"]
-        OLLAMA["🦙 Local Ollama<br/>Llama3, Mistral, Qwen"]
-        API["🌐 Cloud APIs<br/>OpenAI & Custom"]
-    end
-
-    subgraph DETECT ["Detection & Scoring"]
-        direction TB
-        DET1["⚡ Stage 1: Heuristics<br/>Regex & Pattern Match"]
-        DET2["🧠 Stage 2: LLM Judge<br/>Evaluator LLM Audit"]
-        SCORER["📊 Risk Scorer<br/>ASR, RMR, TAR Metrics"]
-
-        DET1 --> DET2 --> SCORER
-    end
-
-    subgraph STORAGE ["Evidence & Persistence"]
-        direction LR
-        DB[("💾 Findings DB<br/>SQLite Storage")]
-        EV["🔍 Evidence Store<br/>Replay Session Log"]
-        REP["📑 Report Engine<br/>HTML & JSON Audit"]
-    end
-
-    %% Symmetrical node-to-node routing
-    WEB & CLI --> AG
-    AG --> SBX & OLLAMA & API
-    SBX & OLLAMA & API --> DET1
-    SCORER --> DB & EV & REP
-
-    %% Container & Node Styling
-    style UI fill:#f8fafc,stroke:#94a3b8,stroke-width:1.5px,rx:10
-    style CORE fill:#f8fafc,stroke:#94a3b8,stroke-width:1.5px,rx:10
-    style TARGETS fill:#f8fafc,stroke:#94a3b8,stroke-width:1.5px,rx:10
-    style DETECT fill:#f8fafc,stroke:#94a3b8,stroke-width:1.5px,rx:10
-    style STORAGE fill:#f8fafc,stroke:#94a3b8,stroke-width:1.5px,rx:10
-
-    classDef default fill:#ffffff,stroke:#64748b,stroke-width:1.5px,color:#0f172a,rx:8;
-    classDef blueCard fill:#f0f9ff,stroke:#0284c7,stroke-width:2px,color:#0369a1,font-weight:bold,rx:8;
-    classDef greenCard fill:#f0fdf4,stroke:#16a34a,stroke-width:2px,color:#15803d,font-weight:bold,rx:8;
-    classDef purpleCard fill:#faf5ff,stroke:#9333ea,stroke-width:2px,color:#7e22ce,font-weight:bold,rx:8;
-
-    class WEB,CLI,AG,TM,DSL,MUT blueCard;
-    class SBX,OLLAMA,API greenCard;
-    class DET1,DET2,SCORER,DB,EV,REP purpleCard;
 ```
 
 ---
