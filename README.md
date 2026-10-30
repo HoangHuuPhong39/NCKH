@@ -121,60 +121,69 @@ The scanner directly maps detected vulnerabilities to industry standards:
   └────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Interactive Pipeline Diagram
+### Detailed Multi-Tier Architecture Diagram
 
 ```mermaid
-flowchart LR
-    subgraph ORCH ["1. Attack Orchestration"]
-        direction TB
-        CTRL["🖥️ Web UI / CLI Console"]
-        DSL["📜 YAML Attack DSL<br/>(62+ VN Benchmarks)"]
-        AG["⚡ Adaptive Generator"]
+flowchart TD
+    subgraph UI ["User Interfaces"]
+        WEB["🖥️ Enterprise Web UI (Port 5000)"]
+        CLI["💻 Metasploit-Style CLI"]
+    end
+
+    subgraph CORE ["Core Evaluation Engine"]
+        TM["🎯 Threat Model Profiler"]
+        DSL["📜 Testcase Loader (YAML DSL)"]
+        AG["⚡ Adaptive Attack Generator"]
         MUT["🔄 Mutation Engine"]
-        
-        CTRL --> AG
+
+        TM --> AG
         DSL --> AG
         AG <--> MUT
     end
 
-    subgraph EXEC ["2. Target Execution"]
-        direction TB
-        OLLAMA["🦙 Local Ollama<br/>(Llama 3, Mistral, Qwen)"]
-        API["🌐 Cloud APIs<br/>(OpenAI Compatible)"]
-        SBX["📦 Agent Sandbox<br/>(Mock Tools & RAG DB)"]
+    subgraph TARGETS ["Target Interfaces"]
+        SBX["📦 Agent Mock Sandbox & RAG"]
+        OLLAMA["🦙 Local LLM (Ollama: Llama3, Mistral)"]
+        API["🌐 Cloud API (OpenAI Compatible)"]
     end
 
-    subgraph EVAL ["3. Detection & Evidence"]
-        direction TB
-        D1["⚡ L1: Pattern Matcher"]
-        D2["🧠 L2: LLM-as-a-Judge"]
-        SCORER["📊 Risk Scorer & Metrics"]
-        STORE[("💾 SQLite Evidence & Replay")]
-        REP["📑 Interactive Audit Report"]
+    subgraph DETECT ["Detection & Scoring"]
+        DET1["⚡ Stage 1: Regex & Heuristic Pattern Match"]
+        DET2["🧠 Stage 2: LLM-as-a-Judge Validator"]
+        SCORER["📊 Risk Scoring & Metrics (ASR, RMR, TAR)"]
 
-        D1 --> D2 --> SCORER --> STORE --> REP
+        DET1 --> DET2 --> SCORER
     end
 
-    AG --> OLLAMA
-    AG --> API
-    AG --> SBX
+    subgraph STORAGE ["Evidence & Persistence"]
+        DB[("💾 SQLite Database")]
+        EV["🔍 Evidence Store & Replay Engine"]
+        REP["📑 HTML / JSON Audit Reports"]
+    end
 
-    OLLAMA --> D1
-    API --> D1
-    SBX --> D1
+    %% Direct Node-to-Node Connections (Symmetrical & Aligned)
+    WEB & CLI --> AG
+    AG --> SBX & OLLAMA & API
+    SBX & OLLAMA & API --> DET1
+    SCORER --> DB & EV & REP
 
-    style ORCH fill:#0f172a,stroke:#38bdf8,stroke-width:2px,stroke-dasharray: 4 4,rx:12
-    style EXEC fill:#0f172a,stroke:#818cf8,stroke-width:2px,stroke-dasharray: 4 4,rx:12
-    style EVAL fill:#0f172a,stroke:#34d399,stroke-width:2px,stroke-dasharray: 4 4,rx:12
+    %% Container & Node Styling
+    style UI fill:#f8fafc,stroke:#94a3b8,stroke-width:1.5px,rx:8
+    style CORE fill:#f8fafc,stroke:#94a3b8,stroke-width:1.5px,rx:8
+    style TARGETS fill:#f8fafc,stroke:#94a3b8,stroke-width:1.5px,rx:8
+    style DETECT fill:#f8fafc,stroke:#94a3b8,stroke-width:1.5px,rx:8
+    style STORAGE fill:#f8fafc,stroke:#94a3b8,stroke-width:1.5px,rx:8
 
-    classDef default fill:#1e293b,stroke:#475569,stroke-width:1.5px,color:#f8fafc,font-weight:600,rx:8;
-    classDef cyanNode fill:#0369a1,stroke:#38bdf8,stroke-width:2px,color:#ffffff,font-weight:bold,rx:8;
-    classDef purpleNode fill:#4c1d95,stroke:#a78bfa,stroke-width:2px,color:#ffffff,font-weight:bold,rx:8;
-    classDef greenNode fill:#064e3b,stroke:#34d399,stroke-width:2px,color:#ffffff,font-weight:bold,rx:8;
+    classDef default fill:#ffffff,stroke:#64748b,stroke-width:1.5px,color:#0f172a,rx:6;
+    classDef highlight fill:#eff6ff,stroke:#2563eb,stroke-width:2px,color:#1e3a8a,font-weight:bold,rx:6;
+    classDef targetNode fill:#f0fdf4,stroke:#16a34a,stroke-width:2px,color:#14532d,font-weight:bold,rx:6;
+    classDef judgeNode fill:#fdf4ff,stroke:#a855f7,stroke-width:2px,color:#581c87,font-weight:bold,rx:6;
+    classDef storeNode fill:#faf5ff,stroke:#7c3aed,stroke-width:2px,color:#4c1d95,font-weight:bold,rx:6;
 
-    class CTRL,AG cyanNode;
-    class OLLAMA,API,SBX purpleNode;
-    class D2,SCORER,STORE,REP greenNode;
+    class WEB,CLI,AG highlight;
+    class SBX,OLLAMA,API targetNode;
+    class DET1,DET2,SCORER judgeNode;
+    class DB,EV,REP storeNode;
 ```
 
 ---
