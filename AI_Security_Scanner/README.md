@@ -92,15 +92,53 @@ The scanner directly maps detected vulnerabilities to industry standards:
 
 ## 🏛️ System Architecture
 
+<div align="center">
+
 ```mermaid
 flowchart TD
-    Config["Testcases & Config (YAML)"] --> Generator["Attack Generator"]
-    UI["Web UI / CLI Scanner"] --> Generator
-    Generator --> Target["Target System (LLM / RAG / Agent)"]
-    Target --> Detector["Hybrid Detector (Regex + LLM Judge)"]
-    Detector --> Scorer["Risk Scoring & Evidence Store"]
-    Scorer --> Report["Security Report (HTML / JSON)"]
+    subgraph UI ["User Interfaces"]
+        WEB["Enterprise Web UI (Port 5000)"]
+        CLI["Metasploit-Style CLI"]
+    end
+
+    subgraph CoreEngine ["Core Evaluation Engine"]
+        TM["Threat Model Profiler"]
+        DSL["Testcase Loader (YAML DSL)"]
+        AG["Adaptive Attack Generator"]
+        MUT["Mutation Engine"]
+    end
+
+    subgraph Targets ["Target Interfaces"]
+        SANDBOX["Agent Mock Sandbox"]
+        OLLAMA["Local LLM<br/>(Ollama: Llama3, Mistral, Qwen)"]
+        OPENAI["API Target<br/>(OpenAI / Compatible)"]
+    end
+
+    subgraph Evaluation ["Detection & Scoring"]
+        DET1["Stage 1: Regex & Heuristic Pattern Match"]
+        DET2["Stage 2: LLM-as-a-Judge Validator"]
+        SCORER["Risk Scoring & Metrics<br/>(ASR, RMR, TAR)"]
+    end
+
+    subgraph Storage ["Evidence & Persistence"]
+        DB[("SQLite Storage")]
+        EV["Evidence Store & Replay Engine"]
+        REP["HTML / JSON Reports"]
+    end
+
+    UI --> CoreEngine
+    DSL --> AG
+    TM --> AG
+    AG <--> MUT
+    AG --> Targets
+    Targets --> Evaluation
+    DET1 --> DET2
+    DET2 --> SCORER
+    SCORER --> Storage
+    Storage --> REP
 ```
+
+</div>
 
 ---
 
