@@ -6,6 +6,7 @@
 <title>AI Security Scanner — LLM Vulnerability & Safety Assessment</title>
 <link rel="icon" type="image/jpeg" href="/static/logo.jpg">
 <link rel="stylesheet" href="/static/style.css">
+<script src="/static/i18n.js"></script>
 <script src="/static/chart.umd.min.js"></script>
 <script>
   if (typeof Chart === 'undefined') {
@@ -147,13 +148,13 @@
 
     <div class="topbar-right">
       <!-- Language Switcher Button (VI / EN) -->
-      <button class="btn-topbar-custom btn-lang-toggle" id="btn-lang-toggle" onclick="toggleLanguage()" title="Chuyển đổi ngôn ngữ / Switch Language">
+      <button class="btn-topbar-custom btn-lang-toggle" id="btn-lang-toggle" onclick="toggleLanguage()" title="Chuyển đổi ngôn ngữ / Switch Language" style="display:inline-flex;align-items:center;gap:6px">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="10"></circle>
           <line x1="2" y1="12" x2="22" y2="12"></line>
           <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
         </svg>
-        <span class="lang-badge" id="lang-btn-label">VI</span>
+        <span class="lang-badge" id="lang-btn-label">VI 🇻🇳</span>
       </button>
 
       <!-- Theme Switcher Button matching Image 2 -->
@@ -1260,7 +1261,7 @@
       </div>
       <div style="display:flex;align-items:center;gap:10px">
         <span class="badge badge-high" id="modal-finding-sev-badge">HIGH</span>
-        <button class="btn btn-outline btn-sm" onclick="closeModal('finding-detail-modal')">Close</button>
+        <button class="btn btn-outline btn-sm modal-btn-close" id="modal-btn-close-top" onclick="closeModal('finding-detail-modal')">Close</button>
       </div>
     </div>
 
@@ -1268,27 +1269,27 @@
       <!-- Meta Information Grid -->
       <div class="modal-meta-grid">
         <div>
-          <div class="meta-box-label">CVSS Risk Score</div>
+          <div class="meta-box-label" id="modal-lbl-score">CVSS Risk Score</div>
           <div class="meta-box-val" id="modal-finding-score">8.5 / 10.0</div>
         </div>
         <div>
-          <div class="meta-box-label">OWASP 2025</div>
+          <div class="meta-box-label" id="modal-lbl-owasp">OWASP 2025</div>
           <div class="meta-box-val" id="modal-finding-owasp">LLM01</div>
         </div>
         <div>
-          <div class="meta-box-label">MITRE ATLAS</div>
+          <div class="meta-box-label" id="modal-lbl-mitre">MITRE ATLAS</div>
           <div class="meta-box-val" id="modal-finding-mitre">AML.T0051</div>
         </div>
         <div>
-          <div class="meta-box-label">Target System</div>
+          <div class="meta-box-label" id="modal-lbl-target">Target System</div>
           <div class="meta-box-val" id="modal-finding-target">localhost:11434</div>
         </div>
         <div>
-          <div class="meta-box-label">Timestamp</div>
+          <div class="meta-box-label" id="modal-lbl-time">Timestamp</div>
           <div class="meta-box-val" id="modal-finding-time">-</div>
         </div>
         <div>
-          <div class="meta-box-label">Status</div>
+          <div class="meta-box-label" id="modal-lbl-status">Status</div>
           <div class="meta-box-val" id="modal-finding-status" style="color:var(--sev-critical)">VULNERABLE</div>
         </div>
       </div>
@@ -1296,12 +1297,12 @@
       <!-- Payload View (Untruncated) -->
       <div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-          <span style="font-size:12px;font-weight:700;color:var(--text-primary)">Adversarial Attack Payload</span>
-          <button class="btn btn-outline btn-sm" onclick="copyElementText('modal-finding-payload')">Copy Payload</button>
+          <span style="font-size:12px;font-weight:700;color:var(--text-primary)" id="modal-lbl-payload-title">Adversarial Attack Payload</span>
+          <button class="btn btn-outline btn-sm" id="modal-btn-copy-payload" onclick="copyElementText('modal-finding-payload')">Copy Payload</button>
         </div>
         <div class="code-view-box">
           <div class="code-view-header">
-            <span>Input Prompt Dispatched</span>
+            <span id="modal-lbl-prompt-dispatched">Input Prompt Dispatched</span>
             <span id="modal-payload-len">0 chars</span>
           </div>
           <div class="code-view-content" id="modal-finding-payload"></div>
@@ -1311,12 +1312,12 @@
       <!-- Response View (Untruncated) -->
       <div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-          <span style="font-size:12px;font-weight:700;color:var(--text-primary)">Target AI System Completion</span>
-          <button class="btn btn-outline btn-sm" onclick="copyElementText('modal-finding-response')">Copy Response</button>
+          <span style="font-size:12px;font-weight:700;color:var(--text-primary)" id="modal-lbl-response-title">Target AI System Completion</span>
+          <button class="btn btn-outline btn-sm" id="modal-btn-copy-response" onclick="copyElementText('modal-finding-response')">Copy Response</button>
         </div>
         <div class="code-view-box">
           <div class="code-view-header">
-            <span>Raw Model Output</span>
+            <span id="modal-lbl-raw-output">Raw Model Output</span>
             <span id="modal-response-len">0 chars</span>
           </div>
           <div class="code-view-content" id="modal-finding-response"></div>
@@ -1325,7 +1326,7 @@
 
       <!-- Remediation Note -->
       <div style="background-color:var(--bg-card-secondary);border:1px solid var(--border-color);border-radius:var(--radius-md);padding:14px">
-        <div style="font-size:12px;font-weight:700;color:var(--text-primary);margin-bottom:6px">Remediation Guidance</div>
+        <div style="font-size:12px;font-weight:700;color:var(--text-primary);margin-bottom:6px" id="modal-lbl-remediation-title">Remediation Guidance</div>
         <div style="font-size:12.5px;color:var(--text-secondary);line-height:1.5" id="modal-finding-remediation">Loading advice...</div>
       </div>
 
@@ -1337,10 +1338,10 @@
     </div>
 
     <div class="modal-footer">
-      <span style="font-size:11px;color:var(--text-muted)">Nhấn Replay Test để xác minh tính tái lập (Reproducibility) của lỗ hổng</span>
+      <span style="font-size:11px;color:var(--text-muted)" id="modal-lbl-replay-hint">Nhấn Replay Test để xác minh tính tái lập (Reproducibility) của lỗ hổng</span>
       <div style="display:flex;gap:8px">
         <button class="btn btn-primary btn-sm" id="btn-replay-finding" onclick="replayCurrentFinding()">🔄 Replay Test (Verify Reproducibility)</button>
-        <button class="btn btn-outline btn-sm" onclick="closeModal('finding-detail-modal')">Close Window</button>
+        <button class="btn btn-outline btn-sm modal-btn-close-win" id="modal-btn-close-bottom" onclick="closeModal('finding-detail-modal')">Close Window</button>
       </div>
     </div>
   </div>
@@ -1493,6 +1494,12 @@ function toggleTheme() {
   if (typeof loadDashboardAnalytics === 'function') {
     loadDashboardAnalytics();
   }
+  if (typeof renderModuleCheckboxCards === 'function' && Object.keys(modulesData).length > 0) {
+    renderModuleCheckboxCards();
+  }
+  if (typeof updateSelectionSummary === 'function') {
+    updateSelectionSummary();
+  }
 }
 
 function updateThemeButtonUI(theme) {
@@ -1540,7 +1547,7 @@ function showPage(pageId, navEl) {
   document.getElementById('topbar-page-title').textContent = titles[pageId] || pageId;
 
   if (pageId === 'findings') loadFindings();
-  if (pageId === 'dashboard') loadDashboardAnalytics();
+  if (pageId === 'dashboard') { if (typeof refreshAllTelemetryAndMetrics === 'function') refreshAllTelemetryAndMetrics(); else loadDashboardAnalytics(); }
   if (pageId === 'remediation') loadRemediationGuidance();
   if (pageId === 'taxonomy') loadTaxonomyBrowser();
   if (pageId === 'benchmark') loadOSSIntegrations();
@@ -1580,8 +1587,9 @@ async function checkConnection(showToastAlert = false) {
     if (res.success) {
       dot.className = 'connection-dot connected';
       const effectiveModel = res.resolved_model || model;
-      text.textContent = `Connected: ${effectiveModel}`;
-      text.title = `Connected: ${effectiveModel}`;
+      const isVi = (window.currentAppLang || 'vi') === 'vi';
+      text.textContent = isVi ? `Đã kết nối: ${effectiveModel}` : `Connected: ${effectiveModel}`;
+      text.title = isVi ? `Đã kết nối: ${effectiveModel}` : `Connected: ${effectiveModel}`;
 
       const latEl = document.getElementById('dash-op-latency');
       const latSub = document.getElementById('dash-op-latency-sub');
@@ -1748,6 +1756,7 @@ async function loadModulesData() {
     modulesData = data.modules || {};
     renderModuleCheckboxCards();
     updateModuleFilterDropdowns();
+    updateSelectionSummary();
   } catch(e) {
     document.getElementById('modules-checkbox-grid').innerHTML = '<div style="color:var(--sev-critical);padding:14px">Failed to load modules.</div>';
   }
@@ -1803,6 +1812,66 @@ function getModuleSvgIcon(id) {
 
 let hasInitializedSelection = false;
 
+
+const VI_MODULE_METADATA = {
+  'prompt_injection': {
+    name: 'Prompt Injection',
+    desc: 'Kiểm tra khả năng mô hình bị bỏ qua hướng dẫn hệ thống bằng các câu lệnh ghi đè trực tiếp hoặc gián tiếp.'
+  },
+  'jailbreak': {
+    name: 'Jailbreak / Safety Bypass',
+    desc: 'Sử dụng kịch bản nhập vai (DAN, AIM, STAN) để ép AI bỏ qua các rào cản đạo đức và quy tắc an toàn.'
+  },
+  'prompt_leak': {
+    name: 'System Prompt Disclosure',
+    desc: 'Trích xuất System Prompt ẩn bằng cách yêu cầu AI lặp lại hoặc dịch hướng dẫn nghiệp vụ nội bộ.'
+  },
+  'sensitive_disclosure': {
+    name: 'Sensitive Data Disclosure',
+    desc: 'Kiểm thử rò rỉ dữ liệu cá nhân (PII), thông tin xác thực, mật khẩu và dữ liệu huấn luyện nhạy cảm.'
+  },
+  'model_dos': {
+    name: 'Model Denial of Service (DoS)',
+    desc: 'Kiểm thử cạn kiệt tài nguyên bộ nhớ context và GPU bằng prompt cực dài hoặc tác vụ đệ quy vô hạn.'
+  },
+  'output_handling': {
+    name: 'Improper Output Handling',
+    desc: 'Kiểm tra xem AI có sinh ra các payload nguy hiểm (XSS, SQL Injection, SSRF) ra môi trường bên ngoài.'
+  },
+  'misinformation': {
+    name: 'Misinformation & Hallucination',
+    desc: 'Kiểm thử khả năng AI bịa đặt thông tin sai lệch với độ tự tin cao, trích dẫn tài liệu giả mạo.'
+  },
+  'excessive_agency': {
+    name: 'Excessive Agency',
+    desc: 'Kiểm tra khả năng mô hình tự ý thực thi các hành vi vượt thẩm quyền nguy hiểm (xóa dữ liệu, giao dịch).'
+  },
+  'rag_security': {
+    name: 'RAG & Knowledge Poisoning',
+    desc: 'Kiểm thử khả năng mô hình bị thao túng gián tiếp qua cơ sở tri thức RAG nhiễm độc tài liệu.'
+  },
+  'multiturn_jailbreak': {
+    name: 'Multi-Turn Jailbreak',
+    desc: 'Kiểm thử khả năng bẻ khóa an toàn qua chuỗi hội thoại dẫn dụ nhiều lượt theo kỹ thuật Crescendo.'
+  },
+  'model_fingerprint': {
+    name: 'Model Fingerprint',
+    desc: 'Nhận diện họ mô hình AI (LLaMA, Mistral, GPT, Qwen, DeepSeek) và chữ ký bảo vệ hệ thống.'
+  },
+  'port_scan': {
+    name: 'AI Port Scanner',
+    desc: 'Quét các cổng mạng dịch vụ suy luận AI/ML phổ biến (Ollama 11434, vLLM 8000, Qdrant 6333, MLflow).'
+  },
+  'agent_testing': {
+    name: 'Agent Sandbox Testing',
+    desc: 'Kiểm thử lỗ hổng AI Agent trong môi trường Sandbox: Tool Injection, leo thang đặc quyền và đánh cắp dữ liệu.'
+  },
+  'ml_adversarial': {
+    name: 'Adversarial Robustness',
+    desc: 'Kiểm thử độ bền trước mẫu đối kháng: Homoglyph, ký tự ẩn Zero-Width, đảo token và nhiễu Unicode.'
+  }
+};
+
 function renderModuleCheckboxCards() {
   const container = document.getElementById('modules-checkbox-grid');
   container.innerHTML = '';
@@ -1832,20 +1901,27 @@ function renderModuleCheckboxCards() {
       }
     };
 
+    const isVi = (window.currentAppLang || 'vi') === 'vi';
+    const viMeta = (typeof VI_MODULE_METADATA !== 'undefined' && VI_MODULE_METADATA[id]) ? VI_MODULE_METADATA[id] : null;
+    // Module titles stay clean in English as requested
+    const modTitle = viMeta ? viMeta.name : m.name;
+    const modDesc = isVi && viMeta ? viMeta.desc : (m.description || '');
+    const countLabel = isVi ? `${m.payloads_count || 0} mẫu thử` : `${m.payloads_count || 0} payloads`;
+
     card.innerHTML = `
       <div class="module-card-top">
         <div class="module-card-title-wrap">
           <input type="checkbox" class="module-checkbox" id="chk-${id}" ${isSelected ? 'checked' : ''} onclick="event.stopPropagation()" onchange="toggleModuleSelection('${id}', this.checked)">
           <span class="module-icon-badge">${getModuleSvgIcon(id)}</span>
-          <span class="module-card-name">${escapeHtml(m.name)}</span>
+          <span class="module-card-name">${escapeHtml(modTitle)}</span>
         </div>
         <span class="badge badge-${sevClass}">${m.severity}</span>
       </div>
-      <div class="module-card-desc">${escapeHtml(m.description || '')}</div>
+      <div class="module-card-desc">${escapeHtml(modDesc)}</div>
       <div class="module-card-meta">
         <span class="badge badge-owasp">${m.owasp || 'N/A'}</span>
         <span class="badge badge-mitre">${m.mitre || ''}</span>
-        <span class="module-card-count">${m.payloads_count || 0} payloads</span>
+        <span class="module-card-count">${countLabel}</span>
       </div>
     `;
     container.appendChild(card);
@@ -1882,7 +1958,8 @@ function selectAllModules(selectAll) {
 function updateSelectionSummary() {
   const total = Object.keys(modulesData).length;
   const count = selectedModulesSet.size;
-  document.getElementById('modules-selection-summary').textContent = `${count} of ${total} selected`;
+  const isVi = (window.currentAppLang || 'vi') === 'vi';
+  document.getElementById('modules-selection-summary').textContent = isVi ? `${count} / ${total} đã chọn` : `${count} of ${total} selected`;
   document.getElementById('btn-run-count').textContent = count;
   document.getElementById('btn-run-scan').disabled = (count === 0);
 }
@@ -1905,6 +1982,47 @@ function updateModuleFilterDropdowns() {
 }
 
 // ─── Real-Time Scan Execution (SSE) (Item 3) ──────────────────
+
+async function refreshAllTelemetryAndMetrics() {
+  try {
+    // 1. Cập nhật module scopes
+    const modRes = await fetch('/api/modules').then(r => r.json()).catch(() => ({}));
+    const count = Object.keys(modRes.modules || {}).length || 14;
+    const opMod = document.getElementById('dash-op-active-modules');
+    if (opMod) opMod.textContent = `${count} Scopes`;
+    const gSub = document.getElementById('gauge-status-sub');
+    if (gSub && !isScanJobActive) gSub.textContent = `${count} Scopes Active`;
+
+    // 2. Cập nhật total logs
+    if (typeof loadDashboardLogs === 'function') {
+      loadDashboardLogs();
+    }
+
+    // 3. Cập nhật target latency
+    fetch('/api/connection/test').then(r => r.json()).then(conn => {
+      const latEl = document.getElementById('dash-op-latency');
+      const latSub = document.getElementById('dash-op-latency-sub');
+      if (latEl) latEl.textContent = conn.connected ? `${conn.latency_ms} ms` : 'Disconnected';
+      if (latSub) latSub.textContent = conn.connected ? `Model: ${conn.model || 'Active'}` : (conn.model ? `Model: ${conn.model}` : 'Target host unreachable');
+    }).catch(() => {
+      const latEl = document.getElementById('dash-op-latency');
+      if (latEl) latEl.textContent = 'Disconnected';
+    });
+
+    // 4. Cập nhật toàn bộ Dashboard Analytics & Threat Audit
+    if (typeof loadDashboardAnalytics === 'function') {
+      await loadDashboardAnalytics();
+    }
+
+    // 5. Cập nhật Incidents & Findings
+    if (typeof loadDashboardIncidents === 'function') loadDashboardIncidents();
+    if (typeof loadFindings === 'function') loadFindings();
+    if (typeof loadScanHistory === 'function') loadScanHistory();
+  } catch(err) {
+    console.error('Error in refreshAllTelemetryAndMetrics:', err);
+  }
+}
+
 function startSelectedScan() {
   if (selectedModulesSet.size === 0) {
     showToast('error', 'Select at least one module to run.');
@@ -1927,6 +2045,11 @@ async function executeScanJob(modulesArray) {
     return;
   }
   isScanJobActive = true;
+
+  // Đổi ngay lập tức Dashboard sang trạng thái Đang quét / --
+  if (typeof loadDashboardAnalytics === 'function') {
+    loadDashboardAnalytics();
+  }
 
   // Set UI state to Scanning
   document.getElementById('btn-run-scan').disabled = true;
@@ -2077,6 +2200,7 @@ function handleSSEEvent(raw) {
     loadScanHistory();
     loadDashboardLogs();
     loadDashboardIncidents();
+    loadDashboardAnalytics();
 
     // Fetch dynamic modules count
     fetch('/api/modules').then(r => r.json()).then(data => {
@@ -2144,6 +2268,9 @@ async function cancelScan() {
 
 function resetScanUIControls() {
   isScanJobActive = false;
+  if (typeof refreshAllTelemetryAndMetrics === 'function') {
+    refreshAllTelemetryAndMetrics();
+  }
   document.getElementById('btn-run-scan').disabled = (selectedModulesSet.size === 0);
   document.getElementById('btn-run-all').disabled = false;
   document.getElementById('btn-stop-scan').style.display = 'none';
@@ -2382,7 +2509,8 @@ function renderFindingsTablePage() {
   const total = filteredFindingsList.length;
 
   if (!total) {
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--text-muted)">No matching findings found.</td></tr>';
+    const isVi = (window.currentAppLang || 'vi') === 'vi';
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--text-muted)">${isVi ? 'Không tìm thấy lỗ hổng phù hợp với bộ lọc.' : 'No matching findings found.'}</td></tr>`;
     updatePaginationControls(0, 0, 0, 1);
     return;
   }
@@ -2404,11 +2532,13 @@ function renderFindingsTablePage() {
     const timeStr = f.timestamp ? f.timestamp.substring(0, 16).replace('T', ' ') : '-';
     const payloadSnip = escapeHtml((f.payload || '').trim());
     const respSnip = escapeHtml((f.response || '').trim());
+    const viMeta = (typeof VI_MODULE_METADATA !== 'undefined' && VI_MODULE_METADATA[f.module_name]) ? VI_MODULE_METADATA[f.module_name] : null;
+    const cleanModName = viMeta ? viMeta.name : (f.module_name || '');
 
     return `
       <tr class="clickable-row" onclick="openFindingDetailModal(${globalIdx})" title="Click row to view full payload, response, and details">
         <td style="color:var(--text-muted);font-family:var(--font-mono)">${f.id || (globalIdx + 1)}</td>
-        <td><strong style="color:var(--text-primary)">${escapeHtml(f.module_name)}</strong></td>
+        <td><strong style="color:var(--text-primary)">${escapeHtml(cleanModName)}</strong></td>
         <td><span class="badge badge-${sevClass}">${f.severity}</span></td>
         <td>
           <div class="score-pill">
@@ -2460,8 +2590,13 @@ function updatePaginationControls(start, end, total, totalPages) {
     return;
   }
   bar.style.display = 'flex';
-  document.getElementById('findings-pagination-info').textContent = `Showing ${start}-${end} of ${total} findings`;
-  document.getElementById('findings-current-page-text').textContent = `Page ${findingsCurrentPage} / ${totalPages}`;
+  const isVi = (window.currentAppLang || 'vi') === 'vi';
+  document.getElementById('findings-pagination-info').textContent = isVi 
+    ? `Hiển thị ${start}-${end} trên tổng số ${total} lỗ hổng` 
+    : `Showing ${start}-${end} of ${total} findings`;
+  document.getElementById('findings-current-page-text').textContent = isVi
+    ? `Trang ${findingsCurrentPage} / ${totalPages}`
+    : `Page ${findingsCurrentPage} / ${totalPages}`;
   document.getElementById('btn-page-first').disabled = findingsCurrentPage <= 1;
   document.getElementById('btn-page-prev').disabled = findingsCurrentPage <= 1;
   document.getElementById('btn-page-next').disabled = findingsCurrentPage >= totalPages;
@@ -2486,13 +2621,45 @@ function openFindingDetailModal(index) {
   const replayBox = document.getElementById('modal-replay-result-box');
   if (replayBox) replayBox.style.display = 'none';
 
-  document.getElementById('modal-finding-title').textContent = `${f.module_name} Assessment`;
-  document.getElementById('modal-finding-subtitle').textContent = `Finding ID #${f.id || index+1} · OWASP ${f.owasp_code || 'LLM'}`;
+  const isVi = (window.currentAppLang || 'vi') === 'vi';
+  const viMeta = (typeof VI_MODULE_METADATA !== 'undefined' && VI_MODULE_METADATA[f.module_name]) ? VI_MODULE_METADATA[f.module_name] : null;
+  const cleanModName = viMeta ? viMeta.name : (f.module_name || '');
+
+  document.getElementById('modal-finding-title').textContent = isVi 
+    ? `Đánh giá Lỗ hổng: ${cleanModName}` 
+    : `${cleanModName} Assessment`;
+  document.getElementById('modal-finding-subtitle').textContent = isVi
+    ? `Mã Lỗ hổng #${f.id || index+1} · OWASP ${f.owasp_code || 'LLM'}`
+    : `Finding ID #${f.id || index+1} · OWASP ${f.owasp_code || 'LLM'}`;
 
   const sevBadge = document.getElementById('modal-finding-sev-badge');
   const sev = (f.severity || 'info').toUpperCase();
   sevBadge.className = `badge badge-${sev.toLowerCase()}`;
   sevBadge.textContent = sev;
+
+  const setEl = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
+  setEl('modal-lbl-score', isVi ? 'Điểm Rủi ro CVSS' : 'CVSS Risk Score');
+  setEl('modal-lbl-owasp', isVi ? 'Chuẩn OWASP 2025' : 'OWASP 2025');
+  setEl('modal-lbl-mitre', isVi ? 'Mã MITRE ATLAS' : 'MITRE ATLAS');
+  setEl('modal-lbl-target', isVi ? 'Hệ thống Mục tiêu' : 'Target System');
+  setEl('modal-lbl-time', isVi ? 'Thời gian Ghi nhận' : 'Timestamp');
+  setEl('modal-lbl-status', isVi ? 'Trạng thái' : 'Status');
+  setEl('modal-finding-status', isVi ? 'CÓ LỖ HỔNG' : 'VULNERABLE');
+
+  setEl('modal-lbl-payload-title', isVi ? 'Câu lệnh Tấn công Đối kháng (Payload)' : 'Adversarial Attack Payload');
+  setEl('modal-btn-copy-payload', isVi ? 'Sao chép Payload' : 'Copy Payload');
+  setEl('modal-lbl-prompt-dispatched', isVi ? 'Câu lệnh Đầu vào Đã gửi' : 'Input Prompt Dispatched');
+
+  setEl('modal-lbl-response-title', isVi ? 'Phản hồi từ Hệ thống AI Mục tiêu' : 'Target AI System Completion');
+  setEl('modal-btn-copy-response', isVi ? 'Sao chép Phản hồi' : 'Copy Response');
+  setEl('modal-lbl-raw-output', isVi ? 'Đầu ra Thô của Mô hình' : 'Raw Model Output');
+
+  setEl('modal-lbl-remediation-title', isVi ? 'Khuyến nghị Khắc phục & Bản vá An ninh' : 'Remediation Guidance');
+  setEl('modal-lbl-replay-hint', isVi ? 'Nhấn Replay Test để xác minh tính tái lập (Reproducibility) của lỗ hổng' : 'Click Replay Test to verify vulnerability reproducibility');
+  setEl('btn-replay-finding', isVi ? '🔄 Replay Test (Xác minh Tái lập)' : '🔄 Replay Test (Verify Reproducibility)');
+
+  document.querySelectorAll('#finding-detail-modal .modal-btn-close').forEach(b => b.textContent = isVi ? 'Đóng' : 'Close');
+  document.querySelectorAll('#finding-detail-modal .modal-btn-close-win').forEach(b => b.textContent = isVi ? 'Đóng Cửa sổ' : 'Close Window');
 
   document.getElementById('modal-finding-score').textContent = `${(f.risk_score||0).toFixed(1)} / 10.0`;
   document.getElementById('modal-finding-score').style.color = getScoreColor(f.risk_score);
@@ -2501,25 +2668,37 @@ function openFindingDetailModal(index) {
   document.getElementById('modal-finding-target').textContent = f.target_url || 'Target System';
   document.getElementById('modal-finding-time').textContent = f.timestamp || '-';
 
-  // Full Untruncated Payload & Response
+  // Full Untruncated Payload & Response (Preserve payload raw text as requested)
   const payloadEl = document.getElementById('modal-finding-payload');
   const payloadText = f.payload || '(empty)';
   payloadEl.textContent = payloadText;
-  document.getElementById('modal-payload-len').textContent = `${payloadText.length} characters`;
+  document.getElementById('modal-payload-len').textContent = isVi ? `${payloadText.length} ký tự` : `${payloadText.length} chars`;
 
   const respEl = document.getElementById('modal-finding-response');
   const respText = f.response || '(empty)';
   respEl.textContent = respText;
-  document.getElementById('modal-response-len').textContent = `${respText.length} characters`;
+  document.getElementById('modal-response-len').textContent = isVi ? `${respText.length} ký tự` : `${respText.length} chars`;
 
-  // Remediation Text
+  // Remediation Text (bilingual)
   const remBox = document.getElementById('modal-finding-remediation');
-  remBox.textContent = getRemediationAdviceForOWASP(f.owasp_code, f.module_name);
+  remBox.textContent = getRemediationAdviceForOWASP(f.owasp_code, f.module_name, isVi);
 
   openModal('finding-detail-modal');
 }
 
-function getRemediationAdviceForOWASP(owasp, module_name) {
+function getRemediationAdviceForOWASP(owasp, module_name, isVi = false) {
+  if (isVi) {
+    const guidesVi = {
+      'LLM01': 'Thiết lập ký tự phân tách Prompt nghiêm ngặt (như thẻ XML/Markdown), áp dụng phân cấp đặc quyền hệ thống (Role Hierarchy) và triển khai bộ lọc Reverse Proxy kiểm tra làm sạch đầu vào.',
+      'LLM02': 'Làm sạch ngữ cảnh huấn luyện/RAG, áp dụng regex che giấu dữ liệu nhạy cảm PII/API tokens, và thiết lập hàng rào Differential Privacy trước khi gửi dữ liệu về client.',
+      'LLM05': 'Đảm bảo mọi module tiếp nhận phản hồi từ AI phải thực hiện encoding an toàn (thoát ký tự HTML/SQL theo ngữ cảnh), nghiêm cấm truyền trực tiếp phản hồi vào eval() hoặc os.system().',
+      'LLM06': 'Áp dụng cơ chế cổng kiểm duyệt con người (Human-in-the-loop) cho các lệnh gọi hàm nhạy cảm, thu hẹp tối đa quyền hạn của công cụ (Least Privilege), và yêu cầu xác thực lại.',
+      'LLM07': 'Tuyệt đối không lưu trữ thông tin xác thực/mật khẩu trong System Prompt. Coi mọi prompt đều có thể bị đọc công khai và bổ sung chỉ thị nghiêm cấm tiết lộ prompt hệ thống.',
+      'LLM09': 'Tích hợp cơ chế xác thực RAG đối chiếu nguồn, hạ thấp nhiệt độ sinh (temperature), thiết lập ngưỡng tin cậy (confidence threshold), và từ chối các câu hỏi yêu cầu khẳng định y tế/pháp lý chưa được kiểm chứng.',
+      'LLM10': 'Giới hạn chặt chẽ max_tokens từ client, thiết lập giới hạn tốc độ truy vấn (rate-limit) theo IP/Token, và áp dụng timeout ngắt mạch trên hàng đợi suy luận inference.'
+    };
+    return guidesVi[owasp] || 'Rà soát lại cấu trúc System Prompt, thiết lập kiểm tra đầu ra nghiêm ngặt và bổ sung các lớp phòng thủ chuyên sâu (defense-in-depth).';
+  }
   const guides = {
     'LLM01': 'Implement strict system prompt delimiters (e.g. XML/Markdown tags), enforce strict role hierarchy, and deploy an input validation reverse proxy filter.',
     'LLM02': 'Sanitize training context, apply regex mask for PII/tokens, and enforce differential privacy guardrails before passing context to completions.',
@@ -2631,8 +2810,9 @@ function openLogModalByIndex(idx) {
 async function loadDashboardIncidents() {
   const container = document.getElementById('dash-incident-container');
   if (!container) return;
+  const isVi = (window.currentAppLang || 'vi') === 'vi';
 
-  container.innerHTML = '<div style="text-align:center;padding:18px;color:var(--text-muted)">Correlating high-severity findings...</div>';
+  container.innerHTML = `<div style="text-align:center;padding:18px;color:var(--text-muted)">${isVi ? 'Đang gom cụm các sự cố an ninh nghiêm trọng...' : 'Correlating high-severity findings...'}</div>`;
   try {
     const res = await fetch('/api/incidents').then(r => r.json());
     const incidents = res.incidents || [];
@@ -2642,8 +2822,8 @@ async function loadDashboardIncidents() {
         <div class="clean-incident-banner">
           <div class="clean-icon">🛡️</div>
           <div>
-            <div class="clean-title">Zero Critical Incidents Detected</div>
-            <div class="clean-sub">All monitored AI endpoints and attack surfaces are currently within standard security thresholds. 0 correlated threat staging events found in database.</div>
+            <div class="clean-title">${isVi ? 'Không phát hiện Sự cố An ninh Nghiêm trọng' : 'Zero Critical Incidents Detected'}</div>
+            <div class="clean-sub">${isVi ? 'Tất cả các endpoint AI và bề mặt tấn công đang nằm trong ngưỡng an toàn. Không có chuỗi tấn công phân tầng nào được ghi nhận trong cơ sở dữ liệu.' : 'All monitored AI endpoints and attack surfaces are currently within standard security thresholds. 0 correlated threat staging events found in database.'}</div>
           </div>
         </div>
       `;
@@ -2652,26 +2832,32 @@ async function loadDashboardIncidents() {
 
     const cardsHtml = incidents.map(inc => {
       const isCrit = inc.severity === 'CRITICAL';
+      const viMeta = (typeof VI_MODULE_METADATA !== 'undefined' && VI_MODULE_METADATA[inc.module]) ? VI_MODULE_METADATA[inc.module] : null;
+      const modTitle = isVi && viMeta ? viMeta.name : (inc.module || 'Unknown');
+      const cardTitle = isVi 
+        ? `Gom cụm Chuỗi Tấn công ${isCrit ? 'Nghiêm trọng' : 'Mức Cao'}: ${modTitle}` 
+        : escapeHtml(inc.title);
+
       return `
         <div class="incident-card ${isCrit ? '' : 'incident-high'}">
           <div class="incident-header">
             <div>
               <span class="incident-id">${escapeHtml(inc.id)}</span>
-              <div class="incident-title">${escapeHtml(inc.title)}</div>
+              <div class="incident-title">${cardTitle}</div>
             </div>
             <span class="badge ${isCrit ? 'badge-critical' : 'badge-high'}">${escapeHtml(inc.severity)}</span>
           </div>
           <div class="incident-tags">
             <span class="badge badge-owasp">${escapeHtml(inc.owasp)}</span>
             <span class="badge badge-mitre">${escapeHtml(inc.mitre)}</span>
-            <span class="badge badge-low">${inc.count} Findings Clustered</span>
+            <span class="badge badge-low">${isVi ? `${inc.count} Lỗ hổng gom cụm` : `${inc.count} Findings Clustered`}</span>
           </div>
           <div class="incident-body">
-            <strong>Sample Vector:</strong> ${escapeHtml(inc.sample_payload)}
+            <strong>${isVi ? 'Mẫu câu lệnh (Vector):' : 'Sample Vector:'}</strong> ${escapeHtml(inc.sample_payload)}
           </div>
           <div class="incident-footer">
-            <span>Target: <code>${escapeHtml(inc.target_url)}</code></span>
-            <span>Last Seen: ${escapeHtml(inc.last_seen)}</span>
+            <span>${isVi ? 'Mục tiêu:' : 'Target:'} <code>${escapeHtml(inc.target_url)}</code></span>
+            <span>${isVi ? 'Gần nhất:' : 'Last Seen:'} ${escapeHtml(inc.last_seen)}</span>
           </div>
         </div>
       `;
@@ -2679,7 +2865,7 @@ async function loadDashboardIncidents() {
 
     container.innerHTML = `<div class="incident-grid">${cardsHtml}</div>`;
   } catch (err) {
-    container.innerHTML = `<div style="color:var(--sev-critical);padding:14px">Failed to correlate incidents: ${escapeHtml(err.message)}</div>`;
+    container.innerHTML = `<div style="color:var(--sev-critical);padding:14px">${isVi ? 'Lỗi khi tương quan sự cố: ' : 'Failed to correlate incidents: '} ${escapeHtml(err.message)}</div>`;
   }
 }
 
@@ -2710,6 +2896,8 @@ async function loadDashboardAnalytics() {
     const lPct = totalCount > 0 ? Math.round((lowCount / totalCount) * 100) : 0;
 
     document.getElementById('dash-stat-total').textContent = totalCount;
+    const opNewFindingsEl = document.getElementById('dash-op-new-findings');
+    if (opNewFindingsEl) opNewFindingsEl.textContent = totalCount;
     document.getElementById('dash-stat-critical').textContent = critCount;
     document.getElementById('dash-stat-high').textContent = highCount;
     document.getElementById('dash-stat-medium').textContent = medCount;
@@ -2902,6 +3090,16 @@ async function loadDashboardAnalytics() {
           overallBadge.className = 'badge badge-low';
           overallBadge.textContent = 'GUARDED';
         }
+      }
+
+      if (gStatus) {
+        const modCount = Object.keys(mod).length || 14;
+        gStatus.textContent = `${modCount} Scopes Active`;
+      }
+      const opModEl = document.getElementById('dash-op-active-modules');
+      if (opModEl) {
+        const modCount = Object.keys(mod).length || 14;
+        opModEl.textContent = `${modCount} Scopes`;
       }
 
       const penalty = (critCount * 16) + (highCount * 6.5) + (medCount * 2.2) + (lowCount * 0.6);
@@ -3889,42 +4087,42 @@ async function saveSettings() {
 // ─── Phase 1: Enterprise Internationalization (i18n VI / EN) ───
 window.I18N = {
   vi: {
-    nav_group_test: "Kiểm thử & Đánh giá",
-    nav_group_analytics: "Phân tích & Thực nghiệm",
-    nav_group_config: "Cấu hình & Quản trị",
-    nav_scan: "Scan Control",
-    nav_threatmodel: "Threat Model",
-    nav_findings: "Findings",
+    nav_group_test: "KIỂM THỬ & ĐÁNH GIÁ",
+    nav_group_analytics: "PHÂN TÍCH & THỰC NGHIỆM",
+    nav_group_config: "CẤU HÌNH & QUẢN TRỊ",
+    nav_scan: "Điều khiển Quét",
+    nav_threatmodel: "Mô hình Đe dọa",
+    nav_findings: "Lỗ hổng Phát hiện",
     nav_dashboard: "Dashboard",
     nav_benchmark: "Benchmark & OSS",
-    nav_remediation: "Remediation",
-    nav_reports: "Reports",
-    nav_taxonomy: "Taxonomy",
-    nav_settings: "Settings",
-    nav_apidocs: "API Docs",
+    nav_remediation: "Hướng dẫn Khắc phục",
+    nav_reports: "Báo cáo Kiểm toán",
+    nav_taxonomy: "Từ điển Rủi ro",
+    nav_settings: "Cài đặt Hệ thống",
+    nav_apidocs: "Tài liệu API",
 
-    title_scan: "Scan Control",
-    title_threatmodel: "Threat Model & Attack Surface Profiler",
-    title_findings: "Security Findings",
-    title_dashboard: "Dashboard & Analytics",
-    title_benchmark: "Vietnamese Benchmark & Open-Source Integrations",
-    title_remediation: "Remediation Guidance",
-    title_report: "Audit Reports",
-    title_taxonomy: "Taxonomy Browser",
-    title_settings: "System Settings",
+    title_scan: "Điều khiển Quét Hệ thống",
+    title_threatmodel: "Mô hình Đe dọa & Phân tích Bề mặt Tấn công",
+    title_findings: "Danh sách Lỗ hổng Đánh giá An ninh",
+    title_dashboard: "Dashboard",
+    title_benchmark: "Benchmark An toàn Tiếng Việt & Tích hợp OSS",
+    title_remediation: "Hướng dẫn Khắc phục & Bản vá An ninh",
+    title_report: "Báo cáo Kiểm toán An toàn AI",
+    title_taxonomy: "Từ điển Phân loại Rủi ro (Taxonomy)",
+    title_settings: "Cài đặt Cấu hình Hệ thống",
 
-    export_html: "Export HTML",
-    export_json: "Export JSON",
-    print_pdf: "Print / PDF",
-    refresh: "Refresh",
-    test_ping: "Test Ping",
-    theme_dark: "Theme: Dark",
-    theme_light: "Theme: Light"
+    export_html: "Xuất HTML",
+    export_json: "Xuất JSON",
+    print_pdf: "In / PDF",
+    refresh: "Làm mới",
+    test_ping: "Kiểm tra Ping",
+    theme_dark: "Giao diện: Tối",
+    theme_light: "Giao diện: Sáng"
   },
   en: {
-    nav_group_test: "Testing & Assessment",
-    nav_group_analytics: "Analytics & Experiments",
-    nav_group_config: "Configuration & Admin",
+    nav_group_test: "TESTING & ASSESSMENT",
+    nav_group_analytics: "ANALYTICS & EXPERIMENTS",
+    nav_group_config: "CONFIGURATION & ADMIN",
     nav_scan: "Scan Control",
     nav_threatmodel: "Threat Model",
     nav_findings: "Findings",
@@ -3955,7 +4153,6 @@ window.I18N = {
     theme_light: "Theme: Light"
   }
 };
-
 let currentAppLang = localStorage.getItem('ai_scanner_lang') || 'vi';
 
 function setLanguage(lang) {
@@ -3963,34 +4160,664 @@ function setLanguage(lang) {
   localStorage.setItem('ai_scanner_lang', currentAppLang);
   document.documentElement.setAttribute('lang', currentAppLang);
 
-  const badge = document.getElementById('lang-btn-label');
-  if (badge) badge.textContent = currentAppLang.toUpperCase();
+  const isVi = (currentAppLang === 'vi');
 
-  const dict = window.I18N[currentAppLang] || window.I18N.vi;
-  document.querySelectorAll('[data-i18n]').forEach(el => {
-    const key = el.getAttribute('data-i18n');
-    if (dict[key]) el.textContent = dict[key];
+  // Lang toggle button label
+  const badge = document.getElementById('lang-btn-label');
+  if (badge) badge.textContent = isVi ? 'VI 🇻🇳' : 'EN 🇬🇧';
+
+  // 1. Topbar elements
+  const connText = document.getElementById('target-conn-text');
+  if (connText && connText.textContent) {
+    if (connText.textContent.startsWith('Connected: ') || connText.textContent.startsWith('Đã kết nối: ')) {
+      const curModel = connText.textContent.split(': ')[1] || '';
+      connText.textContent = isVi ? `Đã kết nối: ${curModel}` : `Connected: ${curModel}`;
+      connText.title = isVi ? `Đã kết nối: ${curModel}` : `Connected: ${curModel}`;
+    } else if (connText.textContent === 'Disconnected' || connText.textContent === 'Mất kết nối') {
+      connText.textContent = isVi ? 'Mất kết nối' : 'Disconnected';
+    }
+  }
+
+  const pingBtn = document.querySelector('button[onclick="checkConnection(true)"]');
+  if (pingBtn) pingBtn.textContent = isVi ? 'Kiểm tra Ping' : 'Test Ping';
+
+  const themeLabel = document.getElementById('theme-btn-label');
+  if (themeLabel) {
+    const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+    themeLabel.textContent = isVi 
+      ? (currentTheme === 'dark' ? 'Giao diện: Tối' : 'Giao diện: Sáng')
+      : (currentTheme === 'dark' ? 'Theme: Dark' : 'Theme: Light');
+  }
+
+  const exportHtmlBtn = document.querySelector('button[onclick="exportAuditReport(\'html\')"]');
+  if (exportHtmlBtn) {
+    const node = exportHtmlBtn.childNodes[exportHtmlBtn.childNodes.length - 1];
+    if (node) node.textContent = isVi ? ' Xuất HTML' : ' Export HTML';
+  }
+  const exportJsonBtn = document.querySelector('button[onclick="exportAuditReport(\'json\')"]');
+  if (exportJsonBtn) {
+    const node = exportJsonBtn.childNodes[exportJsonBtn.childNodes.length - 1];
+    if (node) node.textContent = isVi ? ' Xuất JSON' : ' Export JSON';
+  }
+  const printPdfBtn = document.querySelector('button[onclick="printAuditReport()"]');
+  if (printPdfBtn) {
+    const node = printPdfBtn.childNodes[printPdfBtn.childNodes.length - 1];
+    if (node) node.textContent = isVi ? ' In / PDF' : ' Print / PDF';
+  }
+  const refreshBtn = document.querySelector('button[onclick="refreshAllTelemetryAndMetrics()"]');
+  if (refreshBtn) {
+    const node = refreshBtn.childNodes[refreshBtn.childNodes.length - 1];
+    if (node) node.textContent = isVi ? ' Làm mới' : ' Refresh';
+  }
+
+  // 2. Topbar Page Title
+  const curPage = window.currentActivePage || 'scan';
+  const pageTitles = {
+    scan: isVi ? 'Điều khiển Quét Hệ thống' : 'Scan Control',
+    threatmodel: isVi ? 'Mô hình Đe dọa & Phân tích Bề mặt Tấn công' : 'Threat Model & Attack Surface Profiler',
+    findings: isVi ? 'Lỗ hổng Đánh giá An ninh' : 'Security Findings',
+    dashboard: 'Dashboard', // PURE Dashboard ALWAYS
+    benchmark: isVi ? 'Benchmark An toàn Tiếng Việt & Tích hợp OSS' : 'Vietnamese Benchmark & Open-Source Integrations',
+    remediation: isVi ? 'Hướng dẫn Khắc phục & Bản vá An ninh' : 'Remediation Guidance',
+    report: isVi ? 'Báo cáo Kiểm toán An toàn AI' : 'Audit Reports',
+    taxonomy: isVi ? 'Từ điển Phân loại Rủi ro (Taxonomy)' : 'Taxonomy Browser',
+    settings: isVi ? 'Cài đặt Cấu hình Hệ thống' : 'System Settings'
+  };
+  const topTitle = document.getElementById('topbar-page-title');
+  if (topTitle) topTitle.textContent = pageTitles[curPage] || 'Dashboard';
+
+  // 3. Sidebar Navigation Group Headers
+  document.querySelectorAll('.nav-group-header').forEach(hdr => {
+    const t = hdr.textContent.trim().toUpperCase();
+    if (t.includes('KIỂM') || t.includes('TESTING')) hdr.textContent = isVi ? 'KIỂM THỬ & ĐÁNH GIÁ' : 'TESTING & ASSESSMENT';
+    else if (t.includes('PHÂN') || t.includes('ANALYTICS')) hdr.textContent = isVi ? 'PHÂN TÍCH & THỰC NGHIỆM' : 'ANALYTICS & EXPERIMENTS';
+    else if (t.includes('CẤU') || t.includes('CONFIG')) hdr.textContent = isVi ? 'CẤU HÌNH & QUẢN TRỊ' : 'CONFIGURATION & ADMIN';
   });
 
-  const curPage = window.currentActivePage || 'scan';
-  const pageTitleKey = 'title_' + curPage;
-  const topTitle = document.getElementById('topbar-page-title');
-  if (topTitle && dict[pageTitleKey]) {
-    topTitle.textContent = dict[pageTitleKey];
+  // 4. Sidebar Nav Items
+  const navItems = {
+    'nav-scan': isVi ? 'Điều khiển Quét' : 'Scan Control',
+    'nav-threatmodel': isVi ? 'Mô hình Đe dọa' : 'Threat Model',
+    'nav-findings': isVi ? 'Lỗ hổng Bảo mật' : 'Findings',
+    'nav-dashboard': 'Dashboard', // Keep Dashboard pure
+    'nav-benchmark': isVi ? 'Benchmark & OSS' : 'Benchmark & OSS',
+    'nav-remediation': isVi ? 'Hướng dẫn Khắc phục' : 'Remediation',
+    'nav-reports': isVi ? 'Báo cáo Kiểm toán' : 'Reports',
+    'nav-taxonomy': isVi ? 'Từ điển Rủi ro (Taxonomy)' : 'Taxonomy',
+    'nav-settings': isVi ? 'Cài đặt Hệ thống' : 'Settings',
+    'nav-apidocs': isVi ? 'Tài liệu API' : 'API Docs'
+  };
+  for (const [id, txt] of Object.entries(navItems)) {
+    const el = document.getElementById(id);
+    if (el) {
+      const span = el.querySelector('span:not(.nav-badge)');
+      if (span) span.textContent = txt;
+    }
+  }
+
+  // 5. Scan Page Header Banner
+  const bannerSub = document.querySelector('.banner-main-sub');
+  if (bannerSub) {
+    bannerSub.textContent = isVi 
+      ? 'Đánh giá và phát hiện lỗ hổng bảo mật trong các ứng dụng LLM' 
+      : 'Automated adversarial vulnerability assessment and safety audit for LLMs';
+  }
+
+  // 6. Card 1: Target AI Endpoint Configuration
+  const card1 = document.querySelector('#view-scan .card:nth-of-type(1)');
+  if (card1) {
+    const title = card1.querySelector('.card-title');
+    if (title) {
+      const icon = title.querySelector('.title-badge-icon');
+      title.innerHTML = `${icon ? icon.outerHTML : ''} ${isVi ? 'Cấu hình quét hệ thống' : 'Target AI Endpoint Configuration'}`;
+    }
+    const sub = card1.querySelector('.card-subtitle');
+    if (sub) {
+      sub.textContent = isVi 
+        ? 'Cung cấp thông tin endpoint và tham số để bắt đầu quét' 
+        : 'Provide target endpoint details and audit parameters';
+    }
+  }
+
+  const btnScanAction = document.querySelector('.btn-scan-action');
+  if (btnScanAction) {
+    const svg = btnScanAction.querySelector('svg');
+    btnScanAction.innerHTML = `${svg ? svg.outerHTML : ''} ${isVi ? 'Bắt đầu quét' : 'Start Scan'}`;
+  }
+  const btnSaveAction = document.querySelector('.btn-save-action');
+  if (btnSaveAction) {
+    const svg = btnSaveAction.querySelector('svg');
+    btnSaveAction.innerHTML = `${svg ? svg.outerHTML : ''} ${isVi ? 'Lưu cấu hình' : 'Save Config'}`;
+  }
+  const btnTestConn = document.querySelector('button[onclick="testConnectionExplicit()"]');
+  if (btnTestConn) {
+    btnTestConn.textContent = isVi ? 'Kiểm tra kết nối' : 'Test Connection';
+  }
+
+  const formLabels = document.querySelectorAll('.target-config-grid .form-group .form-label');
+  if (formLabels.length >= 4) {
+    const updateLabel = (lbl, txt) => {
+      const svg = lbl.querySelector('svg');
+      if (svg) lbl.innerHTML = `${svg.outerHTML} ${txt}`;
+      else lbl.textContent = txt;
+    };
+    updateLabel(formLabels[0], isVi ? 'URL Mục tiêu (Target URL)' : 'Target URL');
+    updateLabel(formLabels[1], isVi ? 'Mô hình AI Mục tiêu (Target Model)' : 'Target Model');
+    updateLabel(formLabels[2], isVi ? 'Thời gian chờ (Timeout giây)' : 'Timeout (sec)');
+    updateLabel(formLabels[3], isVi ? 'Khóa API (Tùy chọn)' : 'API Key (Optional)');
+  }
+
+  // 7. Card 2: Security Assessment Modules
+  const card2 = document.querySelector('#view-scan .card:nth-of-type(2)');
+  if (card2) {
+    const title = card2.querySelector('.card-title');
+    if (title) {
+      const icon = title.querySelector('.title-badge-icon');
+      title.innerHTML = `${icon ? icon.outerHTML : ''} ${isVi ? 'Chọn module kiểm thử' : 'Security Assessment Modules'}`;
+    }
+    const sub = card2.querySelector('.card-subtitle');
+    if (sub) {
+      sub.textContent = isVi 
+        ? 'Chọn các module tấn công và đánh giá để thực thi' 
+        : 'Select individual threat categories or benchmark all 14 vectors';
+    }
+  }
+
+  const btnSelectAll = document.querySelector('button[onclick="selectAllModules(true)"]');
+  if (btnSelectAll) btnSelectAll.textContent = isVi ? 'Chọn tất cả' : 'Select All';
+  const btnDeselectAll = document.querySelector('button[onclick="selectAllModules(false)"]');
+  if (btnDeselectAll) btnDeselectAll.textContent = isVi ? 'Bỏ chọn tất cả' : 'Deselect All';
+  const btnEditPay = document.getElementById('btn-edit-payloads');
+  if (btnEditPay) {
+    const svg = btnEditPay.querySelector('svg');
+    btnEditPay.innerHTML = `${svg ? svg.outerHTML : ''} ${isVi ? 'Tùy chỉnh payloads' : 'Customize Payloads'}`;
+  }
+
+  const btnRunAll = document.getElementById('btn-run-all');
+  if (btnRunAll) btnRunAll.textContent = isVi ? '⚡ Chạy toàn bộ 14 Modules' : '⚡ Run All 14 Modules';
+  const btnStop = document.getElementById('btn-stop-scan');
+  if (btnStop) btnStop.textContent = isVi ? '⏹ Dừng quét' : '⏹ Stop Scan';
+
+  const adaptiveLabel = document.querySelector('.toggle-switch-wrap span');
+  if (adaptiveLabel) {
+    adaptiveLabel.textContent = isVi ? '🧬 Đột biến Thích ứng (13 Chiến lược)' : '🧬 Adaptive Mutation (13 Strategies)';
+  }
+
+  const statusInd = document.getElementById('scan-status-indicator');
+  if (statusInd && !isScanJobActive) {
+    statusInd.textContent = isVi ? 'Sẵn sàng thực thi.' : 'Ready for execution.';
+  }
+
+  // 8. Card 3: Real-Time Audit Terminal & Telemetry
+  const card3 = document.querySelector('#view-scan .card:nth-of-type(3)');
+  if (card3) {
+    const title = card3.querySelector('.card-title');
+    if (title) {
+      const icon = title.querySelector('.title-badge-icon');
+      title.innerHTML = `${icon ? icon.outerHTML : ''} ${isVi ? 'Nhật ký thực thi (Realtime)' : 'Real-Time Audit Terminal & Telemetry'}`;
+    }
+    const sub = card3.querySelector('.card-subtitle');
+    if (sub) {
+      sub.textContent = isVi 
+        ? 'Theo dõi tiến trình quét và kết quả theo thời gian thực' 
+        : 'Live execution logs and attack telemetry stream';
+    }
+  }
+
+  const btnScroll = document.getElementById('btn-toggle-autoscroll');
+  if (btnScroll) {
+    btnScroll.textContent = isVi 
+      ? (typeof autoScrollTerminal !== 'undefined' && !autoScrollTerminal ? 'Tự động cuộn: TẮT' : 'Tự động cuộn: BẬT')
+      : (typeof autoScrollTerminal !== 'undefined' && !autoScrollTerminal ? 'Auto-scroll: OFF' : 'Auto-scroll: ON');
+  }
+  const copyBtn = document.querySelector('button[onclick="copyTerminalLogs()"]');
+  if (copyBtn) {
+    const svg = copyBtn.querySelector('svg');
+    copyBtn.innerHTML = `${svg ? svg.outerHTML : ''} ${isVi ? 'Sao chép log' : 'Copy Log'}`;
+  }
+  const clearBtn = document.querySelector('button[onclick="clearTerminal()"]');
+  if (clearBtn) {
+    const svg = clearBtn.querySelector('svg');
+    clearBtn.innerHTML = `${svg ? svg.outerHTML : ''} ${isVi ? 'Xóa log' : 'Clear Logs'}`;
+  }
+  const termHeader = document.querySelector('.terminal-header span');
+  if (termHeader) {
+    termHeader.textContent = isVi ? 'Đầu ra Dòng lệnh — SSE Live Stream' : 'Terminal Output — SSE Live Stream';
+  }
+  const progLbl = document.getElementById('progress-status-label');
+  if (progLbl && !isScanJobActive) {
+    progLbl.textContent = isVi ? 'Chờ thực thi' : 'Idle / Awaiting execution';
+  }
+
+  // 9. Re-render 14 Module Cards (Pure English Titles, localized descriptions)
+  if (typeof renderModuleCheckboxCards === 'function' && typeof modulesData !== 'undefined' && Object.keys(modulesData).length > 0) {
+    renderModuleCheckboxCards();
+  }
+  if (typeof updateSelectionSummary === 'function' && typeof modulesData !== 'undefined') {
+    updateSelectionSummary();
+  }
+
+  // 10. Tab 2: Findings Page
+  const findCard = document.querySelector('#view-findings .card');
+  if (findCard) {
+    const title = findCard.querySelector('.card-title');
+    if (title) {
+      const icon = title.querySelector('.title-badge-icon');
+      title.innerHTML = `${icon ? icon.outerHTML : ''} ${isVi ? 'Lỗ hổng Đánh giá An ninh' : 'Security Assessment Findings'}`;
+    }
+    const sub = findCard.querySelector('.card-subtitle');
+    if (sub) {
+      sub.textContent = isVi 
+        ? 'Toàn bộ các lỗ hổng bảo mật và vi phạm chính sách an toàn AI được phát hiện' 
+        : 'All detected vulnerabilities and AI safety policy violations';
+    }
+  }
+
+  const btnLoadFind = document.querySelector('button[onclick="loadFindings()"]');
+  if (btnLoadFind) {
+    const svg = btnLoadFind.querySelector('svg');
+    btnLoadFind.innerHTML = `${svg ? svg.outerHTML : ''} ${isVi ? 'Làm mới' : 'Refresh'}`;
+  }
+  const btnClearFind = document.querySelector('button[onclick="clearFindingsData()"]');
+  if (btnClearFind) {
+    const svg = btnClearFind.querySelector('svg');
+    btnClearFind.innerHTML = `${svg ? svg.outerHTML : ''} ${isVi ? 'Xóa lịch sử' : 'Clear History'}`;
+  }
+
+  const pills = document.querySelectorAll('.filter-pills .filter-pill');
+  if (pills.length >= 6) {
+    const counts = [
+      document.getElementById('count-all')?.textContent || '0',
+      document.getElementById('count-crit')?.textContent || '0',
+      document.getElementById('count-high')?.textContent || '0',
+      document.getElementById('count-med')?.textContent || '0',
+      document.getElementById('count-low')?.textContent || '0',
+      document.getElementById('count-info')?.textContent || '0'
+    ];
+    pills[0].innerHTML = `${isVi ? 'Tất cả' : 'All'} (<span id="count-all">${counts[0]}</span>)`;
+    pills[1].innerHTML = `${isVi ? 'Nghiêm trọng' : 'Critical'} (<span id="count-crit">${counts[1]}</span>)`;
+    pills[2].innerHTML = `${isVi ? 'Mức Cao' : 'High'} (<span id="count-high">${counts[2]}</span>)`;
+    pills[3].innerHTML = `${isVi ? 'Mức Trung bình' : 'Medium'} (<span id="count-med">${counts[3]}</span>)`;
+    pills[4].innerHTML = `${isVi ? 'Mức Thấp' : 'Low'} (<span id="count-low">${counts[4]}</span>)`;
+    pills[5].innerHTML = `${isVi ? 'Thông tin' : 'Info'} (<span id="count-info">${counts[5]}</span>)`;
+  }
+
+  const findingsSearch = document.getElementById('findings-search-input');
+  if (findingsSearch) {
+    findingsSearch.placeholder = isVi ? 'Tìm kiếm payload, phản hồi, target...' : 'Search findings by keyword, vector, owasp...';
+  }
+  const findingsOwaspOpt = document.querySelector('#findings-owasp-filter option[value="ALL"]');
+  if (findingsOwaspOpt) findingsOwaspOpt.textContent = isVi ? 'Tất cả chuẩn OWASP' : 'All OWASP Categories';
+  const findingsModOpt = document.querySelector('#findings-module-filter option[value="ALL"]');
+  if (findingsModOpt) findingsModOpt.textContent = isVi ? 'Tất cả Modules' : 'All Modules';
+  const findingsDateOpt = document.querySelector('#findings-date-filter option[value=""]');
+  if (findingsDateOpt) findingsDateOpt.textContent = isVi ? 'Tất cả các ngày' : 'All Dates';
+
+  const findingsThs = document.querySelectorAll('#view-findings .data-table thead th');
+  if (findingsThs.length >= 8) {
+    if (findingsThs[0].childNodes.length > 0) findingsThs[0].childNodes[0].nodeValue = '# ';
+    if (findingsThs[1].childNodes.length > 0) findingsThs[1].childNodes[0].nodeValue = isVi ? 'Module Tấn công ' : 'Module ';
+    if (findingsThs[2].childNodes.length > 0) findingsThs[2].childNodes[0].nodeValue = isVi ? 'Mức độ ' : 'Severity ';
+    if (findingsThs[3].childNodes.length > 0) findingsThs[3].childNodes[0].nodeValue = isVi ? 'Điểm CVSS ' : 'Risk Score ';
+    if (findingsThs[4].childNodes.length > 0) findingsThs[4].childNodes[0].nodeValue = isVi ? 'OWASP / MITRE ' : 'OWASP / MITRE ';
+    if (findingsThs[5].childNodes.length > 0) findingsThs[5].childNodes[0].nodeValue = isVi ? 'Trích đoạn Payload' : 'Payload Preview';
+    if (findingsThs[6].childNodes.length > 0) findingsThs[6].childNodes[0].nodeValue = isVi ? 'Phản hồi từ AI' : 'AI Response Preview';
+    if (findingsThs[7].childNodes.length > 0) findingsThs[7].childNodes[0].nodeValue = isVi ? 'Thời gian ' : 'Timestamp ';
+  }
+
+  const pagPrevBtn = document.getElementById('btn-page-prev');
+  if (pagPrevBtn) pagPrevBtn.textContent = isVi ? '‹ Trước' : '‹ Prev';
+  const pagNextBtn = document.getElementById('btn-page-next');
+  if (pagNextBtn) pagNextBtn.textContent = isVi ? 'Sau ›' : 'Next ›';
+
+  if (typeof renderFindingsTablePage === 'function') {
+    renderFindingsTablePage();
+  }
+
+  // 11. Tab 3: Dashboard & Analytics
+  const kpiLabels = document.querySelectorAll('.op-kpi-lbl');
+  const kpiSubs = document.querySelectorAll('.op-kpi-sub');
+  if (kpiLabels.length >= 4) {
+    kpiLabels[0].textContent = isVi ? 'Tổng Nhật ký Hệ thống' : 'Total System Logs';
+    kpiLabels[1].textContent = isVi ? 'Lỗ hổng trong DB' : 'New Findings';
+    kpiLabels[2].textContent = isVi ? 'Module Hoạt động' : 'Active Modules';
+    kpiLabels[3].textContent = isVi ? 'Độ trễ Mục tiêu' : 'Target Latency';
+  }
+  if (kpiSubs.length >= 3) {
+    kpiSubs[0].textContent = isVi ? 'Ghi nhận trong scanner.log' : 'Recorded in scanner.log';
+    kpiSubs[1].textContent = isVi ? 'Lỗ hổng đã ghi vết' : 'Vulnerabilities in DB';
+    kpiSubs[2].textContent = isVi ? 'Công cụ kiểm thử đã nạp' : 'Registered test engines';
+  }
+
+  const gaugeHdr = document.querySelector('.threat-score-card .threat-score-title');
+  if (gaugeHdr) {
+    gaugeHdr.textContent = isVi ? 'ĐIỂM RỦI RO CVSS (v3.1)' : 'CVSS THREAT SCORE (v3.1)';
+  }
+  const gaugeLbls = document.querySelectorAll('.gauge-lbl');
+  if (gaugeLbls.length >= 2) {
+    gaugeLbls[0].textContent = isVi ? 'MODULE ĐÃ KIỂM THỬ' : 'AUDITED MODULES';
+    gaugeLbls[1].textContent = isVi ? 'TRẠNG THÁI AN NINH' : 'POSTURE STATUS';
+  }
+  const cvssTags = document.querySelectorAll('.kpi-cvss-tag');
+  if (cvssTags.length >= 1) {
+    cvssTags[0].textContent = isVi ? 'TẤT CẢ VECTƠ' : 'ALL VECTORS';
+  }
+  const kpiSubLabels = document.querySelectorAll('.kpi-label');
+  if (kpiSubLabels.length >= 5) {
+    kpiSubLabels[0].textContent = isVi ? 'TỔNG LỖ HỔNG' : 'TOTAL FINDINGS';
+    kpiSubLabels[1].textContent = isVi ? 'RỦI RO NGHIÊM TRỌNG' : 'CRITICAL RISKS';
+    kpiSubLabels[2].textContent = isVi ? 'MỨC ĐỘ CAO' : 'HIGH SEVERITY';
+    kpiSubLabels[3].textContent = isVi ? 'MỨC ĐỘ TRUNG BÌNH' : 'MEDIUM SEVERITY';
+    kpiSubLabels[4].textContent = isVi ? 'MỨC THẤP / THÔNG TIN' : 'LOW / INFO';
+  }
+
+  const compCard = document.querySelector('.compliance-meter-section');
+  if (compCard) {
+    const title = compCard.querySelector('.card-title');
+    if (title) {
+      const icon = title.querySelector('.title-badge-icon');
+      title.innerHTML = `${icon ? icon.outerHTML : ''} ${isVi ? 'Tư thế An ninh & Tuân thủ Tiêu chuẩn' : 'Security Posture & Compliance'}`;
+    }
+    const sub = compCard.querySelector('.card-subtitle');
+    if (sub) {
+      sub.textContent = isVi 
+        ? 'Bao phủ khung tiêu chuẩn: OWASP LLM 2025 & MITRE ATLAS' 
+        : 'Framework coverage: OWASP LLM 2025 & MITRE ATLAS';
+    }
+    const meterSpans = compCard.querySelectorAll('.compliance-meter-header > span:first-child');
+    if (meterSpans.length >= 4) {
+      meterSpans[0].textContent = isVi ? 'Điểm Kháng cự & Phòng thủ Toàn hệ thống' : 'Overall System Resilience Score';
+      meterSpans[1].textContent = isVi ? 'Chuẩn OWASP Top 10 for LLM (2025)' : 'OWASP Top 10 for LLM (2025)';
+      meterSpans[2].textContent = isVi ? 'Ma trận MITRE ATLAS v4.0' : 'MITRE ATLAS Matrix v4.0';
+      meterSpans[3].textContent = isVi ? 'Khả năng Chống bẻ khóa Đối kháng (HarmBench)' : 'Adversarial Resilience (HarmBench)';
+    }
+  }
+
+  const findingsModCard = document.querySelector('.attack-breakdown-section');
+  if (findingsModCard) {
+    const title = findingsModCard.querySelector('.card-title');
+    if (title) {
+      const icon = title.querySelector('.title-badge-icon');
+      title.innerHTML = `${icon ? icon.outerHTML : ''} ${isVi ? 'Phân bổ Lỗ hổng theo Module Tấn công' : 'Findings by Attack Module'}`;
+    }
+    const sub = findingsModCard.querySelector('.card-subtitle');
+    if (sub) {
+      sub.textContent = isVi 
+        ? 'Phân bổ lỗ hổng theo các vector tấn công và module bảo mật' 
+        : 'Vulnerability distribution across attack vectors and security modules';
+    }
+    const remLink = findingsModCard.querySelector('a');
+    if (remLink) {
+      remLink.innerHTML = isVi ? 'Xem Hướng dẫn Khắc phục &rarr;' : 'View Remediation Guidance &rarr;';
+    }
+  }
+
+  const correlatorSection = document.querySelector('.incident-correlator-section');
+  if (correlatorSection) {
+    const title = correlatorSection.querySelector('.card-title');
+    if (title) {
+      const icon = title.querySelector('.title-badge-icon');
+      title.innerHTML = `${icon ? icon.outerHTML : ''} ${isVi ? 'Bộ Tương quan & Gom cụm Sự cố An ninh' : 'Security Incident Correlator'}`;
+    }
+    const sub = correlatorSection.querySelector('.card-subtitle');
+    if (sub) {
+      sub.textContent = isVi 
+        ? 'Gom cụm lỗ hổng thời gian thực và tương quan sự cố ưu tiên cao từ cơ sở dữ liệu SQLite' 
+        : 'Real-time vulnerability clustering and high-priority incident correlation from SQLite database';
+    }
+    const correlateBtn = correlatorSection.querySelector('button');
+    if (correlateBtn) {
+      const svg = correlateBtn.querySelector('svg');
+      correlateBtn.innerHTML = `${svg ? svg.outerHTML : ''} ${isVi ? 'Tương quan lại Sự cố' : 'Correlate Incidents'}`;
+    }
+  }
+
+  // Row 4: SOC System Runtime & Health
+  const socCard1 = document.querySelector('.soc-status-hud .card:nth-of-type(1)');
+  if (socCard1) {
+    const title = socCard1.querySelector('.card-title');
+    if (title) {
+      const icon = title.querySelector('.title-badge-icon');
+      title.innerHTML = `${icon ? icon.outerHTML : ''} ${isVi ? 'Trạng thái Hệ thống & Sức khỏe SOC' : 'System Runtime & Health'}`;
+    }
+    const actBtns = socCard1.querySelectorAll('button');
+    if (actBtns.length >= 3) {
+      actBtns[0].textContent = isVi ? '⚡ Chạy Quét An ninh Đầy đủ' : '⚡ Launch Full Security Audit';
+      actBtns[1].textContent = isVi ? '🎯 Chạy Phân tích Mô hình Đe dọa' : '🎯 Run System Threat Profiler';
+      actBtns[2].textContent = isVi ? '🔗 Kiểm tra Ping Endpoint' : '🔗 Ping Inference Endpoint';
+    }
+  }
+  const socCard2 = document.querySelector('.soc-status-hud .card:nth-of-type(2)');
+  if (socCard2) {
+    const title = socCard2.querySelector('.card-title');
+    if (title) {
+      const icon = title.querySelector('.title-badge-icon');
+      title.innerHTML = `${icon ? icon.outerHTML : ''} ${isVi ? 'Luồng Nhật ký Vận hành & Đo kiểm' : 'Operational Log Stream & Telemetry'}`;
+    }
+    const sub = socCard2.querySelector('.card-subtitle');
+    if (sub) {
+      sub.textContent = isVi 
+        ? 'Nhật ký có cấu trúc thời gian thực từ scanner.log và luồng sự kiện SSE' 
+        : 'Real-time structured logs from scanner.log and live SSE event pipeline';
+    }
+  }
+  const socCard3 = document.querySelector('.soc-status-hud .card:nth-of-type(3)');
+  if (socCard3) {
+    const title = socCard3.querySelector('.card-title');
+    if (title) {
+      const icon = title.querySelector('.title-badge-icon');
+      title.innerHTML = `${icon ? icon.outerHTML : ''} ${isVi ? 'Lịch sử Thực thi Kiểm thử An ninh' : 'Assessment Execution History'}`;
+    }
+    const sub = socCard3.querySelector('.card-subtitle');
+    if (sub) {
+      sub.textContent = isVi 
+        ? 'Lưu vết kiểm toán trong cơ sở dữ liệu SQLite với chế độ ghi đồng thời WAL' 
+        : 'Stored audit trails in SQLite database with WAL concurrent execution';
+    }
+    const btnRefHistory = socCard3.querySelector('button');
+    if (btnRefHistory) {
+      btnRefHistory.textContent = isVi ? 'Làm mới Lịch sử' : 'Refresh History';
+    }
+  }
+
+  // 12. Tab 4: Threat Model & System Profiler
+  const tmCard = document.querySelector('#view-threatmodel .card');
+  if (tmCard) {
+    const title = tmCard.querySelector('.card-title');
+    if (title) {
+      const icon = title.querySelector('.title-badge-icon');
+      title.innerHTML = `${icon ? icon.outerHTML : ''} ${isVi ? 'Hồ sơ Đe dọa & Bề mặt Tấn công AI (MITRE ATLAS & OWASP 2025)' : 'AI System Profiler & Threat Modeling (MITRE ATLAS & OWASP 2025)'}`;
+    }
+    const sub = tmCard.querySelector('.card-subtitle');
+    if (sub) {
+      sub.textContent = isVi 
+        ? 'Tự động nhận diện kiến trúc mục tiêu (LLM / RAG / Agent / ML Model) và phân tích đa tầng bề mặt tấn công' 
+        : 'Auto-detect target architecture (LLM / RAG / Agent / ML Model) and analyze multi-tier attack surface';
+    }
+  }
+  const tmOpt = document.getElementById('tm-system-type');
+  if (tmOpt && tmOpt.options.length >= 5) {
+    tmOpt.options[0].textContent = isVi ? '🔍 Tự động nhận diện Kiến trúc' : '🔍 Auto-Detect Architecture';
+    tmOpt.options[1].textContent = isVi ? '💬 Trò chuyện LLM Độc lập' : '💬 Standalone LLM Chat';
+    tmOpt.options[2].textContent = isVi ? '📚 Chuỗi Tri thức RAG' : '📚 RAG Knowledge Pipeline';
+    tmOpt.options[3].textContent = isVi ? '🤖 Tác tử AI Tự trị (Agent)' : '🤖 Autonomous AI Agent';
+    tmOpt.options[4].textContent = isVi ? '🧠 API Suy luận ML / DL' : '🧠 ML / DL Inference API';
+  }
+  const btnRunTm = document.getElementById('btn-run-threat-model');
+  if (btnRunTm) btnRunTm.textContent = isVi ? '⚡ Phân tích Bề mặt Mục tiêu' : '⚡ Analyze Target Surface';
+
+  // 13. Tab 5: Benchmark & OSS
+  const bmTitle = document.getElementById('bm-card-title');
+  if (bmTitle) bmTitle.textContent = isVi ? 'Thực Nghiệm Định Lượng & Bộ Benchmark Tiếng Việt (62 Kịch Bản)' : 'Quantitative Benchmark Runner & Vietnamese Testbed (62 Scenarios)';
+  const bmSub = document.getElementById('bm-card-subtitle');
+  if (bmSub) bmSub.textContent = isVi ? 'Đánh giá độ chính xác (Precision, Recall, F1-Score, ASR) và kiểm định khoảng cách an toàn ngôn ngữ (Cross-lingual Gap)' : 'Evaluate accuracy (Precision, Recall, F1-Score, ASR) and test cross-lingual security gap';
+  const btnBmVn = document.getElementById('btn-bm-vietnamese');
+  if (btnBmVn) btnBmVn.textContent = isVi ? '🇻🇳 Chạy Benchmark Tiếng Việt (62 Cases)' : '🇻🇳 Run Vietnamese Benchmark (62 Cases)';
+  const btnBmStd = document.getElementById('btn-bm-standard');
+  if (btnBmStd) btnBmStd.textContent = isVi ? '🌐 Chạy Benchmark Chuẩn (36 Cases)' : '🌐 Run Standard Benchmark (36 Cases)';
+  const btnBmHarm = document.getElementById('btn-bm-harmbench');
+  if (btnBmHarm) btnBmHarm.textContent = isVi ? '🔥 Chạy HarmBench Subset (10 Cases)' : '🔥 Run HarmBench Subset (10 Cases)';
+
+  const ossCard = document.querySelector('#view-benchmark .card:nth-of-type(2)');
+  if (ossCard) {
+    const title = ossCard.querySelector('.card-title');
+    if (title) {
+      const icon = title.querySelector('.title-badge-icon');
+      title.innerHTML = `${icon ? icon.outerHTML : ''} ${isVi ? 'Liên Minh 6 Công Cụ Kiểm Thử Mã Nguồn Mở Quốc Tế' : '6 Open-Source Security Testing Integrations'}`;
+    }
+    const sub = ossCard.querySelector('.card-subtitle');
+    if (sub) {
+      sub.textContent = isVi 
+        ? 'Tích hợp đồng nhất NVIDIA Garak, Microsoft PyRIT, Promptfoo, DeepTeam, Giskard OSS và IBM ART' 
+        : 'Unified wrappers for NVIDIA Garak, Microsoft PyRIT, Promptfoo, DeepTeam, Giskard OSS and IBM ART';
+    }
+    const btnOss = ossCard.querySelector('button');
+    if (btnOss) {
+      const svg = btnOss.querySelector('svg');
+      btnOss.innerHTML = `${svg ? svg.outerHTML : ''} ${isVi ? 'Kiểm tra Trạng thái' : 'Check Status'}`;
+    }
+  }
+
+  // 14. Tab 6: Remediation Guidance
+  const remCard = document.querySelector('#view-remediation .card');
+  if (remCard) {
+    const title = remCard.querySelector('.card-title');
+    if (title) {
+      const icon = title.querySelector('.title-badge-icon');
+      title.innerHTML = `${icon ? icon.outerHTML : ''} ${isVi ? 'Chiến lược Giảm thiểu Rủi ro & Khắc phục Phòng thủ' : 'Defensive Remediation & Hardening Guidance'}`;
+    }
+    const sub = remCard.querySelector('.card-subtitle');
+    if (sub) {
+      sub.textContent = isVi 
+        ? 'Chiến lược giảm thiểu rủi ro và tăng cường bảo mật phân nhóm theo OWASP LLM 2025' 
+        : 'Defense-in-depth mitigation strategies categorized by OWASP LLM 2025';
+    }
+    const btnExpand = remCard.querySelector('button');
+    if (btnExpand) {
+      const svg = btnExpand.querySelector('svg');
+      btnExpand.innerHTML = `${svg ? svg.outerHTML : ''} ${isVi ? 'Mở rộng tất cả' : 'Expand All'}`;
+    }
+  }
+
+  // 15. Tab 7: Reports
+  const repCard = document.querySelector('#view-report .card');
+  if (repCard) {
+    const title = repCard.querySelector('.card-title');
+    if (title) {
+      const icon = title.querySelector('.title-badge-icon');
+      title.innerHTML = `${icon ? icon.outerHTML : ''} ${isVi ? 'Biên dịch Báo cáo Kiểm toán & Xuất dữ liệu' : 'Audit Report Compilation & Export'}`;
+    }
+    const sub = repCard.querySelector('.card-subtitle');
+    if (sub) {
+      sub.textContent = isVi 
+        ? 'Biên dịch báo cáo kiểm thử an toàn AI, xuất file HTML/JSON hoặc in ấn chuẩn báo cáo' 
+        : 'Compile AI security assessment report, export HTML/JSON or print PDF';
+    }
+  }
+  const repSevLbl = document.querySelector('label[for="report-filter-severity"]') || document.querySelector('#view-report .form-label:nth-of-type(1)');
+  if (repSevLbl) repSevLbl.textContent = isVi ? 'Mức độ rủi ro:' : 'Severity Filter:';
+  const repModLbl = document.querySelector('label[for="report-filter-module"]') || document.querySelector('#view-report .form-label:nth-of-type(2)');
+  if (repModLbl) repModLbl.textContent = isVi ? 'Lọc theo Module:' : 'Module Filter:';
+  const btnGenRep = document.querySelector('button[onclick="generateReportPreview()"]');
+  if (btnGenRep) btnGenRep.textContent = isVi ? 'Biên dịch Báo cáo HTML' : 'Compile HTML Report';
+
+  // 16. Tab 8: Taxonomy Browser
+  const taxCard = document.querySelector('#view-taxonomy .card');
+  if (taxCard) {
+    const title = taxCard.querySelector('.card-title');
+    if (title) {
+      const icon = title.querySelector('.title-badge-icon');
+      title.innerHTML = `${icon ? icon.outerHTML : ''} ${isVi ? 'Từ điển An toàn AI (OWASP LLM 2025 & MITRE ATLAS)' : 'AI Security Testing Taxonomy (OWASP LLM 2025 & MITRE ATLAS)'}`;
+    }
+    const sub = taxCard.querySelector('.card-subtitle');
+    if (sub) {
+      sub.textContent = isVi 
+        ? 'Phân loại cấu trúc phân tầng các kỹ thuật, chiến thuật tấn công và lỗ hổng AI/LLM' 
+        : 'Hierarchical categorization of AI vulnerabilities and adversarial attack techniques';
+    }
+    const btnRefTax = taxCard.querySelector('button');
+    if (btnRefTax) {
+      const svg = btnRefTax.querySelector('svg');
+      btnRefTax.innerHTML = `${svg ? svg.outerHTML : ''} ${isVi ? 'Làm mới Taxonomy' : 'Refresh Taxonomy'}`;
+    }
+  }
+
+  // 17. Tab 9: System Settings
+  const setCard1 = document.querySelector('#view-settings .settings-grid > .card:nth-of-type(1)');
+  if (setCard1) {
+    const title = setCard1.querySelector('.card-title');
+    if (title) {
+      const icon = title.querySelector('.title-badge-icon');
+      title.innerHTML = `${icon ? icon.outerHTML : ''} ${isVi ? 'Tham số Môi trường & Dịch vụ' : 'Environment & Service Parameters'}`;
+    }
+    const labels = setCard1.querySelectorAll('.form-label');
+    if (labels.length >= 4) {
+      labels[0].textContent = isVi ? 'Endpoint Mục tiêu Mặc định' : 'Default Target Endpoint';
+      labels[1].textContent = isVi ? 'Mô hình Mặc định' : 'Default Model';
+      labels[2].textContent = isVi ? 'Thời gian chờ HTTP (giây)' : 'HTTP Timeout (seconds)';
+      labels[3].textContent = isVi ? 'Khóa API (API Key)' : 'API Key';
+    }
+    const btnSave = setCard1.querySelector('button[onclick="saveSettings()"]');
+    if (btnSave) btnSave.textContent = isVi ? 'Lưu Cấu hình' : 'Save Configuration';
+  }
+  const setCard2 = document.querySelector('#view-settings .settings-grid > .card:nth-of-type(2)');
+  if (setCard2) {
+    const title = setCard2.querySelector('.card-title');
+    if (title) {
+      const icon = title.querySelector('.title-badge-icon');
+      title.innerHTML = `${icon ? icon.outerHTML : ''} ${isVi ? 'Thông số Kỹ thuật Công cụ Kiểm thử' : 'Engine Specifications'}`;
+    }
+    const rows = setCard2.querySelectorAll('.data-table tr');
+    if (rows.length >= 6) {
+      const setRowKey = (r, viText, enText) => {
+        const td = r.querySelector('td:first-child');
+        if (td) td.textContent = isVi ? viText : enText;
+      };
+      setRowKey(rows[0], 'Kiến trúc', 'Architecture');
+      setRowKey(rows[1], 'Bộ phát hiện', 'Detection Engine');
+      setRowKey(rows[2], 'Giao thức kết nối', 'Communication');
+      setRowKey(rows[3], 'Lưu trữ dữ liệu', 'Storage Backend');
+      setRowKey(rows[4], 'Tài liệu OpenAPI', 'OpenAPI Specification');
+      setRowKey(rows[5], 'Xuất chỉ số Prometheus', 'Metrics Export');
+    }
+  }
+
+  // 18. Payload Customizer Modal
+  const modalCustTitle = document.querySelector('#payload-customizer-modal .modal-header div > div:first-child');
+  if (modalCustTitle) modalCustTitle.textContent = isVi ? 'Tùy chỉnh Payload Tấn công Đối kháng' : 'Adversarial Payload Customizer';
+  const modalCustClose = document.querySelector('#payload-customizer-modal .modal-header button');
+  if (modalCustClose) modalCustClose.textContent = isVi ? 'Đóng' : 'Close';
+  const btnAddPay = document.querySelector('button[onclick="addCustomPayloadRow()"]');
+  if (btnAddPay) btnAddPay.textContent = isVi ? 'Thêm Payload Mới' : 'Add New Payload';
+  const btnResetPay = document.querySelector('button[onclick="resetCustomPayloads()"]');
+  if (btnResetPay) btnResetPay.textContent = isVi ? 'Khôi phục Mặc định' : 'Reset to Default';
+  const btnCancelCust = document.querySelector('#payload-customizer-modal .modal-footer button.btn-outline');
+  if (btnCancelCust) btnCancelCust.textContent = isVi ? 'Hủy' : 'Cancel';
+  const btnApplyPay = document.querySelector('button[onclick="saveCustomPayloads()"]');
+  if (btnApplyPay) btnApplyPay.textContent = isVi ? 'Áp dụng Payload Tùy chỉnh' : 'Apply Custom Payloads';
+
+  // 19. Refresh Dynamic Feeds
+  if (typeof loadDashboardIncidents === 'function') {
+    loadDashboardIncidents();
+  }
+  if (typeof loadDashboardAnalytics === 'function') {
+    loadDashboardAnalytics();
   }
 }
-
 function toggleLanguage() {
   setLanguage(currentAppLang === 'vi' ? 'en' : 'vi');
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-  setLanguage(currentAppLang);
+  initI18n();
   initSidebar();
   initTheme();
   await loadConfigData();
   await loadModulesData();
   checkConnection(false);
+  if (typeof refreshAllTelemetryAndMetrics === 'function') {
+    refreshAllTelemetryAndMetrics();
+  }
   setInterval(() => checkConnection(false), 20000);
 });
 // ─── NCKH v2.1: Threat Model, Benchmark, OSS & Replay Functions ───
@@ -4000,21 +4827,23 @@ document.addEventListener('DOMContentLoaded', async () => {
 const _origShowPage = showPage;
 showPage = function(pageId, navEl) {
   _origShowPage(pageId, navEl);
+  const isVi = (window.currentAppLang || 'vi') === 'vi';
   const titles = {
-    scan: 'Scan Control',
-    threatmodel: 'Threat Model & Attack Surface Profiler',
-    findings: 'Security Findings',
-    dashboard: 'Dashboard & Analytics',
-    benchmark: 'Vietnamese Benchmark & Open-Source Integrations',
-    remediation: 'Remediation Guidance',
-    report: 'Audit Reports',
-    taxonomy: 'Taxonomy Browser',
-    settings: 'System Settings'
+    scan: isVi ? 'Điều khiển Quét Hệ thống' : 'Scan Control',
+    threatmodel: isVi ? 'Mô hình Đe dọa & Phân tích Bề mặt Tấn công' : 'Threat Model & Attack Surface Profiler',
+    findings: isVi ? 'Danh sách Lỗ hổng Đánh giá An ninh' : 'Security Findings',
+    dashboard: 'Dashboard',
+    benchmark: isVi ? 'Benchmark An toàn Tiếng Việt & Tích hợp OSS' : 'Vietnamese Benchmark & Open-Source Integrations',
+    remediation: isVi ? 'Hướng dẫn Khắc phục & Bản vá An ninh' : 'Remediation Guidance',
+    report: isVi ? 'Báo cáo Kiểm toán An toàn AI' : 'Audit Reports',
+    taxonomy: isVi ? 'Từ điển Phân loại Rủi ro (Taxonomy)' : 'Taxonomy Browser',
+    settings: isVi ? 'Cài đặt Cấu hình Hệ thống' : 'System Settings'
   };
   window.currentActivePage = pageId;
   const dict = (window.I18N && window.I18N[currentAppLang]) ? window.I18N[currentAppLang] : titles;
   const pageKey = 'title_' + pageId;
-  document.getElementById('topbar-page-title').textContent = dict[pageKey] || titles[pageId] || pageId;
+  const activeDict = (window.I18N && window.I18N[currentAppLang]) ? window.I18N[currentAppLang] : titles;
+  document.getElementById('topbar-page-title').textContent = activeDict[pageKey] || titles[pageId] || pageId;
   if (pageId === 'threatmodel') runThreatProfiler();
   if (pageId === 'benchmark') loadOSSIntegrations();
 };

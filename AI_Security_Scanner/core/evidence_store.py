@@ -204,6 +204,18 @@ class EvidenceStore:
     # Public API
     # ------------------------------------------------------------------
 
+    def clear_all(self) -> None:
+        """Clear all records from evidence and run_metadata tables."""
+        conn = self._get_conn()
+        conn.execute("DELETE FROM evidence")
+        conn.execute("DELETE FROM run_metadata")
+        try:
+            conn.execute("DELETE FROM sqlite_sequence WHERE name IN ('evidence', 'run_metadata')")
+        except sqlite3.OperationalError:
+            pass
+        conn.commit()
+        conn.close()
+
     def record_evidence(
         self,
         finding_id: str,

@@ -176,12 +176,22 @@ def get_findings(
 
 
 def clear_findings() -> None:
-    """Delete all findings and scans from the database."""
+    """Delete all findings and scans from the database and reset AUTOINCREMENT sequences."""
     conn = _get_conn()
     conn.execute("DELETE FROM findings")
     conn.execute("DELETE FROM scans")
+    try:
+        conn.execute("DELETE FROM sqlite_sequence WHERE name IN ('findings', 'scans')")
+    except sqlite3.OperationalError:
+        pass
     conn.commit()
     conn.close()
+
+    try:
+        from core.evidence_store import EvidenceStore
+        EvidenceStore().clear_all()
+    except Exception:
+        pass
 
 
 # ---------------------------------------------------------------------------

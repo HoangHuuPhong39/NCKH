@@ -1,5 +1,30 @@
+# Virtual environments
 venv/
+.venv/
+*/venv/
+*/.venv/
+
+# Python bytecode & cache
 __pycache__/
+*.py[cod]
+*$py.class
 .pytest_cache/
-logs/
+
+# Databases & logs
 *.db
+logs/
+*.log
+
+# Temporary office / editor files
+~$*
+.vscode/
+.idea/
+
+# Local personal documents & misc files (not pushed to GitHub)
+document/
+New folder/
+ai_guard_proxy.py
+Modelfile
+*.docx
+*.pptx
+*.pdf

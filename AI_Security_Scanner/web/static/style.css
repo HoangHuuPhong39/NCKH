@@ -79,18 +79,31 @@
 }
 
 [data-theme="light"] {
+    /* ─── TOKENS THIẾT KẾ GỐC (LIGHT MODE) ─── */
+    --app-bg: #f1f5f9;
+    --sidebar-bg: #ffffff;
+    --card-surface: #ffffff;
+    --elevated-surface: #f8fafc;
+    --border-color: #cbd5e1;
+    --border-token: #cbd5e1;
+    --border-light: #e2e8f0;
+    --primary-blue: #0284c7;
+    --neon-cyan: #0284c7;
+    --main-text: #0f172a;
+    --secondary-text: #475569;
+    --muted-text: #64748b;
+
+    /* Semantic Variables */
     --bg-base: #f1f5f9;
     --bg-surface: #ffffff;
     --bg-surface-hover: #e2e8f0;
     --bg-card: #ffffff;
     --bg-card-secondary: #f8fafc;
     --bg-input: #ffffff;
-    --border-color: #cbd5e1;
-    --border-light: #94a3b8;
 
     --text-primary: #0f172a;
     --text-secondary: #475569;
-    --text-muted: #94a3b8;
+    --text-muted: #64748b;
 
     --accent: #0284c7;
     --accent-hover: #0369a1;
@@ -481,6 +494,148 @@
     background-color: #f1f5f9 !important;
     border-color: #cbd5e1 !important;
     color: #475569 !important;
+}
+
+
+/* ══════════════════════════════════════════════════════════════════
+   11. OPERATIONAL KPI CARDS & DASHBOARD TELEMETRY (LIGHT MODE)
+   Khắc phục nền tối của 4 thẻ thống kê trên cùng Dashboard
+   ══════════════════════════════════════════════════════════════════ */
+[data-theme="light"] .op-kpi-card {
+    background-color: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+}
+[data-theme="light"] .op-kpi-card:hover {
+    border-color: #0284c7 !important;
+    background-color: #f8fafc !important;
+    box-shadow: 0 4px 14px rgba(2, 132, 199, 0.12) !important;
+}
+[data-theme="light"] .op-kpi-icon {
+    background: #e0f2fe !important;
+    border-color: #bae6fd !important;
+    color: #0284c7 !important;
+}
+[data-theme="light"] .op-kpi-val {
+    color: #0f172a !important;
+}
+[data-theme="light"] .op-kpi-lbl {
+    color: #64748b !important;
+}
+[data-theme="light"] .op-kpi-sub {
+    color: #94a3b8 !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   12. SYSTEM RUNTIME & HEALTH CHIPS (LIGHT MODE)
+   Khắc phục nền tối của 4 ô trạng thái trong System Runtime & Health
+   ══════════════════════════════════════════════════════════════════ */
+[data-theme="light"] .soc-status-chip {
+    background-color: #f8fafc !important;
+    border: 1px solid #e2e8f0 !important;
+}
+[data-theme="light"] .soc-chip-title {
+    color: #0f172a !important;
+}
+[data-theme="light"] .soc-chip-sub {
+    color: #64748b !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   13. OPERATIONAL QUICK ACTIONS BUTTONS (LIGHT MODE)
+   Khắc phục nền đen của các nút thao tác nhanh bên phải
+   ══════════════════════════════════════════════════════════════════ */
+[data-theme="light"] .quick-action-btn {
+    background-color: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #1e293b !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+}
+[data-theme="light"] .quick-action-btn:hover {
+    background-color: #f0f9ff !important;
+    border-color: #0284c7 !important;
+    color: #0284c7 !important;
+    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.12) !important;
+}
+[data-theme="light"] .quick-action-btn svg {
+    color: #0284c7 !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   14. OPERATIONAL LOG STREAM & TELEMETRY (LIGHT MODE)
+   Khắc phục nút lọc đen và khung log terminal đen trong Dashboard
+   ══════════════════════════════════════════════════════════════ */
+[data-theme="light"] .dash-log-stream-card {
+    background-color: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+}
+[data-theme="light"] .log-filter-btn {
+    background-color: #f1f5f9 !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #475569 !important;
+}
+[data-theme="light"] .log-filter-btn:hover {
+    background-color: #e2e8f0 !important;
+    color: #0f172a !important;
+    border-color: #94a3b8 !important;
+}
+[data-theme="light"] .log-filter-btn.active {
+    background-color: #0284c7 !important;
+    border-color: #0284c7 !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 8px rgba(2, 132, 199, 0.25) !important;
+}
+[data-theme="light"] .log-stream-box {
+    background-color: #f8fafc !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #1e293b !important;
+}
+[data-theme="light"] .log-row-item:hover {
+    background: #e2e8f0 !important;
+}
+[data-theme="light"] .log-row-ts {
+    color: #64748b !important;
+}
+[data-theme="light"] .log-row-src {
+    color: #334155 !important;
+}
+[data-theme="light"] .log-row-msg {
+    color: #0f172a !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   15. INCIDENT CARDS & THREAT MODEL PROFILER (LIGHT MODE)
+   ══════════════════════════════════════════════════════════════════ */
+[data-theme="light"] .incident-card {
+    background-color: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+}
+[data-theme="light"] .incident-title {
+    color: #0f172a !important;
+}
+[data-theme="light"] .incident-body {
+    background-color: #f8fafc !important;
+    border: 1px solid #e2e8f0 !important;
+    color: #334155 !important;
+}
+[data-theme="light"] .clean-incident-banner {
+    background-color: #f0fdf4 !important;
+    border: 1px solid #bbf7d0 !important;
+}
+[data-theme="light"] .clean-incident-banner .clean-title {
+    color: #166534 !important;
+}
+[data-theme="light"] .clean-incident-banner .clean-sub {
+    color: #15803d !important;
+}
+[data-theme="light"] .tm-profile-card,
+[data-theme="light"] .oss-tool-card,
+[data-theme="light"] .bench-kpi-card {
+    background-color: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
 }
 
 /* ── Base Reset ── */
@@ -2717,7 +2872,11 @@ table.data-table tr.clickable-row:hover { background-color: var(--bg-surface-hov
     border-radius: 6px;
     border: 1px solid rgba(32, 51, 77, 0.5);
     font-family: var(--font-mono);
-    word-break: break-all;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    line-height: 1.45;
+    max-height: 140px;
+    overflow-y: auto;
 }
 .incident-footer {
     display: flex;

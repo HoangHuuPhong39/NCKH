@@ -84,7 +84,6 @@ app_config = {
     "target_url": cfg.get("scanner.target_url", "http://localhost:11434"),
     "target_model": cfg.get("scanner.target_model", "llama3"),
     "timeout": cfg.get("scanner.timeout", 90),
-    "max_tokens": cfg.get("scanner.max_tokens", 80),
     "api_key": cfg.get("scanner.api_key", ""),
 }
 
@@ -712,7 +711,7 @@ def api_set_config():
     if not is_valid:
         return jsonify({"error": "Invalid configuration", "message": err_msg}), 400
 
-    for key in ["target_url", "target_model", "timeout"]:
+    for key in ["target_url", "target_model", "timeout", "api_key"]:
         if key in data:
             app_config[key] = data[key]
 
@@ -956,7 +955,10 @@ def api_scans():
 
 @app.route("/api/findings", methods=["DELETE"])
 def api_clear_findings():
-    clear_findings()
+    import core.db
+    import importlib
+    importlib.reload(core.db)
+    core.db.clear_findings()
     return jsonify({"success": True, "message": "Đã xóa tất cả findings."})
 
 
@@ -1352,7 +1354,7 @@ def api_incidents():
                 "target_url": f_list[0].get("target_url", app_config["target_url"]),
                 "last_seen": f_list[0].get("timestamp", "N/A"),
                 "first_seen": f_list[-1].get("timestamp", "N/A"),
-                "sample_payload": (f_list[0].get("payload") or "")[:120],
+                "sample_payload": (f_list[0].get("payload") or "")[:250],
                 "finding_ids": [x.get("id") for x in f_list],
             })
             idx += 1
