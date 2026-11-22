@@ -125,9 +125,8 @@ class EvidenceStore:
     # ------------------------------------------------------------------
 
     def _get_conn(self) -> sqlite3.Connection:
-        """Return an optimised SQLite connection with WAL journal mode."""
+        """Return an optimised SQLite connection."""
         conn = sqlite3.connect(str(self.db_path), timeout=10.0)
-        conn.execute("PRAGMA journal_mode=WAL")
         conn.execute("PRAGMA synchronous=NORMAL")
         conn.row_factory = sqlite3.Row
         return conn
@@ -135,48 +134,51 @@ class EvidenceStore:
     def _init_db(self) -> None:
         """Create the evidence table if it does not exist, with migration support."""
         conn = self._get_conn()
-        cursor = conn.cursor()
+        try:
+            conn.execute("PRAGMA journal_mode=WAL")
+            cursor = conn.cursor()
 
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS evidence (
-                id              TEXT PRIMARY KEY,
-                finding_id      TEXT NOT NULL,
-                timestamp       TEXT NOT NULL,
-                payload         TEXT NOT NULL,
-                response        TEXT NOT NULL,
-                module_name     TEXT NOT NULL,
-                score           REAL NOT NULL DEFAULT 0.0,
-                severity        TEXT NOT NULL DEFAULT 'INFO',
-                model_version   TEXT NOT NULL DEFAULT 'unknown',
-                config_hash     TEXT NOT NULL DEFAULT '',
-                seed            INTEGER NOT NULL DEFAULT 0,
-                is_reproducible INTEGER NOT NULL DEFAULT 0,
-                metadata_json   TEXT NOT NULL DEFAULT '{}'
-            )
-        """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS evidence (
+                    id              TEXT PRIMARY KEY,
+                    finding_id      TEXT NOT NULL,
+                    timestamp       TEXT NOT NULL,
+                    payload         TEXT NOT NULL,
+                    response        TEXT NOT NULL,
+                    module_name     TEXT NOT NULL,
+                    score           REAL NOT NULL DEFAULT 0.0,
+                    severity        TEXT NOT NULL DEFAULT 'INFO',
+                    model_version   TEXT NOT NULL DEFAULT 'unknown',
+                    config_hash     TEXT NOT NULL DEFAULT '',
+                    seed            INTEGER NOT NULL DEFAULT 0,
+                    is_reproducible INTEGER DEFAULT NULL,
+                    metadata_json   TEXT NOT NULL DEFAULT '{}'
+                )
+            """)
 
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS run_metadata (
-                run_id          TEXT NOT NULL,
-                evidence_id     TEXT NOT NULL,
-                created_at      TEXT NOT NULL,
-                PRIMARY KEY (run_id, evidence_id)
-            )
-        """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS run_metadata (
+                    run_id          TEXT NOT NULL,
+                    evidence_id     TEXT NOT NULL,
+                    created_at      TEXT NOT NULL,
+                    PRIMARY KEY (run_id, evidence_id)
+                )
+            """)
 
-        # Migration: add missing columns gracefully
-        existing_cols = {row[1] for row in cursor.execute("PRAGMA table_info(evidence)")}
-        migrations = [
-            ("seed", "INTEGER NOT NULL DEFAULT 0"),
-            ("is_reproducible", "INTEGER NOT NULL DEFAULT 0"),
-            ("config_hash", "TEXT NOT NULL DEFAULT ''"),
-        ]
-        for col_name, col_def in migrations:
-            if col_name not in existing_cols:
-                cursor.execute(f"ALTER TABLE evidence ADD COLUMN {col_name} {col_def}")
+            # Migration: add missing columns gracefully
+            existing_cols = {row[1] for row in cursor.execute("PRAGMA table_info(evidence)")}
+            migrations = [
+                ("seed", "INTEGER NOT NULL DEFAULT 0"),
+                ("is_reproducible", "INTEGER DEFAULT NULL"),
+                ("config_hash", "TEXT NOT NULL DEFAULT ''"),
+            ]
+            for col_name, col_def in migrations:
+                if col_name not in existing_cols:
+                    cursor.execute(f"ALTER TABLE evidence ADD COLUMN {col_name} {col_def}")
 
-        conn.commit()
-        conn.close()
+            conn.commit()
+        finally:
+            conn.close()
 
     @staticmethod
     def _compute_config_hash(metadata: Dict[str, Any]) -> str:
@@ -278,7 +280,7 @@ class EvidenceStore:
                 model_version,
                 config_hash,
                 seed,
-                1 if detector_result else 0,
+                None,  # Reproducibility is unknown until replay_test() is actually executed
                 json.dumps(metadata, ensure_ascii=False),
             ),
         )
@@ -460,7 +462,9 @@ class EvidenceStore:
         Returns:
             Resolved :class:`pathlib.Path` of the written bundle file.
         """
-        output_path = Path(output_path)
+        from core.path_security import resolve_safe_output_path
+
+        output_path = resolve_safe_output_path(output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
         records: List[Dict[str, Any]] = []
@@ -498,27 +502,19 @@ class EvidenceStore:
             Dict containing reproducibility statistics and per-record details.
         """
         conn = self._get_conn()
-        cursor = conn.cursor()
-
-        # Fetch all evidence IDs linked to this run
-        cursor.execute(
-            """
-            SELECT e.* FROM evidence e
-            INNER JOIN run_metadata r ON e.id = r.evidence_id
-            WHERE r.run_id = ?
-            ORDER BY e.timestamp ASC
-            """,
-            (run_id,),
-        )
-        rows = cursor.fetchall()
-        conn.close()
-
-        if not rows:
-            # Fallback: all evidence if no run metadata exists
-            conn = self._get_conn()
+        try:
             cursor = conn.cursor()
-            cursor.execute("SELECT * FROM evidence ORDER BY timestamp ASC LIMIT 100")
+            cursor.execute(
+                """
+                SELECT e.* FROM evidence e
+                INNER JOIN run_metadata r ON e.id = r.evidence_id
+                WHERE r.run_id = ?
+                ORDER BY e.timestamp ASC
+                """,
+                (run_id,),
+            )
             rows = cursor.fetchall()
+        finally:
             conn.close()
 
         total = len(rows)

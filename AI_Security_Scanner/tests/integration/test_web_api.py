@@ -52,8 +52,11 @@ def test_api_auth_login_and_token(client):
     res = client.post("/api/auth/login", json={"username": "wrong", "password": "bad"})
     assert res.status_code == 401
 
-    # Valid login with default admin API key
-    res = client.post("/api/auth/login", json={"api_key": "ai-scanner-admin-secret-token"})
+    # Valid login with runtime-configured admin API key (never hardcoded placeholder)
+    from core.config import cfg
+    active_admin_key = cfg.get("web.admin_api_key")
+    assert active_admin_key and active_admin_key != "ai-scanner-admin-secret-token"
+    res = client.post("/api/auth/login", json={"api_key": active_admin_key})
     assert res.status_code == 200
     data = res.get_json()
     assert data.get("success") is True
@@ -117,7 +120,9 @@ def test_api_findings_and_scans_workflow(client):
 def test_swagger_and_openapi_endpoints(client):
     res_docs = client.get("/docs")
     assert res_docs.status_code == 200
-    assert "SwaggerUIBundle" in res_docs.get_data(as_text=True)
+    docs_html = res_docs.get_data(as_text=True)
+    assert "swagger-ui-bundle.js" in docs_html
+    assert "swagger_init.js" in docs_html
 
     res_swagger = client.get("/swagger")
     assert res_swagger.status_code == 200
@@ -219,3 +224,47 @@ def test_api_connection_test_model_validation(client):
 
 
 
+def test_api_code_and_oss_scanner_endpoints(client):
+    """Kiểm tra các API endpoint cho Quét Mã Nguồn (SAST) và Hệ Thống AI Mã Nguồn Mở."""
+    # 1. Sample SAST code
+    res_sample = client.get("/api/code-scan/sample")
+    assert res_sample.status_code == 200
+    d_sample = res_sample.get_json()
+    assert d_sample["success"] is True
+    assert "AI-SAST-001" in [r["rule_id"] for r in d_sample["rules"]]
+    assert len(d_sample["sample_code"]) > 100
+
+    # 2. Run SAST Code Scan on sample code and sample directory
+    res_sast = client.post("/api/code-scan/run", json={
+        "code": d_sample["sample_code"],
+        "target_path": d_sample["sample_dir"],
+        "use_bandit": False,
+        "save_to_db": True,
+    })
+    assert res_sast.status_code == 200
+    d_sast = res_sast.get_json()
+    assert d_sast["success"] is True
+    assert d_sast["summary"]["total_findings"] >= 8
+    assert d_sast["summary"]["by_severity"]["CRITICAL"] >= 2
+
+    # 3. Sample OSS config
+    res_oss_sample = client.get("/api/oss-scan/sample")
+    assert res_oss_sample.status_code == 200
+    d_oss_sample = res_oss_sample.get_json()
+    assert d_oss_sample["success"] is True
+    assert len(d_oss_sample["platforms"]) >= 8
+
+    # 4. Run OSS AI Scan (ModelScan + Dependency CVE Scan on sample directory)
+    res_oss = client.post("/api/oss-scan/run", json={
+        "mode": "full",
+        "target_url": "http://127.0.0.1:59999",
+        "project_dir": d_oss_sample["sample_dir"],
+        "requirements_text": d_oss_sample["sample_requirements"],
+        "save_to_db": True,
+    })
+    assert res_oss.status_code == 200
+    d_oss = res_oss.get_json()
+    assert d_oss["success"] is True
+    assert d_oss["summary"]["total_findings"] >= 5
+    assert d_oss["summary"]["packages_checked"] >= 4
+    assert d_oss["summary"]["artifacts_checked"] >= 2

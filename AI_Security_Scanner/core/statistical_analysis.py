@@ -14,6 +14,7 @@ Tuân thủ best practices cho reproducible research theo chuẩn NeurIPS/ACL.
 
 from __future__ import annotations
 
+import math
 import warnings
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
@@ -65,7 +66,7 @@ class HypothesisTestResult:
     def __repr__(self) -> str:
         sig_str = "SIGNIFICANT" if self.significant else "NOT SIGNIFICANT"
         return (f"{self.test_name}: statistic={self.statistic:.4f}, "
-                f"p={self.p_value:.4f} ({sig_str} at α={self.alpha})")
+                f"p={self.p_value:.4f} ({sig_str} at alpha={self.alpha})")
 
 
 @dataclass
@@ -182,6 +183,143 @@ def t_confidence_interval(
     )
 
 
+def wilson_score_interval(
+    k: int,
+    n: int,
+    confidence: float = 0.95,
+) -> Tuple[float, float]:
+    """
+    Khoang tin cay Wilson score cho ty le k / n (Binomial Proportion CI).
+    Dac biet tin cay voi co mau nho (small n) va ty le cuc doan gan 0 hoac 1.
+    
+    Cong thuc:
+        p_center = (p + z^2 / (2n)) / (1 + z^2 / n)
+        margin = (z / (1 + z^2 / n)) * sqrt(p(1-p)/n + z^2 / (4n^2))
+    """
+    if n <= 0:
+        return 0.0, 0.0
+    k = max(0, min(k, n))
+    p = k / n
+    alpha = 1.0 - confidence
+    if _HAS_SCIPY:
+        z = float(scipy_stats.norm.ppf(1.0 - alpha / 2.0))
+    else:
+        z = 1.95996 if abs(confidence - 0.95) < 1e-3 else 2.57583
+    
+    denom = 1.0 + (z ** 2) / n
+    center = (p + (z ** 2) / (2.0 * n)) / denom
+    margin = (z / denom) * math.sqrt((p * (1.0 - p)) / n + (z ** 2) / (4.0 * (n ** 2)))
+    low = 0.0 if k == 0 else max(0.0, center - margin)
+    high = 1.0 if k == n else min(1.0, center + margin)
+    return float(low), float(high)
+
+
+def clopper_pearson_interval(
+    k: int,
+    n: int,
+    confidence: float = 0.95,
+) -> Tuple[float, float]:
+    """
+    Khoang tin cay Clopper-Pearson (Exact Binomial Interval) dua tren phan phoi Beta.
+    Bao dam do phu toi thieu 1 - alpha (chuan vang trong y sinh va kiem dinh bao mat).
+    """
+    if n <= 0:
+        return 0.0, 0.0
+    k = max(0, min(k, n))
+    alpha = 1.0 - confidence
+    if k == 0:
+        low = 0.0
+        high = 1.0 - (alpha / 2.0) ** (1.0 / n)
+    elif k == n:
+        low = (alpha / 2.0) ** (1.0 / n)
+        high = 1.0
+    else:
+        if _HAS_SCIPY:
+            low = float(scipy_stats.beta.ppf(alpha / 2.0, k, n - k + 1))
+            high = float(scipy_stats.beta.ppf(1.0 - alpha / 2.0, k + 1, n - k))
+        else:
+            return wilson_score_interval(k, n, confidence)
+    return float(low), float(high)
+
+
+def proportion_confidence_interval(
+    k: int,
+    n: int,
+    method: str = "wilson",
+    confidence: float = 0.95,
+) -> Tuple[float, float]:
+    """
+    Tinh khoang tin cay cho ty le k / n theo phuong phap Wilson hoac Clopper-Pearson.
+    Bo bootstrap o cac o ty le 0 de tranh suy bien [0.0, 0.0].
+    """
+    if method == "clopper_pearson":
+        return clopper_pearson_interval(k, n, confidence)
+    return wilson_score_interval(k, n, confidence)
+
+
+def format_ratio_and_ci(
+    k: int,
+    n: int,
+    method: str = "wilson",
+    confidence: float = 0.95,
+    percent: bool = True,
+    decimals: int = 1,
+    escape_latex: bool = True,
+) -> str:
+    r"""
+    Dinh dang ty le hien thi trong bang hoc thuat: 'k/n (pct\%, [low, high])'
+    Vi du: '4/7 (57.1\%, [25.0, 84.2])' hoac '0/7 (0.0\%, [0.0, 35.4])'.
+    Neu n == 0, tra ve '--'.
+    """
+    if n <= 0:
+        return "--"
+    pct = (k / n) * 100.0 if percent else (k / n)
+    low, high = proportion_confidence_interval(k, n, method=method, confidence=confidence)
+    sym = "\\%" if escape_latex else "%"
+    if percent:
+        return f"{k}/{n} ({pct:.{decimals}f}{sym}, [{low*100:.{decimals}f}, {high*100:.{decimals}f}])"
+    return f"{k}/{n} ({pct:.{decimals}f}, [{low:.{decimals}f}, {high:.{decimals}f}])"
+
+
+def kappa_confidence_interval(
+    r1: List[int],
+    r2: List[int],
+    confidence: float = 0.95,
+    weights: str = "quadratic",
+    n_bootstrap: int = 2000,
+    random_seed: int = 42,
+) -> Tuple[float, float, float]:
+    """
+    Tinh Quadratic Weighted Cohen's Kappa kem khoang tin cay 95% CI qua Bootstrap.
+    Tra ve: (kappa_point, ci_lower, ci_upper).
+    """
+    assert len(r1) == len(r2), "Hai danh gia phai co cung so luong phan tu."
+    n = len(r1)
+    if n == 0:
+        return 0.0, 0.0, 0.0
+    
+    # Import noi bo tu judge_validation neu can
+    from experiments.judge_validation import compute_weighted_kappa
+    base_k, _ = compute_weighted_kappa(r1, r2, weights=weights, categories=[0, 1, 2])
+    
+    if base_k >= 0.999:
+        return float(base_k), float(base_k), float(base_k)
+        
+    np.random.seed(random_seed)
+    r1_arr = np.array(r1)
+    r2_arr = np.array(r2)
+    boot_kappas = []
+    for _ in range(n_bootstrap):
+        idx = np.random.choice(n, size=n, replace=True)
+        k_val, _ = compute_weighted_kappa(r1_arr[idx].tolist(), r2_arr[idx].tolist(), weights=weights, categories=[0, 1, 2])
+        boot_kappas.append(k_val)
+        
+    alpha = 1.0 - confidence
+    low = float(np.percentile(boot_kappas, (alpha / 2.0) * 100))
+    high = float(np.percentile(boot_kappas, (1.0 - alpha / 2.0) * 100))
+    return float(base_k), float(low), float(high)
+
+
 # ===========================================================================
 # Hypothesis Testing
 # ===========================================================================
@@ -224,24 +362,29 @@ def independent_t_test(
         var1, var2 = np.var(g1, ddof=1), np.var(g2, ddof=1)
         n1, n2 = len(g1), len(g2)
         
-        # Pooled standard error
-        pooled_se = np.sqrt(var1/n1 + var2/n2)
-        t_stat = (mean1 - mean2) / pooled_se
-        
-        # Approximate p-value using normal distribution
-        if alternative == 'two-sided':
-            p_value = 2 * (1 - scipy_stats.norm.cdf(abs(t_stat))) if _HAS_SCIPY else 0.05
+        # Pooled standard error (guard against zero variance)
+        pooled_se = float(np.sqrt(var1 / n1 + var2 / n2))
+        if pooled_se == 0.0:
+            t_stat = 0.0
+            p_value = 1.0
         else:
-            p_value = 0.05  # Placeholder
+            t_stat = float((mean1 - mean2) / pooled_se)
+            # Approximate p-value using normal distribution respecting alternative
+            if alternative == 'two-sided':
+                p_value = float(math.erfc(abs(t_stat) / math.sqrt(2.0)))
+            elif alternative == 'greater':
+                p_value = float(0.5 * math.erfc(t_stat / math.sqrt(2.0)))
+            else:
+                p_value = float(0.5 * math.erfc(-t_stat / math.sqrt(2.0)))
     
     # Calculate Cohen's d effect size
     effect_size = cohens_d(g1, g2)
     
     # Interpretation
     if p_value < alpha:
-        interpretation = f"Significant difference detected (p={p_value:.4f} < α={alpha}). Effect size (Cohen's d) = {effect_size:.3f}."
+        interpretation = f"Significant difference detected (p={p_value:.4f} < alpha={alpha}). Effect size (Cohen's d) = {effect_size:.3f}."
     else:
-        interpretation = f"No significant difference (p={p_value:.4f} ≥ α={alpha})."
+        interpretation = f"No significant difference (p={p_value:.4f} >= alpha={alpha})."
     
     return HypothesisTestResult(
         test_name="Independent t-test",
@@ -285,7 +428,7 @@ def paired_t_test(
         mean_diff = np.mean(diff)
         se_diff = np.std(diff, ddof=1) / np.sqrt(len(diff))
         t_stat = mean_diff / se_diff
-        p_value = 0.05  # Placeholder
+        p_value = float(math.erfc(abs(t_stat) / math.sqrt(2.0)))
     
     return HypothesisTestResult(
         test_name="Paired t-test",
@@ -348,7 +491,7 @@ def cohens_d(group1: List[float], group2: List[float]) -> float:
     - |d| < 0.2: negligible
     - 0.2 ≤ |d| < 0.5: small
     - 0.5 ≤ |d| < 0.8: medium
-    - |d| ≥ 0.8: large
+    - |d| >= 0.8: large
     
     Args:
         group1: First group.
@@ -364,9 +507,11 @@ def cohens_d(group1: List[float], group2: List[float]) -> float:
     var1, var2 = np.var(g1, ddof=1), np.var(g2, ddof=1)
     n1, n2 = len(g1), len(g2)
     
-    # Pooled standard deviation
-    pooled_std = np.sqrt(((n1 - 1) * var1 + (n2 - 1) * var2) / (n1 + n2 - 2))
-    
+    if n1 + n2 <= 2:
+        return 0.0
+    pooled_std = float(np.sqrt(((n1 - 1) * var1 + (n2 - 1) * var2) / (n1 + n2 - 2)))
+    if pooled_std == 0.0:
+        return 0.0
     d = (mean1 - mean2) / pooled_std
     return float(d)
 
@@ -405,6 +550,8 @@ def bonferroni_correction(
         MultipleComparisonResult with adjusted p-values.
     """
     n = len(p_values)
+    if n == 0:
+        return MultipleComparisonResult([], [], method='bonferroni', significant=[], alpha=alpha)
     adjusted_alpha = alpha / n
     adjusted_p = [min(p * n, 1.0) for p in p_values]
     significant = [p < alpha for p in adjusted_p]
@@ -442,14 +589,17 @@ def holm_correction(
     adjusted_p = [1.0] * n
     significant = [False] * n
     
+    running_max = 0.0
+    rejected_all_prev = True
     for rank, (original_idx, p) in enumerate(indexed_p):
-        adjusted = min(p * (n - rank), 1.0)
-        adjusted_p[original_idx] = adjusted
-        significant[original_idx] = adjusted < alpha
-        
-        # Stop if we fail to reject
-        if adjusted >= alpha:
-            break
+        # Enforce step-down monotonicity across all p-values
+        running_max = max(running_max, min(p * (n - rank), 1.0))
+        adjusted_p[original_idx] = running_max
+        if rejected_all_prev and running_max < alpha:
+            significant[original_idx] = True
+        else:
+            rejected_all_prev = False
+            significant[original_idx] = False
     
     return MultipleComparisonResult(
         original_p_values=p_values,
@@ -482,8 +632,9 @@ def required_sample_size(
     Returns:
         Required sample size per group.
     """
+    if not effect_size or abs(effect_size) < 1e-9:
+        raise ValueError("effect_size must be non-zero.")
     if not _HAS_SCIPY:
-        # Rule of thumb approximation
         n_approx = int(16 / (effect_size ** 2))
         return max(n_approx, 20)
     
@@ -509,13 +660,25 @@ def summary_statistics(data: List[float]) -> Dict[str, float]:
     Returns:
         Dict with mean, median, std, min, max, q1, q3, iqr.
     """
-    arr = np.array(data)
-    
+    arr = np.array(data, dtype=float)
+    if arr.size == 0:
+        return {
+            "count": 0,
+            "mean": 0.0,
+            "median": 0.0,
+            "std": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "q1": 0.0,
+            "q3": 0.0,
+            "iqr": 0.0,
+        }
+
     return {
         "count": len(arr),
         "mean": float(np.mean(arr)),
         "median": float(np.median(arr)),
-        "std": float(np.std(arr, ddof=1)),
+        "std": float(np.std(arr, ddof=1)) if len(arr) > 1 else 0.0,
         "min": float(np.min(arr)),
         "max": float(np.max(arr)),
         "q1": float(np.percentile(arr, 25)),
@@ -523,6 +686,167 @@ def summary_statistics(data: List[float]) -> Dict[str, float]:
         "iqr": float(np.percentile(arr, 75) - np.percentile(arr, 25)),
     }
 
+
+
+
+# ===========================================================================
+# Paired Non-Parametric & Cross-Lingual Tests (Paper 1 - G8 & Cross-lingual Gap)
+# ===========================================================================
+
+def mcnemar_test(
+    group1_binary: List[int],
+    group2_binary: List[int],
+    alpha: float = 0.05,
+    exact: bool = True,
+) -> HypothesisTestResult:
+    """
+    McNemar's test for paired nominal (binary) data.
+    
+    Used for comparing paired attack outcomes on the same model:
+    e.g., Vietnamese prompt vulnerability vs. English equivalent prompt vulnerability.
+    
+    Contingency table:
+        b: group1 = 1, group2 = 0
+        c: group1 = 0, group2 = 1
+        
+    Args:
+        group1_binary: Binary outcomes for condition 1 (e.g., Vietnamese).
+        group2_binary: Binary outcomes for condition 2 (e.g., English).
+        alpha: Significance level (default: 0.05).
+        exact: Whether to use exact binomial test when b + c < 25.
+        
+    Returns:
+        HypothesisTestResult with chi-square/binomial statistic, p-value, and interpretation.
+    """
+    if len(group1_binary) != len(group2_binary):
+        raise ValueError("Paired samples must have identical lengths for McNemar test.")
+        
+    g1 = np.array(group1_binary, dtype=int)
+    g2 = np.array(group2_binary, dtype=int)
+    
+    b = int(np.sum((g1 == 1) & (g2 == 0)))
+    c = int(np.sum((g1 == 0) & (g2 == 1)))
+    n_discordant = b + c
+    
+    if n_discordant == 0:
+        return HypothesisTestResult(
+            test_name="McNemar's Test",
+            statistic=0.0,
+            p_value=1.0,
+            significant=False,
+            alpha=alpha,
+            interpretation="No discordant pairs between conditions (identical outcomes).",
+        )
+        
+    if exact and n_discordant < 25 and _HAS_SCIPY:
+        # Exact two-sided binomial test
+        try:
+            res = scipy_stats.binomtest(min(b, c), n=n_discordant, p=0.5, alternative='two-sided')
+            p_val = float(res.pvalue)
+            stat = float(min(b, c))
+        except AttributeError:
+            p_val = float(scipy_stats.binom_test(min(b, c), n=n_discordant, p=0.5))
+            stat = float(min(b, c))
+        test_type = "Exact McNemar (Binomial)"
+    else:
+        # Edwards continuity-corrected Chi-Square: (|b - c| - 1)^2 / (b + c)
+        chi2_stat = ((abs(b - c) - 1.0) ** 2) / n_discordant
+        stat = float(chi2_stat)
+        if _HAS_SCIPY:
+            p_val = float(1.0 - scipy_stats.chi2.cdf(chi2_stat, df=1))
+        else:
+            # Approximation for 1 df chi2
+            z = np.sqrt(chi2_stat)
+            p_val = float(2.0 * (1.0 - 0.5 * (1.0 + math.erf(z / math.sqrt(2.0)))))
+        test_type = "McNemar's Test (Continuity Corrected Chi2)"
+        
+    sig = bool(p_val < alpha)
+    interp = (
+        f"Significant cross-condition asymmetry detected (b={b}, c={c}, p={p_val:.4f} < alpha={alpha})."
+        if sig else
+        f"No statistically significant difference between conditions (b={b}, c={c}, p={p_val:.4f} >= alpha={alpha})."
+    )
+    
+    return HypothesisTestResult(
+        test_name=test_type,
+        statistic=stat,
+        p_value=p_val,
+        significant=sig,
+        alpha=alpha,
+        interpretation=interp,
+    )
+
+
+def wilcoxon_signed_rank_test(
+    group1: List[float],
+    group2: List[float],
+    alpha: float = 0.05,
+    alternative: str = 'two-sided',
+) -> HypothesisTestResult:
+    """
+    Wilcoxon signed-rank test for paired non-parametric continuous/ordinal data.
+    
+    Used to compare multi-seed ASR or Over-refusal rates across paired configurations.
+    """
+    if len(group1) != len(group2):
+        raise ValueError("Paired samples must have identical lengths for Wilcoxon test.")
+        
+    g1 = np.array(group1, dtype=float)
+    g2 = np.array(group2, dtype=float)
+    diff = g1 - g2
+    
+    if np.all(diff == 0):
+        return HypothesisTestResult(
+            test_name="Wilcoxon signed-rank test",
+            statistic=0.0,
+            p_value=1.0,
+            significant=False,
+            alpha=alpha,
+            interpretation="All paired differences are zero.",
+        )
+        
+    if _HAS_SCIPY:
+        stat, p_val = scipy_stats.wilcoxon(g1, g2, alternative=alternative)
+    else:
+        # Fallback to paired t-test
+        warnings.warn("scipy not available for Wilcoxon test. Using paired t-test approximation.")
+        return paired_t_test(group1, group2, alpha=alpha)
+        
+    sig = bool(p_val < alpha)
+    interp = (
+        f"Significant difference detected by Wilcoxon test (statistic={stat:.4f}, p={p_val:.4f} < alpha={alpha})."
+        if sig else
+        f"No significant difference detected (statistic={stat:.4f}, p={p_val:.4f} >= alpha={alpha})."
+    )
+    
+    return HypothesisTestResult(
+        test_name="Wilcoxon signed-rank test",
+        statistic=float(stat),
+        p_value=float(p_val),
+        significant=sig,
+        alpha=alpha,
+        interpretation=interp,
+    )
+
+
+def bootstrap_metric_ci(
+    values: List[float],
+    metric_name: str = "ASR",
+    confidence: float = 0.95,
+    n_bootstrap: int = 10000,
+    random_seed: int = 42,
+) -> ConfidenceInterval:
+    """
+    Compute 95% Bootstrap Confidence Interval with 10,000 resamples for
+    Attack Success Rate (ASR) or Over-refusal Rate across seeds/prompts.
+    """
+    return bootstrap_confidence_interval(
+        data=values,
+        confidence=confidence,
+        n_bootstrap=n_bootstrap,
+        statistic_fn=np.mean,
+        random_seed=random_seed,
+    )
 
 if __name__ == "__main__":
     # Demo

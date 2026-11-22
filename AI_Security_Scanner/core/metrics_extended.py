@@ -75,7 +75,7 @@ def calculate_retrieval_manipulation_rate(test_results: List[Dict[str, Any]]) ->
 
     manipulated = sum(
         1 for r in rag_cases
-        if r.get("is_vulnerable", r.get("expected_vulnerable", False))
+        if r.get("is_vulnerable", r.get("is_vuln", r.get("expected_vulnerable", False)))
     )
     return round(manipulated / len(rag_cases), 4)
 
@@ -108,7 +108,7 @@ def calculate_unauthorized_retrieval_rate(test_results: List[Dict[str, Any]]) ->
 
     unauthorised = sum(
         1 for r in relevant
-        if r.get("is_vulnerable", r.get("expected_vulnerable", False))
+        if r.get("is_vulnerable", r.get("is_vuln", r.get("expected_vulnerable", False)))
     )
     return round(unauthorised / len(relevant), 4)
 
@@ -138,7 +138,7 @@ def calculate_tool_abuse_rate(agent_results: List[Dict[str, Any]]) -> float:
 
     abused = sum(
         1 for r in agent_cases
-        if r.get("is_vulnerable", r.get("expected_vulnerable", False))
+        if r.get("is_vulnerable", r.get("is_vuln", r.get("expected_vulnerable", False)))
     )
     return round(abused / len(agent_cases), 4)
 
@@ -171,7 +171,7 @@ def calculate_data_exfiltration_rate(test_results: List[Dict[str, Any]]) -> floa
 
     exfil_count = 0
     for r in test_results:
-        is_vuln = r.get("is_vulnerable", r.get("expected_vulnerable", False))
+        is_vuln = r.get("is_vulnerable", r.get("is_vuln", r.get("expected_vulnerable", False)))
         if not is_vuln:
             continue
 
@@ -216,7 +216,7 @@ def calculate_attack_success_rate(results: List[Dict[str, Any]]) -> float:
 
     successful = sum(
         1 for r in results
-        if r.get("is_vulnerable", r.get("expected_vulnerable", False))
+        if r.get("is_vulnerable", r.get("is_vuln", r.get("expected_vulnerable", False)))
     )
     return round(successful / len(results), 4)
 
@@ -237,7 +237,7 @@ def calculate_unique_vulnerability_yield(results: List[Dict[str, Any]]) -> int:
     """
     seen: set = set()
     for r in results:
-        if r.get("is_vulnerable", r.get("expected_vulnerable", False)):
+        if r.get("is_vulnerable", r.get("is_vuln", r.get("expected_vulnerable", False))):
             key = (
                 r.get("module_name", "unknown"),
                 r.get("owasp_code", r.get("owasp", "unknown")),
@@ -387,7 +387,7 @@ class ExtendedMetrics:
         scores = [
             float(r.get("score", r.get("risk_score", 0.0)))
             for r in results
-            if r.get("is_vulnerable", r.get("expected_vulnerable", False))
+            if r.get("is_vulnerable", r.get("is_vuln", r.get("expected_vulnerable", False)))
         ]
 
         return {
@@ -464,7 +464,7 @@ class ExtendedMetrics:
             if mod not in module_breakdown:
                 module_breakdown[mod] = {"total": 0, "vulnerable": 0, "asr": 0.0}
             module_breakdown[mod]["total"] += 1
-            if r.get("is_vulnerable", r.get("expected_vulnerable", False)):
+            if r.get("is_vulnerable", r.get("is_vuln", r.get("expected_vulnerable", False))):
                 module_breakdown[mod]["vulnerable"] += 1
 
         for mod, stats in module_breakdown.items():

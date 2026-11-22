@@ -10,6 +10,7 @@ Garak License: Apache 2.0
 Install: pip install garak
 """
 
+import json
 import logging
 import re
 import subprocess
@@ -173,14 +174,48 @@ class GarakWrapper:
                 - ``owasp_code`` (str): OWASP LLM category code
                 - ``detail`` (str): Raw output line that triggered the finding
         """
+        from core.path_security import validate_safe_identifier
+        from core.url_security import validate_target_url
+
+        try:
+            clean_probe = validate_safe_identifier(str(probe_name), "probe_name")
+            clean_model = validate_safe_identifier(str(self.model_name), "model_name")
+        except ValueError as exc:
+            return [{
+                "probe": str(probe_name),
+                "result": "ERROR",
+                "severity": "INFO",
+                "owasp_code": self.map_to_owasp(str(probe_name)),
+                "detail": str(exc),
+            }]
+
         uri = generator_uri or self.target_url
+        url_ok, url_err = validate_target_url(str(uri))
+        if not url_ok:
+            return [{
+                "probe": clean_probe,
+                "result": "ERROR",
+                "severity": "INFO",
+                "owasp_code": self.map_to_owasp(clean_probe),
+                "detail": url_err or "Invalid target URL.",
+            }]
+
+        if not self.is_available():
+            return [{
+                "probe": clean_probe,
+                "result": "UNAVAILABLE",
+                "severity": "INFO",
+                "owasp_code": self.map_to_owasp(clean_probe),
+                "detail": f"NVIDIA Garak is not installed. {self.get_install_instructions()}",
+            }]
 
         cmd = [
             sys.executable, "-m", "garak",
             "--model_type", "rest",
-            "--model_name", self.model_name,
-            "--probes", probe_name,
+            "--model_name", clean_model,
+            "--probes", clean_probe,
             "--parallel_requests", "1",
+            "--generator_options", json.dumps({"rest": {"RestGenerator": {"uri": uri}}}),
         ]
 
         logger.info("Running Garak probe '%s': %s", probe_name, " ".join(cmd))

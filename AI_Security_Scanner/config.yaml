@@ -9,8 +9,10 @@ scanner:
   # Target LLM server settings
   target_url: "http://localhost:11434"
   target_model: "llama3"
+  judge_model: "qwen2.5"
+  provider: "auto"             # auto, ollama, or openai
   timeout: 90
-  max_tokens: 80
+  max_tokens: 512
   api_key: ""
 
   # Resilience & Network
@@ -26,16 +28,27 @@ scanner:
     recovery_timeout: 30       # Wait 30 seconds before half-open retry
 
 web:
-  # Server settings
-  host: "0.0.0.0"
+  # Server settings (default loopback for safe local dev; Docker overrides WEB_HOST=0.0.0.0)
+  host: "127.0.0.1"
   port: 5000
   debug: false
 
   # Security & Hardening
-  require_auth: false          # Set to true in production
-  jwt_secret_key: "ai-security-scanner-secret-key-change-in-production"
+  # Never commit production secrets here. Provide SCANNER_JWT_SECRET and SCANNER_ADMIN_API_KEY
+  # via environment variables or local .env file.
+  require_auth: false          # Set to true (SCANNER_REQUIRE_AUTH=true) in production/Docker
+  jwt_secret_key: ""
   jwt_access_token_expires_minutes: 1440 # 24 hours
-  admin_api_key: "ai-scanner-admin-secret-token"
+  admin_api_key: ""
+  cors_origins:
+    - "http://localhost:5000"
+    - "http://127.0.0.1:5000"
+    - "https://localhost:5000"
+    - "https://127.0.0.1:5000"
+  allowed_internal_hosts:
+    - "ollama"
+    - "ai-guard-proxy"
+  allowed_local_ports: []
 
   # Rate Limiting
   rate_limit_enabled: true
@@ -52,3 +65,19 @@ logging:
 storage:
   database_path: "data/scanner.db"
   reports_dir: "reports"
+  allowed_scan_roots: []       # Empty = AI_Security_Scanner workspace + system temp dir
+
+governance:
+  # Rules of Engagement (RoE): set enforce_scope_whitelist: true in production/lab audits
+  enforce_scope_whitelist: false
+  authorized_targets:
+    - "localhost"
+    - "127.0.0.1"
+    - "::1"
+  allow_destructive_actions: false
+  redact_reports: true
+  audit_log_path: "logs/governance_audit.jsonl"
+  budget:
+    max_requests: 200
+    max_tokens: 100000
+    max_duration_sec: 600

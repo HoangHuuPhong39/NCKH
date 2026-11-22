@@ -3,6 +3,8 @@ AI Security Scanner - Enhanced CLI (Metasploit-style)
 Giao diện dòng lệnh nâng cao cho bộ công cụ kiểm thử an toàn AI.
 """
 
+import argparse
+import json
 import sys
 import os
 import time
@@ -31,6 +33,7 @@ from core.db import init_db, save_finding, get_findings, get_stats, clear_findin
 from core.llm_client import SimpleLLMClient
 from core.risk_scorer import RiskScorer
 from core.report import generate_html_report, export_json_report
+from modules.registry import get_modules_metadata
 
 console = Console(legacy_windows=False)
 
@@ -42,152 +45,11 @@ BANNER = """
 [bold red]  ██████╔╝██████╔╝██████╔╝██████╔╝    [/bold red][bold blue]    ██║  ██║██║    [/bold blue]
 [bold red]  ╚═════╝ ╚═════╝ ╚═════╝ ╚═════╝     [/bold red][bold blue]    ╚═╝  ╚═╝╚═╝   [/bold blue]
 
-[bold yellow]       Bộ Công Cụ Kiểm Thử An Toàn Hệ Thống AI[/bold yellow]
-[dim]       OWASP LLM Top 10 · MITRE ATLAS · Research Edition v2.0[/dim]
+[bold yellow]       AI Security Scanner — Static AST Taint & Hybrid Red-Teaming Suite[/bold yellow]
+[dim]       OWASP LLM Top 10 (2025) · MITRE ATLAS · Research Edition v2.1[/dim]
 """
 
-MODULES_METADATA = {
-    "prompt_injection": {
-        "name": "Prompt Injection",
-        "description": "Kiểm tra khả năng mô hình bỏ qua hướng dẫn hệ thống bằng các câu lệnh ghi đè trực tiếp/gián tiếp.",
-        "owasp": "LLM01",
-        "mitre": "AML.T0051",
-        "severity": "HIGH",
-        "payloads_count": 12,
-        "icon": "🎯",
-        "category": "exploits",
-    },
-    "jailbreak": {
-        "name": "Jailbreak / Safety Bypass",
-        "description": "Sử dụng kịch bản nhập vai (DAN, AIM, STAN) để ép AI bỏ qua các quy tắc an toàn.",
-        "owasp": "LLM01",
-        "mitre": "AML.T0054",          # ← sửa: T0054 = Jailbreak ML Model
-        "severity": "CRITICAL",
-        "payloads_count": 6,
-        "icon": "🔓",
-        "category": "exploits",
-    },
-    "prompt_leak": {
-        "name": "System Prompt Disclosure",
-        "description": "Trích xuất System Prompt ẩn bằng cách yêu cầu AI lặp lại hoặc dịch hướng dẫn nội bộ.",
-        "owasp": "LLM07",              # ← sửa: LLM07 (không phải LLM06)
-        "mitre": "AML.T0010",
-        "severity": "MEDIUM",
-        "payloads_count": 7,
-        "icon": "📤",
-        "category": "exploits",
-    },
-    "agent_testing": {
-        "name": "AI Agent Security & Sandbox Testing",
-        "description": "Kiểm thử lỗ hổng AI Agent trong môi trường Sandbox: Tool Injection, Privilege Escalation, Data Exfiltration.",
-        "owasp": "LLM06",
-        "mitre": "AML.T0048",
-        "severity": "CRITICAL",
-        "payloads_count": 7,
-        "icon": "🕵️",
-        "category": "exploits",
-    },
-    "ml_adversarial": {
-        "name": "ML/DL Adversarial Robustness",
-        "description": "Kiểm thử tính bền vững trước mẫu đối kháng: Homoglyph, Zero-Width, Unicode Normalization, Perturbation.",
-        "owasp": "LLM01",
-        "mitre": "AML.T0015",
-        "severity": "HIGH",
-        "payloads_count": 8,
-        "icon": "🛡️",
-        "category": "exploits",
-    },
-    "sensitive_disclosure": {
-        "name": "Sensitive Information Disclosure",
-        "description": "Kiểm thử rò rỉ PII, thông tin xác thực, dữ liệu huấn luyện nhạy cảm.",
-        "owasp": "LLM02",              # ← sửa: LLM02 (không phải LLM06)
-        "mitre": "AML.T0024",
-        "severity": "HIGH",
-        "payloads_count": 6,
-        "icon": "🔍",
-        "category": "exploits",
-    },
-    "model_dos": {
-        "name": "Unbounded Consumption (DoS)",
-        "description": "Kiểm thử tiêu thụ tài nguyên không giới hạn bằng prompt cực dài, tác vụ đệ quy.",
-        "owasp": "LLM10",              # ← sửa: LLM10 (LLM04 là Data Poisoning, khác!)
-        "mitre": "AML.T0029",
-        "severity": "MEDIUM",
-        "payloads_count": 4,
-        "icon": "💥",
-        "category": "exploits",
-    },
-    "output_handling": {
-        "name": "Improper Output Handling",
-        "description": "Kiểm tra xem AI có tạo ra output nguy hiểm (XSS, SQL injection, SSRF) khi được yêu cầu.",
-        "owasp": "LLM05",
-        "mitre": "AML.T0048",
-        "severity": "HIGH",
-        "payloads_count": 6,
-        "icon": "⚠️",
-        "category": "exploits",
-    },
-    "misinformation": {
-        "name": "Misinformation / Hallucination",
-        "description": "Kiểm thử khả năng AI tạo ra thông tin sai lệch có độ tin cậy cao, bịa đặt trích dẫn.",
-        "owasp": "LLM09",
-        "mitre": "AML.T0048.003",
-        "severity": "MEDIUM",
-        "payloads_count": 6,
-        "icon": "🌀",
-        "category": "exploits",
-    },
-    "excessive_agency": {
-        "name": "Excessive Agency",
-        "description": "Kiểm tra khả năng mô hình tự ý thực thi các hành vi vượt thẩm quyền nguy hiểm (giao dịch, xóa dữ liệu).",
-        "owasp": "LLM06",
-        "mitre": "AML.T0048.001",
-        "severity": "CRITICAL",
-        "payloads_count": 6,
-        "icon": "🤖",
-        "category": "exploits",
-    },
-    "rag_security": {
-        "name": "Vector & Embedding Weaknesses",
-        "description": "Kiểm thử khả năng mô hình bị thao túng gián tiếp qua ngữ cảnh RAG nhiễm độc (Indirect Injection / Delimiter Breakout).",
-        "owasp": "LLM08",
-        "mitre": "AML.T0020",
-        "severity": "HIGH",
-        "payloads_count": 6,
-        "icon": "📚",
-        "category": "exploits",
-    },
-    "multiturn_jailbreak": {
-        "name": "Multi-Turn Jailbreak Escalation",
-        "description": "Kiểm thử khả năng bẻ khóa an toàn qua chuỗi hội thoại nhiều lượt (Crescendo / PAIR).",
-        "owasp": "LLM01",
-        "mitre": "AML.T0054",
-        "severity": "CRITICAL",
-        "payloads_count": 3,
-        "icon": "🪜",
-        "category": "exploits",
-    },
-    "model_fingerprint": {
-        "name": "Model Architecture Fingerprinting",
-        "description": "Nhận diện họ mô hình AI (LLaMA, Mistral, GPT, Claude, Qwen, DeepSeek) và chữ ký bảo vệ.",
-        "owasp": "N/A",
-        "mitre": "AML.T0008",
-        "severity": "INFO",
-        "payloads_count": 6,
-        "icon": "🧬",
-        "category": "auxiliary",
-    },
-    "port_scan": {
-        "name": "AI Service Port Scanner",
-        "description": "Quét các cổng mạng phổ biến của dịch vụ AI/ML (Ollama, MLflow, Ray, Qdrant...).",
-        "owasp": "N/A",
-        "mitre": "AML.T0008",
-        "severity": "INFO",
-        "payloads_count": 6,
-        "icon": "🔭",
-        "category": "auxiliary",
-    },
-}
+MODULES_METADATA = get_modules_metadata(dynamic_counts=True)
 
 SEVERITY_COLORS = {
     "CRITICAL": "bold red",
@@ -363,7 +225,16 @@ class AIScannerCLI:
 
             detector = PatternDetector()
             # LLM-as-Judge: dùng cùng client làm judge (có thể đổi thành model khác)
-            judge = LLMJudge(judge_client=client)
+            judge_model_cfg = cfg.get("scanner.judge_model", "")
+            if judge_model_cfg and judge_model_cfg != self.target_model:
+                judge = LLMJudge.create_with_separate_model(
+                    api_url=self.target_url,
+                    judge_model=judge_model_cfg,
+                    timeout=self.timeout,
+                    api_key=self.api_key or "",
+                )
+            else:
+                judge = LLMJudge(judge_client=client)
             self.current_scan_id = start_scan(self.target_url, self.target_model)
 
             if module_name == "port_scan":
@@ -390,7 +261,8 @@ class AIScannerCLI:
             if not module:
                 return
 
-            total = m_meta["payloads_count"]
+            actual_payloads = getattr(module, "payloads", None)
+            total = len(actual_payloads) if isinstance(actual_payloads, list) and actual_payloads else m_meta["payloads_count"]
 
             with Progress(
                 SpinnerColumn(),
@@ -669,6 +541,160 @@ class AIScannerCLI:
                 console.print(f"[red]Lỗi hệ thống: {e}[/red]")
 
 
-if __name__ == "__main__":
+def build_arg_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="ai-security-scanner",
+        description=(
+            "AI Security Scanner — Static AST Taint-Tracking SAST, OSS Supply-Chain Audit, "
+            "and Interactive OWASP LLM / MITRE ATLAS Red-Teaming CLI. "
+            "Run without flags to launch the interactive console."
+        ),
+    )
+    parser.add_argument(
+        "--sast",
+        metavar="PATH",
+        help="Run static AST taint-tracking & multi-format SAST scan on a file or directory.",
+    )
+    parser.add_argument(
+        "--hybrid",
+        action="store_true",
+        help="Enable optional Ollama LLM semantic auditing alongside AST SAST (used with --sast).",
+    )
+    parser.add_argument(
+        "--no-external-tools",
+        action="store_true",
+        help="Disable external Bandit/Semgrep subprocess probes during --sast scans.",
+    )
+    parser.add_argument(
+        "--oss",
+        metavar="PATH",
+        help="Run Open-Source AI Supply-Chain (SCA & model checkpoint) scan on a directory.",
+    )
+    parser.add_argument(
+        "--list-modules",
+        action="store_true",
+        help="List all registered exploit and auxiliary scanner modules and exit.",
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        dest="as_json",
+        help="Print scan results as formatted JSON (used with --sast or --oss).",
+    )
+    return parser
+
+
+def _run_cli_sast(target: str, use_hybrid: bool, include_external: bool, as_json: bool) -> int:
+    from modules.auxiliary.scanner.code_scanner import AICodeScanner
+
+    scanner = AICodeScanner()
+    result = scanner.scan_directory(
+        target,
+        include_external_tools=include_external,
+        use_hybrid_llm=use_hybrid,
+    )
+    if as_json:
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        return 0 if result.get("success") else 1
+
+    if not result.get("success"):
+        console.print(f"[bold red]SAST scan failed:[/bold red] {result.get('error', 'Unknown error')}")
+        return 1
+
+    findings = result.get("findings", [])
+    summary = result.get("summary", {})
+    table = Table(
+        title=f"AI SAST Findings ({len(findings)} total) — {target}",
+        box=box.ROUNDED,
+        show_lines=False,
+    )
+    table.add_column("Rule", style="bold cyan", no_wrap=True)
+    table.add_column("Severity", no_wrap=True)
+    table.add_column("OWASP", style="magenta", no_wrap=True)
+    table.add_column("Location", style="yellow")
+    table.add_column("Title")
+    for f in findings:
+        sev = str(f.get("severity", "INFO")).upper()
+        sev_style = SEVERITY_COLORS.get(sev, "white")
+        loc = f"{f.get('file', '<snippet>')}:{f.get('line', 0)}"
+        table.add_row(
+            str(f.get("rule_id", "N/A")),
+            f"[{sev_style}]{sev}[/{sev_style}]",
+            str(f.get("owasp", "N/A")),
+            loc,
+            str(f.get("title", "")),
+        )
+    console.print(table)
+    by_sev = summary.get("by_severity", {})
+    console.print(
+        f"[dim]Files scanned: {summary.get('files_scanned', '?')} ({summary.get('elapsed_ms', 0)} ms) | "
+        f"Critical: {by_sev.get('CRITICAL', 0)} | High: {by_sev.get('HIGH', 0)} | "
+        f"Medium: {by_sev.get('MEDIUM', 0)} | Low: {by_sev.get('LOW', 0)}[/dim]"
+    )
+    return 0
+
+
+def _run_cli_oss(target: str, as_json: bool) -> int:
+    from modules.auxiliary.scanner.oss_scanner import OpenSourceAIScanner
+
+    scanner = OpenSourceAIScanner()
+    res = scanner.scan_model_artifacts(target_dir=target, include_requirements=True)
+    findings = list(res.get("findings", []))
+    payload = {
+        "success": bool(res.get("success", True)),
+        "target": target,
+        "total_findings": len(findings),
+        "error": res.get("error"),
+        "findings": findings,
+    }
+    if as_json:
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
+        return 0 if payload["success"] else 1
+
+    if not payload["success"]:
+        console.print(f"[bold red]OSS scan failed:[/bold red] {payload.get('error', 'Unknown error')}")
+        return 1
+
+    table = Table(title=f"OSS AI Supply-Chain Audit ({len(findings)} findings) — {target}", box=box.ROUNDED)
+    table.add_column("ID", style="bold cyan", no_wrap=True)
+    table.add_column("Severity", no_wrap=True)
+    table.add_column("OWASP", style="magenta", no_wrap=True)
+    table.add_column("Title")
+    for f in findings:
+        sev = str(f.get("severity", "INFO")).upper()
+        sev_style = SEVERITY_COLORS.get(sev, "white")
+        table.add_row(
+            str(f.get("rule_id") or f.get("cve") or "OSS"),
+            f"[{sev_style}]{sev}[/{sev_style}]",
+            str(f.get("owasp", "LLM03")),
+            str(f.get("title") or f.get("description", ""))[:90],
+        )
+    console.print(table)
+    return 0
+
+
+def main(argv=None) -> int:
+    parser = build_arg_parser()
+    args = parser.parse_args(argv)
+
+    if args.list_modules:
+        cli = AIScannerCLI()
+        cli.cmd_show_modules()
+        return 0
+    if args.sast:
+        return _run_cli_sast(
+            target=args.sast,
+            use_hybrid=args.hybrid,
+            include_external=not args.no_external_tools,
+            as_json=args.as_json,
+        )
+    if args.oss:
+        return _run_cli_oss(target=args.oss, as_json=args.as_json)
+
     cli = AIScannerCLI()
     cli.run()
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

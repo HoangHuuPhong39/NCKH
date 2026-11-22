@@ -1,0 +1,58 @@
+% ==============================================================================
+% Figure: Two-Stage Cascade Gating Architecture and Three-State Response Taxonomy
+% Academic Monochrome / Muted Scientific Palette with Anti-Collision Layout
+% ==============================================================================
+\begin{figure*}[t]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[
+    >=Latex,
+    font=\small,
+    box/.style={draw=black!75, rounded corners=3pt, thick, align=center, fill=gray!6, inner sep=6pt},
+    stage1/.style={draw=blue!50!black, fill=blue!4, rounded corners=4pt, thick, align=center, inner sep=7pt},
+    stage2/.style={draw=blue!50!black, fill=blue!4, rounded corners=4pt, thick, align=center, inner sep=7pt},
+    state0/.style={draw=blue!70!black, fill=blue!10, rounded corners=3pt, thick, align=center, inner sep=6pt},
+    state1/.style={draw=gray!70!black, fill=gray!12, rounded corners=3pt, thick, align=center, inner sep=6pt},
+    state2/.style={draw=red!70!black, fill=red!10, rounded corners=3pt, thick, align=center, inner sep=6pt},
+    decision/.style={diamond, draw=black!85, thick, fill=white, align=center, aspect=2, inner sep=3pt},
+    line/.style={draw=black!80, thick, ->}
+]
+
+    % Input
+    \node (input) [box] {\textbf{Input Evaluation Pair} \\ $(q \in \mathcal{D}_{\text{test}}, \; r \sim \mathcal{M}(q))$};
+
+    % Stage 1 Container & Nodes
+    \node (s1_proc) [stage1, right=1.6cm of input] {\textbf{Stage 1: Lazy Refusal Gating} \\ Regex Patterns ($p_r \in \{0, 1, 2\}$) \\ \footnotesize Latency $\approx 1.2$ ms (CPU)};
+    \node (s1_dec) [decision, right=1.4cm of s1_proc] {$p_r = 1 \;\land$ \\ $\text{len}(y) < L_{\text{ref}}$?};
+
+    % Fast Refusal Exit (State 0)
+    \node (state0) [state0, above=1.8cm of s1_dec] {\textbf{State 0: Explicit Refusal (ERR)} \\ Concise refusal keywords \\ Early exit (bypasses Stage 2)};
+
+    % Stage 2 Container & Nodes
+    \node (s2_proc) [stage2, right=2.8cm of s1_dec] {\textbf{Stage 2: Prioritized LLM Judge} \\ Dual-Criterion Semantic Scoring \\ Specificity $s_{\text{spec}} \in [1, 5]$, Refusal $r_{\text{ref}} \in \{0, 1\}$};
+    \node (s2_dec) [decision, below=1.6cm of s2_proc] {$(p_r=2 \land s_{\text{spec}} \ge 3) \;\lor$ \\ $s_{\text{spec}} \ge 4$?};
+
+    % State 1 and State 2 Exits
+    \node (state1) [state1, left=2.2cm of s2_dec] {\textbf{State 1: Low-Specificity (LSR)} \\ Non-actionable summary / Safe fulfillment \\ (Or Prio 2 Refusal if $r_{\text{ref}} = 1$)};
+    \node (state2) [state2, right=3.8cm of s2_dec] {\textbf{State 2: Actionable Jailbreak (ASR)} \\ Actionable malicious instruction \\ Triggered by judge or Semantic Override};
+
+    % Connecting lines
+    \path [line] (input) -- (s1_proc);
+    \path [line] (s1_proc) -- (s1_dec);
+    \path [line] (s1_dec) -- node[right=3pt, font=\footnotesize, align=left] {Yes \\ (Fast Refusal)} (state0);
+    \path [line] (s1_dec) -- node[above=3pt, font=\footnotesize, align=center] {No \\ (Requires LLM Judge)} (s2_proc);
+    \path [line] (s2_proc) -- (s2_dec);
+    \path [line] (s2_dec) -- node[above=3pt, font=\footnotesize] {No} (state1);
+    \path [line] (s2_dec) -- node[above=2pt, font=\footnotesize, align=center] {Yes \\ (Actionable)} (state2);
+
+    % Background group box for Stage 1 vs Stage 2
+    \begin{scope}[on background layer]
+        \node [draw=black!40, dashed, fill=gray!3, rounded corners=6pt, inner ysep=14pt, inner xsep=8pt, fit=(s1_proc) (s1_dec), label={[anchor=north, yshift=-12pt, xshift=-1.4cm]below:{\footnotesize \textcolor{black!75}{\textbf{Fast Stage 1 Gating ($< 1.5$ ms CPU)}}}}] {};
+        \node [draw=black!40, dashed, fill=gray!3, rounded corners=6pt, fit=(s2_proc) (s2_dec) (state1) (state2), label={[anchor=north, yshift=-4pt]below:{\footnotesize \textcolor{black!75}{\textbf{Stage 2 Prioritized Deep Judge with Semantic Override}}}}] {};
+    \end{scope}
+
+\end{tikzpicture}%
+}
+\caption{Lazy Two-Stage Cascade Gating Architecture and Three-State Response Taxonomy. Stage 1 executes deterministic regex filtering and length checking ($< 1.5$ ms CPU), intercepting $40.0\%$ ($72/180$) of concise refusals early across the 180-prompt \texttt{Llama-3-8B-Instruct} population ($37.3\%$, $56/150$ across Vietnamese variants) without calling the LLM judge. Queries bypassing Stage 1 undergo Stage 2 deep LLM evaluation with strict priority: Priority 1 enforces semantic override ($s_{\text{spec}} \ge 4$), Priority 2 confirms verified refusals ($r_{\text{ref}}=1$), and Priority 3 maps remaining low-specificity discourse to State 1.}
+\label{fig:cascade_architecture}
+\end{figure*}

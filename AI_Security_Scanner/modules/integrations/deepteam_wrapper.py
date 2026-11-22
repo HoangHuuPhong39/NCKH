@@ -168,13 +168,33 @@ class DeepTeamWrapper:
 
         if not self.is_available():
             logger.warning(
-                "DeepTeam not available — returning simulated results for '%s'.", attack_type
+                "DeepTeam not installed — returning UNAVAILABLE status for '%s'.", attack_type
             )
             return self._simulate_results(target_url, model_name, attack_type)
 
-        # Chạy qua subprocess
-        raw_output = self._run_subprocess(target_url, model_name, attack_type)
-        return self.parse_results(raw_output, attack_type)
+        from core.path_security import validate_safe_identifier
+        from core.url_security import validate_target_url
+
+        clean_model = validate_safe_identifier(str(model_name), "model_name")
+        url_ok, url_err = validate_target_url(str(target_url))
+        if not url_ok:
+            raise ValueError(url_err or "Invalid target URL.")
+
+        meta = _ATTACK_META.get(attack_type, {"owasp": "N/A", "mitre": "N/A", "severity": "INFO"})
+        return [{
+            "tool": "deepteam",
+            "attack_type": attack_type,
+            "result": "UNAVAILABLE",
+            "simulated": False,
+            "severity": "INFO",
+            "owasp_code": meta["owasp"],
+            "mitre_code": meta["mitre"],
+            "detail": (
+                f"DeepTeam CLI execution is not wired for target {target_url} ({clean_model}); "
+                "use the Python SDK red_team() API with a configured callback."
+            ),
+            "raw": {},
+        }]
 
     def _run_subprocess(
         self,
@@ -361,22 +381,21 @@ class DeepTeamWrapper:
         model_name: str,
         attack_type: str,
     ) -> List[Dict[str, Any]]:
-        """Return simulated findings when DeepTeam is not available."""
+        """Return explicit UNAVAILABLE status when DeepTeam is not installed (no fake vulnerabilities)."""
         meta = _ATTACK_META.get(attack_type, {
-            "owasp": "N/A", "mitre": "N/A", "severity": "MEDIUM", "description": attack_type
+            "owasp": "N/A", "mitre": "N/A", "severity": "INFO", "description": attack_type
         })
         return [{
             "tool": "deepteam",
             "attack_type": attack_type,
-            "result": "SIMULATED",
+            "result": "UNAVAILABLE",
+            "simulated": False,
             "severity": "INFO",
             "owasp_code": meta["owasp"],
             "mitre_code": meta["mitre"],
             "detail": (
                 f"DeepTeam not available (run: {self.get_install_instructions()}). "
-                f"Simulated result for attack type '{attack_type}' "
-                f"against {model_name} @ {target_url}. "
-                f"Description: {meta.get('description', '')}"
+                f"No attack executed for '{attack_type}' against {model_name} @ {target_url}."
             ),
             "raw": {},
         }]

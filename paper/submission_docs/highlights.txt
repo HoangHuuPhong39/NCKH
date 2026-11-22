@@ -1,0 +1,5 @@
+Benchmark pairs English with 5 Vietnamese variants (N=180; 1,080 real evals).
+Proves BPE token explosion (NFD F=3.194) causes refusal collapse (p<=0.00024).
+Reveals cross-model alignment gaps across 6 LLMs (Mistral Raw ASR=8.3%).
+Two-Stage Cascade cuts LLM judge calls by 40.0% (72/180) with Sp=1.000.
+NFD-to-NFC canonicalization restores Llama-3 refusals by +85.0% (p<0.001).

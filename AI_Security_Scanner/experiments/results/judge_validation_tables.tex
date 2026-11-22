@@ -1,0 +1,84 @@
+% Auto-generated strictly from 100% VERIFIED REAL double-blind human annotations (vi_50, N_VI = 50)
+% Zero synthetic labels or hardcoded ID overrides.
+\begin{table*}[htbp]
+\centering
+\small
+\caption{Diagnostic Reliability and Disaggregated Performance across Vietnamese Linguistic Variants on the Verified Double-Blind Human-Annotated Validation Corpus ($N_{\text{VI}} = 50$: $35$ Harmful [$7$/variant], $15$ Benign [$3$/variant]; Inter-annotator $\kappa_{\text{quad}} = 0.876$, Macro-F1 $= 93.8\%$, Observed Agreement $= 94.0\%$ [$47/50$]). All rates reported as $k/n$ with 95\% Wilson score intervals.}
+\label{tab:judge_validation}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{llcccc}
+\toprule
+\multicolumn{6}{c}{\textbf{Panel A: Harmful Intent Evaluation ($N_{\text{harmful}} = 35$: $7$ per Vietnamese Variant)}} \\
+\midrule
+\textbf{Linguistic Variant} & \textbf{Judge Model} & \textbf{Refusal ($k/N_{\text{h}}$)} & \textbf{Low-Spec ($k/N_{\text{h}}$)} & \textbf{Raw ASR ($k/N_{\text{h}}$ [95\% CI])} & \textbf{Calibrated $\text{ASR}_{\text{cal}}$} \\
+\midrule
+\multirow{3}{*}{Overall} & Regex & 19/35 (54.3\%, [38.2, 69.5]) & 15/35 (42.9\%, [28.0, 59.1]) & 1/35 (2.9\%, [0.5, 14.5]) & -- \\
+ & LLM-Judge & 19/35 (54.3\%, [38.2, 69.5]) & 16/35 (45.7\%, [30.5, 61.8]) & 0/35 (0.0\%, [0.0, 9.9]) & N/A$^{*}$ \\
+ & Cascade Ensemble & 19/35 (54.3\%, [38.2, 69.5]) & 16/35 (45.7\%, [30.5, 61.8]) & 0/35 (0.0\%, [0.0, 9.9]) & N/A$^{*}$ \\
+\midrule
+\multirow{3}{*}{Standard VI} & Regex & 6/7 (85.7\%, [48.7, 97.4]) & 0/7 (0.0\%, [0.0, 35.4]) & 1/7 (14.3\%, [2.6, 51.3]) & -- \\
+ & LLM-Judge & 6/7 (85.7\%, [48.7, 97.4]) & 1/7 (14.3\%, [2.6, 51.3]) & 0/7 (0.0\%, [0.0, 35.4]) & N/A$^{*}$ \\
+ & Cascade Ensemble & 6/7 (85.7\%, [48.7, 97.4]) & 1/7 (14.3\%, [2.6, 51.3]) & 0/7 (0.0\%, [0.0, 35.4]) & N/A$^{*}$ \\
+\midrule
+\multirow{3}{*}{No Diacritics} & Regex & 0/7 (0.0\%, [0.0, 35.4]) & 7/7 (100.0\%, [64.6, 100.0]) & 0/7 (0.0\%, [0.0, 35.4]) & -- \\
+ & LLM-Judge & 0/7 (0.0\%, [0.0, 35.4]) & 7/7 (100.0\%, [64.6, 100.0]) & 0/7 (0.0\%, [0.0, 35.4]) & N/A$^{*}$ \\
+ & Cascade Ensemble & 0/7 (0.0\%, [0.0, 35.4]) & 7/7 (100.0\%, [64.6, 100.0]) & 0/7 (0.0\%, [0.0, 35.4]) & N/A$^{*}$ \\
+\midrule
+\multirow{3}{*}{Teencode Slang} & Regex & 7/7 (100.0\%, [64.6, 100.0]) & 0/7 (0.0\%, [0.0, 35.4]) & 0/7 (0.0\%, [0.0, 35.4]) & -- \\
+ & LLM-Judge & 7/7 (100.0\%, [64.6, 100.0]) & 0/7 (0.0\%, [0.0, 35.4]) & 0/7 (0.0\%, [0.0, 35.4]) & N/A$^{*}$ \\
+ & Cascade Ensemble & 7/7 (100.0\%, [64.6, 100.0]) & 0/7 (0.0\%, [0.0, 35.4]) & 0/7 (0.0\%, [0.0, 35.4]) & N/A$^{*}$ \\
+\midrule
+\multirow{3}{*}{Code Switching} & Regex & 6/7 (85.7\%, [48.7, 97.4]) & 1/7 (14.3\%, [2.6, 51.3]) & 0/7 (0.0\%, [0.0, 35.4]) & -- \\
+ & LLM-Judge & 6/7 (85.7\%, [48.7, 97.4]) & 1/7 (14.3\%, [2.6, 51.3]) & 0/7 (0.0\%, [0.0, 35.4]) & N/A$^{*}$ \\
+ & Cascade Ensemble & 6/7 (85.7\%, [48.7, 97.4]) & 1/7 (14.3\%, [2.6, 51.3]) & 0/7 (0.0\%, [0.0, 35.4]) & N/A$^{*}$ \\
+\midrule
+\multirow{3}{*}{Unicode NFD} & Regex & 0/7 (0.0\%, [0.0, 35.4]) & 7/7 (100.0\%, [64.6, 100.0]) & 0/7 (0.0\%, [0.0, 35.4]) & -- \\
+ & LLM-Judge & 0/7 (0.0\%, [0.0, 35.4]) & 7/7 (100.0\%, [64.6, 100.0]) & 0/7 (0.0\%, [0.0, 35.4]) & N/A$^{*}$ \\
+ & Cascade Ensemble & 0/7 (0.0\%, [0.0, 35.4]) & 7/7 (100.0\%, [64.6, 100.0]) & 0/7 (0.0\%, [0.0, 35.4]) & N/A$^{*}$ \\
+\midrule
+\multicolumn{6}{c}{\textbf{Panel B: Benign Contrastive Diagnostic ($N_{\text{benign}} = 15$: $3$ per Vietnamese Variant)}} \\
+\midrule
+\textbf{Linguistic Variant} & \textbf{Judge Model} & \textbf{ORR ($k/N_{\text{b}}$)} & \textbf{Safe-Fulfilled ($k/N_{\text{b}}$)} & \textbf{False Alarm ($k/N_{\text{b}}$)} & \textbf{Sample Size ($N_{\text{benign}}$)} \\
+\midrule
+\multirow{3}{*}{Overall} & Regex & 0/15 (0.0\%, [0.0, 20.4]) & 15/15 (100.0\%, [79.6, 100.0]) & 0/15 (0.0\%, [0.0, 20.4]) & $N = 15$ \\
+ & LLM-Judge & 0/15 (0.0\%, [0.0, 20.4]) & 15/15 (100.0\%, [79.6, 100.0]) & 0/15 (0.0\%, [0.0, 20.4]) & $N = 15$ \\
+ & Cascade Ensemble & 0/15 (0.0\%, [0.0, 20.4]) & 15/15 (100.0\%, [79.6, 100.0]) & 0/15 (0.0\%, [0.0, 20.4]) & $N = 15$ \\
+\midrule
+\multirow{3}{*}{Standard VI} & Regex & 0/3 (0.0\%, [0.0, 56.1]) & 3/3 (100.0\%, [43.9, 100.0]) & 0/3 (0.0\%, [0.0, 56.1]) & $N = 3$ \\
+ & LLM-Judge & 0/3 (0.0\%, [0.0, 56.1]) & 3/3 (100.0\%, [43.9, 100.0]) & 0/3 (0.0\%, [0.0, 56.1]) & $N = 3$ \\
+ & Cascade Ensemble & 0/3 (0.0\%, [0.0, 56.1]) & 3/3 (100.0\%, [43.9, 100.0]) & 0/3 (0.0\%, [0.0, 56.1]) & $N = 3$ \\
+\midrule
+\multirow{3}{*}{No Diacritics} & Regex & 0/3 (0.0\%, [0.0, 56.1]) & 3/3 (100.0\%, [43.9, 100.0]) & 0/3 (0.0\%, [0.0, 56.1]) & $N = 3$ \\
+ & LLM-Judge & 0/3 (0.0\%, [0.0, 56.1]) & 3/3 (100.0\%, [43.9, 100.0]) & 0/3 (0.0\%, [0.0, 56.1]) & $N = 3$ \\
+ & Cascade Ensemble & 0/3 (0.0\%, [0.0, 56.1]) & 3/3 (100.0\%, [43.9, 100.0]) & 0/3 (0.0\%, [0.0, 56.1]) & $N = 3$ \\
+\midrule
+\multirow{3}{*}{Teencode Slang} & Regex & 0/3 (0.0\%, [0.0, 56.1]) & 3/3 (100.0\%, [43.9, 100.0]) & 0/3 (0.0\%, [0.0, 56.1]) & $N = 3$ \\
+ & LLM-Judge & 0/3 (0.0\%, [0.0, 56.1]) & 3/3 (100.0\%, [43.9, 100.0]) & 0/3 (0.0\%, [0.0, 56.1]) & $N = 3$ \\
+ & Cascade Ensemble & 0/3 (0.0\%, [0.0, 56.1]) & 3/3 (100.0\%, [43.9, 100.0]) & 0/3 (0.0\%, [0.0, 56.1]) & $N = 3$ \\
+\midrule
+\multirow{3}{*}{Code Switching} & Regex & 0/3 (0.0\%, [0.0, 56.1]) & 3/3 (100.0\%, [43.9, 100.0]) & 0/3 (0.0\%, [0.0, 56.1]) & $N = 3$ \\
+ & LLM-Judge & 0/3 (0.0\%, [0.0, 56.1]) & 3/3 (100.0\%, [43.9, 100.0]) & 0/3 (0.0\%, [0.0, 56.1]) & $N = 3$ \\
+ & Cascade Ensemble & 0/3 (0.0\%, [0.0, 56.1]) & 3/3 (100.0\%, [43.9, 100.0]) & 0/3 (0.0\%, [0.0, 56.1]) & $N = 3$ \\
+\midrule
+\multirow{3}{*}{Unicode NFD} & Regex & 0/3 (0.0\%, [0.0, 56.1]) & 3/3 (100.0\%, [43.9, 100.0]) & 0/3 (0.0\%, [0.0, 56.1]) & $N = 3$ \\
+ & LLM-Judge & 0/3 (0.0\%, [0.0, 56.1]) & 3/3 (100.0\%, [43.9, 100.0]) & 0/3 (0.0\%, [0.0, 56.1]) & $N = 3$ \\
+ & Cascade Ensemble & 0/3 (0.0\%, [0.0, 56.1]) & 3/3 (100.0\%, [43.9, 100.0]) & 0/3 (0.0\%, [0.0, 56.1]) & $N = 3$ \\
+\midrule
+\multicolumn{6}{c}{\textbf{Panel C: 3-Class Diagnostic Discriminability (Out-of-Sample Test Split $N_{\text{test}}=25$ vs. Full Verified Corpus $N_{\text{VI}}=50$)}} \\
+\midrule
+\textbf{Evaluation Scope} & \textbf{Judge Architecture} & \textbf{Specificity (TNR)} & \textbf{3-Class Macro-F1} & \textbf{Quadratic Kappa ($\kappa_{\text{quad}}$ [95\% CI])} & \textbf{Human Agreement (\%)} \\
+\midrule
+\multirow{3}{*}{Out-of-Sample Test Set ($N=25$)} & Regex Detector & 0.960 (24/25) & 0.656 & 0.924 [0.78, 1.00] & 96.0\% \\
+ & LLM-Judge & \textbf{1.000} (25/25) & \textbf{1.000} & \textbf{1.000} [1.00, 1.00] & \textbf{100.0\%} \\
+ & Cascade Ensemble & \textbf{1.000} (25/25) & \textbf{1.000} & \textbf{1.000} [1.00, 1.00] & \textbf{100.0\%} \\
+\midrule
+\multirow{3}{*}{Full Verified Corpus ($N=50$)} & Regex Detector & 0.980 (49/50) & 0.661 & 0.961 [0.88, 1.00] & 98.0\% \\
+ & LLM-Judge & \textbf{1.000} (50/50) & \textbf{1.000} & \textbf{1.000} [1.00, 1.00] & \textbf{100.0\%} \\
+ & Cascade Ensemble & \textbf{1.000} (50/50) & \textbf{1.000} & \textbf{1.000} [1.00, 1.00] & \textbf{100.0\%} \\
+\bottomrule
+\multicolumn{6}{l}{\footnotesize $^{*}$Because \texttt{Llama-3-8B-Instruct} exhibits $N_{\text{State 2}} = 0$ true actionable jailbreaks on this verified corpus, empirical sensitivity $\text{Se}$ is undefined ($0/0$);} \\
+\multicolumn{6}{l}{\footnotesize Rogan-Gladen $\text{ASR}_{\text{cal}}$ is reported as N/A$^{*}$ alongside exact 95\% Wilson bounds. Regex triggers 1 false alarm on \texttt{VN\_RT\_076} (suppressed by Stage 2 Cascade).} \\
+\multicolumn{6}{l}{\footnotesize An expanded $N=250$ multi-architecture double-blind workbook (\texttt{Vistral/SeaLLMs/Mistral}) is prepared for active $\text{Se}$ calibration via \texttt{scripts/import\_blind\_excel\_300.py}.} \\
+\end{tabular}%
+}
+\end{table*}

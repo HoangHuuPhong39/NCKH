@@ -20,6 +20,9 @@ _MODULE_TO_OWASP: dict[str, str] = {
     "jailbreak":            "LLM01",
     # LLM02 – Sensitive Information Disclosure (≠ LLM06!)
     "sensitive_disclosure": "LLM02",
+    # LLM03 – Supply Chain & Open-Source Code/Model Vulnerabilities
+    "code_scanner":         "LLM03",
+    "oss_security":         "LLM03",
     # LLM05 – Improper Output Handling
     "output_handling":      "LLM05",
     # LLM06 – Excessive Agency
@@ -50,29 +53,15 @@ class OWASPMapper:
     the same OWASP code (e.g. LLM01 covers both general prompt injection and
     jailbreaks); in that case ``get_category_info`` returns the *first* match
     while ``get_remediation`` merges all unique remediation steps.
-
-    Usage::
-
-        mapper = OWASPMapper()
-        info   = mapper.get_category_info("LLM01")
-        steps  = mapper.get_remediation("LLM01")
-        desc   = mapper.format_finding_description("jailbreak", "CRITICAL")
     """
 
     def __init__(self) -> None:
         # Index: owasp_code → list[category_dict]
         self._by_owasp: dict[str, list[dict]] = {}
+        self._standards_metadata: dict[str, dict] = {}
         self._load_taxonomy()
 
-    # ------------------------------------------------------------------
-    # Internal helpers
-    # ------------------------------------------------------------------
-
     def _load_taxonomy(self) -> None:
-        """
-        Load and index taxonomy.json.  Silently ignores missing or malformed
-        files so the mapper degrades gracefully.
-        """
         project_root = Path(__file__).resolve().parent.parent
         taxonomy_path = project_root / "data" / "taxonomy.json"
 
@@ -81,17 +70,18 @@ class OWASPMapper:
 
         from core.cache import cache
 
-        cached_data = cache.get("taxonomy_categories")
+        cached_data = cache.get("taxonomy_full_v21")
         if cached_data is not None:
-            data = {"categories": cached_data}
+            data = cached_data
         else:
             try:
                 with open(taxonomy_path, encoding="utf-8") as fh:
                     data = json.load(fh)
-                    cache.set("taxonomy_categories", data.get("categories", []), ttl=3600)
+                    cache.set("taxonomy_full_v21", data, ttl=3600)
             except (json.JSONDecodeError, OSError):
                 return
 
+        self._standards_metadata = data.get("standards_metadata", {})
         for category in data.get("categories", []):
             code = category.get("owasp_code", "")
             if code:
@@ -99,30 +89,11 @@ class OWASPMapper:
 
     def _resolve_owasp_code(self, owasp_code: str) -> str:
         """Normalise *owasp_code*, treating module names as aliases."""
-        # Allow callers to pass a module name directly
         if owasp_code in _MODULE_TO_OWASP:
             return _MODULE_TO_OWASP[owasp_code]
         return owasp_code
 
-    # ------------------------------------------------------------------
-    # Public API
-    # ------------------------------------------------------------------
-
     def get_remediation(self, owasp_code: str) -> list[str]:
-        """
-        Return a deduplicated list of remediation steps for *owasp_code*.
-
-        When multiple taxonomy categories share the same OWASP code their
-        remediation lists are merged and de-duplicated while preserving
-        insertion order.
-
-        Args:
-            owasp_code: OWASP LLM code (e.g. ``'LLM01'``) or a module name
-                        alias (e.g. ``'jailbreak'``).
-
-        Returns:
-            List of remediation strings, or an empty list if not found.
-        """
         code = self._resolve_owasp_code(owasp_code)
         categories = self._by_owasp.get(code, [])
 
@@ -136,41 +107,11 @@ class OWASPMapper:
         return steps
 
     def get_category_info(self, owasp_code: str) -> dict:
-        """
-        Return the full taxonomy dict for the first category matching
-        *owasp_code*.
-
-        Args:
-            owasp_code: OWASP LLM code or module name alias.
-
-        Returns:
-            Category dict (keys: id, owasp_code, mitre_code, name, name_vi,
-            description, description_vi, severity, base_risk_score,
-            attack_techniques, detection_criteria, remediation), or an
-            empty dict if not found.
-        """
         code = self._resolve_owasp_code(owasp_code)
         categories = self._by_owasp.get(code, [])
         return categories[0] if categories else {}
 
     def format_finding_description(self, module_name: str, severity: str) -> str:
-        """
-        Build a concise, human-readable finding description string with
-        embedded OWASP and MITRE references.
-
-        Args:
-            module_name: Attack module name (e.g. ``'jailbreak'``).
-            severity:    Severity label (e.g. ``'CRITICAL'``).
-
-        Returns:
-            Formatted description string, e.g.:
-
-            .. code-block:: text
-
-                [CRITICAL] Jailbreak / Safety Bypass (LLM01 | AML.T0051.000)
-                Sử dụng nhập vai, nhân vật, hoặc khung hư cấu để vượt qua
-                hướng dẫn an toàn.
-        """
         owasp_code = _MODULE_TO_OWASP.get(module_name, "N/A")
         info = self.get_category_info(owasp_code)
 
@@ -191,27 +132,26 @@ class OWASPMapper:
         )
 
     def get_owasp_code_for_module(self, module_name: str) -> str:
-        """
-        Convenience method: return the OWASP code for a given module name.
-
-        Args:
-            module_name: Attack module name.
-
-        Returns:
-            OWASP code string, or ``'N/A'`` if not mapped.
-        """
         return _MODULE_TO_OWASP.get(module_name, "N/A")
 
     def get_mitre_code_for_module(self, module_name: str) -> str:
-        """
-        Convenience method: return the MITRE ATT&CK for ML code for a module.
-
-        Args:
-            module_name: Attack module name.
-
-        Returns:
-            MITRE code string, or ``'N/A'`` if not found.
-        """
         owasp_code = _MODULE_TO_OWASP.get(module_name, "")
         info = self.get_category_info(owasp_code)
         return info.get("mitre_code", "N/A")
+
+    def get_nist_rmf_for_module(self, module_name: str) -> list[str]:
+        """Return NIST AI RMF 1.0 subcategory mappings for a module or OWASP code."""
+        code = self._resolve_owasp_code(module_name)
+        info = self.get_category_info(code)
+        rmf = info.get("nist_ai_rmf", [])
+        return list(rmf) if isinstance(rmf, list) else []
+
+    def get_nist_aml_for_module(self, module_name: str) -> str:
+        """Return NIST AML (AI 100-2) attack taxonomy label for a module or OWASP code."""
+        code = self._resolve_owasp_code(module_name)
+        info = self.get_category_info(code)
+        return info.get("nist_aml", "N/A")
+
+    def get_standards_metadata(self) -> dict[str, dict]:
+        """Return versioned reference standards metadata (OWASP 2025, MITRE ATLAS, NIST AI RMF, NIST AML)."""
+        return dict(self._standards_metadata)

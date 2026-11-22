@@ -1,0 +1,25 @@
+version: "1.2"
+service_name: internal-rag-agent
+
+# Khối cấu hình nền chứa các thiết lập không an toàn
+_base_runtime: &unsafe_defaults
+  verify_ssl: false
+  trust_remote_code: true
+  max_tokens: -1                # Không giới hạn token (Unbounded Consumption)
+  sandbox_mode: off
+
+model_provider:
+  engine: ollama
+  endpoint: "http://0.0.0.0:11434"
+  # Secret bị tách đôi hoặc đặt tên biến bình thường để tránh từ khóa 'api_key'
+  auth_header_prefix: "Bearer "
+  credential_ref: "sk-live-9f8e7d6c5b4a3210fedcba9876543210"
+
+agent_deployment:
+  production:
+    <<: *unsafe_defaults        # Kế thừa toàn bộ cờ nguy hiểm ở trên
+    allowed_tools:
+      - "shell_exec"
+      - "filesystem_write"
+      - "http_fetch_any"
+    system_prompt_override: true

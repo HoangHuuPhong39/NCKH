@@ -14,15 +14,7 @@ SWAGGER_UI_HTML = """<!DOCTYPE html>
   <link rel="stylesheet" href="/static/swagger-ui.css" />
   <link rel="icon" type="image/jpeg" href="/static/logo.jpg">
 
-  <script>
-    // Immediate Theme Initialization to avoid white flash
-    (function() {
-      try {
-        const saved = localStorage.getItem('ai_scanner_theme') || 'dark';
-        document.documentElement.setAttribute('data-theme', saved);
-      } catch(e) {}
-    })();
-  </script>
+  <script src="/static/js/theme_init.js"></script>
 
   <style>
     /* ══════════════════════════════════════════════════════════════════
@@ -746,59 +738,7 @@ SWAGGER_UI_HTML = """<!DOCTYPE html>
   <div id="swagger-ui"></div>
 
   <script src="/static/swagger-ui-bundle.js"></script>
-  <script>
-    // Exact Sun and Moon SVGs synchronized with index.html
-    const sunSvg = `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 5px rgba(245, 158, 11, 0.6))"><circle cx="12" cy="12" r="4.5" fill="#fef3c7"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>`;
-    const moonSvg = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 4px rgba(56, 189, 248, 0.5))"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>`;
-
-    function initTheme() {
-      const savedTheme = localStorage.getItem('ai_scanner_theme') || 'dark';
-      applyTheme(savedTheme);
-    }
-
-    function applyTheme(theme) {
-      document.documentElement.setAttribute('data-theme', theme);
-      localStorage.setItem('ai_scanner_theme', theme);
-      const label = document.getElementById('theme-btn-label');
-      const iconWrap = document.getElementById('theme-btn-icon');
-      const btn = document.getElementById('btn-theme-toggle');
-
-      if (theme === 'light') {
-        if (iconWrap) iconWrap.innerHTML = sunSvg;
-        if (label) label.textContent = 'Theme: Light';
-        if (btn) btn.title = 'Switch to Dark Theme';
-      } else {
-        if (iconWrap) iconWrap.innerHTML = moonSvg;
-        if (label) label.textContent = 'Theme: Dark';
-        if (btn) btn.title = 'Switch to Light Theme';
-      }
-    }
-
-    function toggleTheme() {
-      const current = document.documentElement.getAttribute('data-theme') || 'dark';
-      const next = current === 'dark' ? 'light' : 'dark';
-      applyTheme(next);
-    }
-
-    window.onload = function() {
-      initTheme();
-      window.ui = SwaggerUIBundle({
-        url: "/api/openapi.json",
-        dom_id: '#swagger-ui',
-        deepLinking: true,
-        presets: [
-          SwaggerUIBundle.presets.apis,
-          SwaggerUIBundle.SwaggerUIStandalonePreset
-        ],
-        layout: "BaseLayout",
-        defaultModelsExpandDepth: -1,
-        docExpansion: "list",
-        filter: true,
-        showExtensions: true,
-        showCommonExtensions: true
-      });
-    };
-  </script>
+  <script src="/static/js/swagger_init.js"></script>
 </body>
 </html>
 """
@@ -810,10 +750,10 @@ def get_openapi_spec() -> dict:
         "info": {
             "title": "AI Security Scanner REST API",
             "description": "Production-grade RESTful API for AI Red-Teaming, Automated Vulnerability Assessment, and OWASP Top 10 for LLMs 2025 Auditing.",
-            "version": "2.0.0",
+            "version": "2.1.0",
             "contact": {
                 "name": "AI Security Research Lab",
-                "url": "https://github.com/your-org/AI_Security_Scanner"
+                "url": "https://github.com/HoangHuuPhong39/NCKH"
             },
             "license": {
                 "name": "MIT",
@@ -821,7 +761,27 @@ def get_openapi_spec() -> dict:
             }
         },
         "servers": [
-            {"url": "http://localhost:5000", "description": "Local development server"}
+            {"url": "/", "description": "Current server origin"}
+        ],
+        "components": {
+            "securitySchemes": {
+                "bearerAuth": {
+                    "type": "http",
+                    "scheme": "bearer",
+                    "bearerFormat": "JWT",
+                    "description": "Bearer JWT obtained via POST /api/auth/login"
+                },
+                "apiKeyAuth": {
+                    "type": "apiKey",
+                    "in": "header",
+                    "name": "X-API-Key",
+                    "description": "Administrative API key (SCANNER_ADMIN_API_KEY)"
+                }
+            }
+        },
+        "security": [
+            {"bearerAuth": []},
+            {"apiKeyAuth": []}
         ],
         "tags": [
             {
@@ -897,10 +857,21 @@ def get_openapi_spec() -> dict:
                     }
                 }
             },
+            "/api/auth/status": {
+                "get": {
+                    "tags": ["Authentication & Config"],
+                    "summary": "Check Authentication Enforcement & Current Session Status",
+                    "security": [],
+                    "responses": {
+                        "200": {"description": "Returns require_auth and authenticated flags"}
+                    }
+                }
+            },
             "/api/auth/login": {
                 "post": {
                     "tags": ["Authentication & Config"],
                     "summary": "Administrative Authentication & Bearer JWT Issuance",
+                    "security": [],
                     "requestBody": {
                         "required": True,
                         "content": {
@@ -908,16 +879,16 @@ def get_openapi_spec() -> dict:
                                 "schema": {
                                     "type": "object",
                                     "properties": {
-                                        "api_key": {"type": "string", "example": "ai-scanner-admin-secret-token"},
+                                        "api_key": {"type": "string", "example": "<YOUR_ADMIN_API_KEY>"},
                                         "username": {"type": "string", "example": "admin"},
-                                        "password": {"type": "string", "example": "ai-scanner-admin-secret-token"}
+                                        "password": {"type": "string", "example": "<YOUR_ADMIN_API_KEY>"}
                                     }
                                 }
                             }
                         }
                     },
                     "responses": {
-                        "200": {"description": "Authentication successful; returns 24-hour valid JWT Bearer token"},
+                        "200": {"description": "Authentication successful; returns JWT Bearer token"},
                         "401": {"description": "Invalid credentials provided"}
                     }
                 }
@@ -968,8 +939,9 @@ def get_openapi_spec() -> dict:
                                 "schema": {
                                     "type": "object",
                                     "properties": {
-                                        "target_url": {"type": "string", "example": "http://localhost:11434"},
-                                        "target_model": {"type": "string", "example": "llama3"}
+                                        "url": {"type": "string", "example": "http://localhost:11434"},
+                                        "model": {"type": "string", "example": "llama3"},
+                                        "api_key": {"type": "string", "example": ""}
                                     }
                                 }
                             }
@@ -1122,9 +1094,14 @@ def get_openapi_spec() -> dict:
                             "application/json": {
                                 "schema": {
                                     "type": "object",
-                                    "required": ["finding_id"],
+                                    "required": ["payload"],
                                     "properties": {
-                                        "finding_id": {"type": "integer", "example": 14}
+                                        "payload": {"type": "string", "example": "Ignore all previous instructions."},
+                                        "original_response": {"type": "string", "example": ""},
+                                        "module_name": {"type": "string", "example": "prompt_injection"},
+                                        "live": {"type": "boolean", "default": True},
+                                        "target_url": {"type": "string", "example": "http://localhost:11434"},
+                                        "target_model": {"type": "string", "example": "llama3"}
                                     }
                                 }
                             }
@@ -1180,9 +1157,9 @@ def get_openapi_spec() -> dict:
                                 "schema": {
                                     "type": "object",
                                     "properties": {
-                                        "system_name": {"type": "string", "example": "Enterprise AI Assistant"},
-                                        "architecture": {"type": "string", "example": "rag_agent"},
-                                        "data_sensitivity": {"type": "string", "example": "confidential"}
+                                        "target_url": {"type": "string", "example": "http://localhost:11434"},
+                                        "target_model": {"type": "string", "example": "llama3"},
+                                        "system_type": {"type": "string", "example": "auto"}
                                     }
                                 }
                             }
@@ -1204,9 +1181,8 @@ def get_openapi_spec() -> dict:
                             "application/json": {
                                 "schema": {
                                     "type": "object",
-                                    "required": ["benchmark_type"],
                                     "properties": {
-                                        "benchmark_type": {"type": "string", "example": "harmbench_subset", "description": "harmbench_subset or vietnamese_benchmark"},
+                                        "dataset": {"type": "string", "example": "vietnamese", "description": "vietnamese, harmbench, or default"},
                                         "target_url": {"type": "string", "example": "http://localhost:11434"},
                                         "target_model": {"type": "string", "example": "llama3"}
                                     }
@@ -1288,12 +1264,223 @@ def get_openapi_spec() -> dict:
             },
             "/api/incidents": {
                 "get": {
-                    "tags": ["Findings & Telemetry"],
+                    "tags": ["Findings & Analytics"],
                     "summary": "Correlate Critical & High Security Incidents",
                     "description": "Groups critical and high severity findings into correlated attack clusters.",
                     "responses": {
                         "200": {"description": "List of correlated security incident clusters"}
                     }
+                }
+            },
+            "/api/findings/{finding_id}/status": {
+                "patch": {
+                    "tags": ["Findings & Analytics"],
+                    "summary": "Update Finding Verification & Remediation Lifecycle (PATCH)",
+                    "parameters": [
+                        {"name": "finding_id", "in": "path", "required": True, "schema": {"type": "integer"}}
+                    ],
+                    "responses": {"200": {"description": "Updated finding record"}}
+                },
+                "post": {
+                    "tags": ["Findings & Analytics"],
+                    "summary": "Update Finding Verification & Remediation Lifecycle (POST)",
+                    "parameters": [
+                        {"name": "finding_id", "in": "path", "required": True, "schema": {"type": "integer"}}
+                    ],
+                    "responses": {"200": {"description": "Updated finding record"}}
+                }
+            },
+            "/api/posture": {
+                "get": {
+                    "tags": ["Audit Reports & Export"],
+                    "summary": "Compute Executive System Security Posture (Grade A-F)",
+                    "description": "Aggregates active findings into a 0-100 posture score, letter grade, and prioritized SLA action matrix.",
+                    "responses": {"200": {"description": "Executive system posture summary"}}
+                }
+            },
+            "/api/regression/run": {
+                "post": {
+                    "tags": ["Findings & Analytics"],
+                    "summary": "Execute Security Regression Retest Campaign",
+                    "description": "Replays baseline vulnerable payloads against a hardened target (e.g. behind AI Guard Proxy) and updates remediation statuses automatically.",
+                    "responses": {"200": {"description": "Regression retest diff and fix_rate summary"}}
+                }
+            },
+            "/api/regression/runs": {
+                "get": {
+                    "tags": ["Findings & Analytics"],
+                    "summary": "List Regression Retest History",
+                    "responses": {"200": {"description": "Historical regression retest runs"}}
+                }
+            },
+            "/api/scans/compare": {
+                "get": {
+                    "tags": ["Findings & Analytics"],
+                    "summary": "Compare Two Scans (Baseline vs. Retest)",
+                    "parameters": [
+                        {"name": "baseline_id", "in": "query", "required": True, "schema": {"type": "integer"}},
+                        {"name": "target_id", "in": "query", "required": True, "schema": {"type": "integer"}}
+                    ],
+                    "responses": {"200": {"description": "Fixed, persistent, and newly introduced findings"}}
+                }
+            },
+            "/api/governance/policy": {
+                "get": {
+                    "tags": ["System & Health"],
+                    "summary": "Get Operational Governance Policy (RoE Scope, Budget, Redaction)",
+                    "responses": {"200": {"description": "Active governance policy"}}
+                },
+                "post": {
+                    "tags": ["System & Health"],
+                    "summary": "Update Operational Governance Policy",
+                    "responses": {"200": {"description": "Updated governance policy"}}
+                }
+            },
+            "/api/governance/audit": {
+                "get": {
+                    "tags": ["System & Health"],
+                    "summary": "Read Governance Audit Trail (JSONL)",
+                    "responses": {"200": {"description": "Recent immutable governance audit events"}}
+                }
+            },
+            "/api/report/sarif": {
+                "get": {
+                    "tags": ["Audit Reports & Export"],
+                    "summary": "Export Security Findings in SARIF 2.1.0 Format",
+                    "description": "Produces a GitHub Code Scanning / GitLab CI compatible SARIF 2.1.0 report with OWASP 2025, MITRE ATLAS, NIST AI RMF metadata and PII redaction.",
+                    "responses": {"200": {"description": "SARIF 2.1.0 JSON document"}}
+                }
+            },
+            "/api/rag-acl/test": {
+                "post": {
+                    "tags": ["Findings & Analytics"],
+                    "summary": "Run RAG Cross-Tenant, RBAC & Deleted Document ACL Audit",
+                    "responses": {"200": {"description": "RAG ACL probe results and leak rate"}}
+                }
+            },
+            "/api/agent-memory/test": {
+                "post": {
+                    "tags": ["Findings & Analytics"],
+                    "summary": "Run Agent Cross-Session Memory Poisoning & Approval Gate Audit",
+                    "responses": {"200": {"description": "Memory poisoning & approval violation report"}}
+                }
+            },
+            "/api/trivy/scan": {
+                "post": {
+                    "tags": ["System & Health"],
+                    "summary": "Scan AI Container / Dockerfile / docker-compose with Trivy (or Static Fallback)",
+                    "responses": {"200": {"description": "Normalized container/IaC vulnerability findings"}}
+                }
+            },
+            "/api/data-hygiene/scan": {
+                "post": {
+                    "tags": ["Findings & Analytics"],
+                    "summary": "Audit Training/RAG Dataset Hygiene (PII, Poisoning Triggers, Duplication, Skew, AI-BOM)",
+                    "responses": {"200": {"description": "Dataset security audit metrics and findings"}}
+                }
+            },
+            "/api/ml-privacy/audit": {
+                "post": {
+                    "tags": ["Findings & Analytics"],
+                    "summary": "Run ML/DL Privacy Audit (ML-001 Membership Inference & ML-002 Model Extraction)",
+                    "responses": {"200": {"description": "MIA advantage, ART RuleBased accuracy, and Extraction fidelity"}}
+                }
+            },
+            "/api/code-scan/sample": {
+                "get": {
+                    "tags": ["Scanning & Exploitation"],
+                    "summary": "Retrieve Sample Vulnerable AI Code & SAST Rule Catalog",
+                    "responses": {"200": {"description": "Sample snippet and AI-SAST rules"}}
+                }
+            },
+            "/api/code-scan/run": {
+                "post": {
+                    "tags": ["Scanning & Exploitation"],
+                    "summary": "Execute Static & Hybrid AI Source Code Audit (SAST)",
+                    "requestBody": {
+                        "required": True,
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "mode": {"type": "string", "enum": ["snippet", "directory"], "default": "snippet"},
+                                        "code": {"type": "string"},
+                                        "filename": {"type": "string", "default": "vulnerable_ai_app.py"},
+                                        "target_path": {"type": "string", "description": "Path inside configured allowed_scan_roots"},
+                                        "use_hybrid_llm": {"type": "boolean", "default": False}
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "responses": {"200": {"description": "AI-SAST findings and risk summary"}}
+                }
+            },
+            "/api/code-scan/upload": {
+                "post": {
+                    "tags": ["Scanning & Exploitation"],
+                    "summary": "Upload Source Files / Folder for AI-SAST Scanning",
+                    "requestBody": {
+                        "required": True,
+                        "content": {
+                            "multipart/form-data": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {"files": {"type": "array", "items": {"type": "string", "format": "binary"}}}
+                                }
+                            }
+                        }
+                    },
+                    "responses": {"200": {"description": "Uploaded code SAST findings"}}
+                }
+            },
+            "/api/oss-scan/sample": {
+                "get": {
+                    "tags": ["Scanning & Exploitation"],
+                    "summary": "Retrieve Open-Source AI Stack Sample Requirements & CVE Catalog",
+                    "responses": {"200": {"description": "OSS AI platforms and CVE database"}}
+                }
+            },
+            "/api/oss-scan/run": {
+                "post": {
+                    "tags": ["Scanning & Exploitation"],
+                    "summary": "Run Open-Source AI Ecosystem, Checkpoint Pickle & SCA Audit",
+                    "requestBody": {
+                        "required": True,
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "mode": {"type": "string", "enum": ["full", "platforms", "models", "sca"], "default": "full"},
+                                        "target_url": {"type": "string", "example": "http://localhost:11434"},
+                                        "project_dir": {"type": "string"},
+                                        "requirements_text": {"type": "string"}
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "responses": {"200": {"description": "OSS AI & supply chain findings"}}
+                }
+            },
+            "/api/oss-scan/upload": {
+                "post": {
+                    "tags": ["Scanning & Exploitation"],
+                    "summary": "Upload Model Checkpoints / Configs / Requirements for OSS Audit",
+                    "requestBody": {
+                        "required": True,
+                        "content": {
+                            "multipart/form-data": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {"files": {"type": "array", "items": {"type": "string", "format": "binary"}}}
+                                }
+                            }
+                        }
+                    },
+                    "responses": {"200": {"description": "Uploaded artifacts OSS/SCA findings"}}
                 }
             }
         }

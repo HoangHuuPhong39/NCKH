@@ -19,7 +19,7 @@ from modules.detectors.pattern_match import PatternDetector
 class ConcurrentScanner:
     """
     Executes vulnerability payloads concurrently using a bounded thread pool,
-    emitting progress callbacks and respecting cancellation tokens.
+    emitting progress callbacks and respecting cancellation tokens and campaign budgets.
     """
 
     def __init__(self, max_workers: int = 4) -> None:
@@ -35,9 +35,11 @@ class ConcurrentScanner:
         on_finding: Optional[Callable[[Dict[str, Any]], None]] = None,
         on_progress: Optional[Callable[[int, int, int], None]] = None,
         cancel_event: Optional[threading.Event] = None,
+        budget: Optional[Any] = None,
     ) -> List[Dict[str, Any]]:
         """
         Executes all payloads of a module in parallel threads.
+        Respects cancellation tokens and optional CampaignBudget guardrails.
         """
         payloads = getattr(module, "payloads", [])
         total_payloads = len(payloads)
@@ -52,6 +54,11 @@ class ConcurrentScanner:
             nonlocal completed_count
             if cancel_event and cancel_event.is_set():
                 return None
+            if budget is not None:
+                allowed, reason_budget = budget.check_allowed()
+                if not allowed:
+                    logger.warning("Campaign budget stopped payload #%d: %s", index + 1, reason_budget)
+                    return None
 
             payload_name = item.get("name", f"Payload #{index+1}")
             payload_text = item.get("payload", "")
@@ -64,6 +71,9 @@ class ConcurrentScanner:
             except Exception as e:
                 response_text = f"[-] Execution error: {e}"
             resp_time_ms = round((time.time() - t0) * 1000)
+
+            if budget is not None:
+                budget.record_usage(prompt_text=payload_text, response_text=response_text)
 
             # Use registry for clean module key resolution
             from modules.registry import get_detector_key
@@ -80,15 +90,9 @@ class ConcurrentScanner:
                 module_name=clean_mod,
                 detection_result=is_vuln,
                 response_length=len(response_text),
+                confidence=confidence,
             ) if is_vuln else 0.0
             severity = self.risk_scorer.score_to_severity(risk_score) if is_vuln else "INFO"
-
-            severity = "CRITICAL" if is_vuln else "INFO"
-            risk_score = self.risk_scorer.calculate_score(
-                module_name=clean_mod,
-                detection_result=is_vuln,
-                response_length=len(response_text),
-            )
 
             finding_data = {
                 "scan_id": scan_id,
@@ -98,6 +102,7 @@ class ConcurrentScanner:
                 "payload": payload_text,
                 "response": response_text,
                 "is_vuln": is_vuln,
+                "is_vulnerable": is_vuln,
                 "reason": reason,
                 "confidence": confidence,
                 "severity": severity,
@@ -127,6 +132,9 @@ class ConcurrentScanner:
             ]
             for future in concurrent.futures.as_completed(futures):
                 if cancel_event and cancel_event.is_set():
+                    executor.shutdown(wait=False, cancel_futures=True)
+                    break
+                if budget is not None and budget.exceeded:
                     executor.shutdown(wait=False, cancel_futures=True)
                     break
                 try:

@@ -24,33 +24,45 @@ except ImportError:
     redis = None
 
 
-class InMemoryCache:
-    """Thread-safe in-memory cache with TTL expiration."""
+import threading
+from collections import OrderedDict
 
-    def __init__(self) -> None:
-        self._store: Dict[str, Tuple[Any, Optional[float]]] = {}
+
+class InMemoryCache:
+    """Thread-safe bounded in-memory LRU cache with TTL expiration."""
+
+    def __init__(self, max_entries: int = 2048) -> None:
+        self._store: OrderedDict[str, Tuple[Any, Optional[float]]] = OrderedDict()
+        self._max_entries = max(16, int(max_entries))
+        self._lock = threading.Lock()
 
     def get(self, key: str) -> Optional[Any]:
-        if key not in self._store:
-            return None
-        val, expiry = self._store[key]
-        if expiry is not None and time.time() > expiry:
-            del self._store[key]
-            return None
-        return val
+        with self._lock:
+            item = self._store.get(key)
+            if item is None:
+                return None
+            val, expiry = item
+            if expiry is not None and time.time() > expiry:
+                self._store.pop(key, None)
+                return None
+            self._store.move_to_end(key)
+            return val
 
     def set(self, key: str, value: Any, ttl: Optional[int] = None) -> None:
         expiry = time.time() + ttl if ttl else None
-        self._store[key] = (value, expiry)
+        with self._lock:
+            self._store[key] = (value, expiry)
+            self._store.move_to_end(key)
+            while len(self._store) > self._max_entries:
+                self._store.popitem(last=False)
 
     def delete(self, key: str) -> bool:
-        if key in self._store:
-            del self._store[key]
-            return True
-        return False
+        with self._lock:
+            return self._store.pop(key, None) is not None
 
     def clear(self) -> None:
-        self._store.clear()
+        with self._lock:
+            self._store.clear()
 
 
 class CacheManager:
@@ -109,7 +121,10 @@ class CacheManager:
     def clear(self) -> None:
         if self.backend == "redis" and self.redis_client:
             try:
-                self.redis_client.flushdb()
+                # Only remove scanner-namespaced keys instead of flushdb()
+                keys = list(self.redis_client.scan_iter(match="ai_scanner:*", count=500))
+                if keys:
+                    self.redis_client.delete(*keys)
             except Exception:
                 pass
         self._memory.clear()

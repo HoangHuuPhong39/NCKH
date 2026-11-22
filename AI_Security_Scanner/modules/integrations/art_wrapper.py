@@ -43,6 +43,7 @@ _ATTACK_OWASP_MAP: Dict[str, str] = {
     "pgd":         "LLM-AI-SEC",
     "textfooler":  "LLM01",
     "fallback":    "LLM01",
+    "membership_inference": "LLM02",
 }
 
 _ATTACK_MITRE_MAP: Dict[str, str] = {
@@ -50,6 +51,7 @@ _ATTACK_MITRE_MAP: Dict[str, str] = {
     "pgd":         "AML.T0015",
     "textfooler":  "AML.T0015",
     "fallback":    "AML.T0015",
+    "membership_inference": "AML.T0024.001",
 }
 
 
@@ -293,26 +295,9 @@ class ARTWrapper:
         """
         findings: List[Dict[str, Any]] = []
 
-        # Nếu ART có NLP module, thử dùng
-        if self.is_available():
-            try:
-                # ART TextFooler chỉ có trong art.attacks.evasion.text cho một số version
-                from art.attacks.evasion import TextFooler  # type: ignore
-                classifier = model  # Assume already wrapped
-                attack = TextFooler(classifier=classifier)
-                adv_texts = attack.generate(x=texts)
-                for orig, adv in zip(texts, adv_texts):
-                    findings.append(self._build_finding(
-                        attack="textfooler",
-                        result="GENERATED",
-                        severity="HIGH",
-                        detail=f"Original: {orig[:100]!r} → Adversarial: {adv[:100]!r}",
-                    ))
-                return findings
-            except (ImportError, AttributeError, Exception) as exc:
-                logger.info("ART TextFooler unavailable (%s) — using built-in fallback.", exc)
-
-        # Fallback: dùng ml_adversarial perturbations
+        # ART does not expose a generic TextFooler class on art.attacks.evasion;
+        # execute real character-level perturbation probes if a live model is supplied,
+        # otherwise return an explicit UNAVAILABLE/NO_MODEL status.
         return self._text_fooler_fallback(model, texts)
 
     def _text_fooler_fallback(self, model: Any, texts: List[str]) -> List[Dict[str, Any]]:
@@ -363,6 +348,47 @@ class ARTWrapper:
                 extra={"perturbations": perturbed_results},
             ))
         return findings
+
+    # ------------------------------------------------------------------
+    # Membership Inference Attack (ML-001)
+    # ------------------------------------------------------------------
+
+    def run_membership_inference(
+        self,
+        model: Any = None,
+        x_train: Any = None,
+        y_train: Any = None,
+        x_test: Any = None,
+        y_test: Any = None,
+        hardened_demo: bool = False,
+    ) -> List[Dict[str, Any]]:
+        """
+        Run Membership Inference Attack (ML-001) using IBM ART's
+        MembershipInferenceBlackBoxRuleBased + MLPrivacyAuditor metrics.
+        """
+        from modules.auxiliary.scanner.data_privacy_scanner import MLPrivacyAuditor
+
+        auditor = MLPrivacyAuditor()
+        res = auditor.run_membership_inference_audit(
+            model=model,
+            x_train=x_train,
+            y_train=y_train,
+            x_test=x_test,
+            y_test=y_test,
+            hardened_demo=hardened_demo,
+        )
+        m = res.get("metrics", {})
+        return [self._build_finding(
+            attack="membership_inference",
+            result="VULNERABLE" if res.get("is_vulnerable") else "ROBUST",
+            severity=res.get("severity", "INFO"),
+            detail=(
+                f"MIA Accuracy={m.get('mia_accuracy')}, Advantage={m.get('mia_advantage')}, "
+                f"ART RuleBased Acc={m.get('art_rule_based_mia_accuracy')}, "
+                f"Confidence Gap={m.get('confidence_gap')}"
+            ),
+            extra={"metrics": m, "art_mia_used": res.get("art_mia_used", False)},
+        )]
 
     # ------------------------------------------------------------------
     # Result parser

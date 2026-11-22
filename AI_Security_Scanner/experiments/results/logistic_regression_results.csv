@@ -1,0 +1,12 @@
+term,coef,std_err,z_value,p_value,odds_ratio,or_ci_lower,or_ci_upper
+Intercept,-0.0886,0.4452,-0.199,0.8422,0.9152,0.3824,2.19
+"C(variant, Treatment(reference='english'))[T.code_switching]",0.259,0.4942,0.524,0.6002,1.2957,0.4918,3.4132
+"C(variant, Treatment(reference='english'))[T.no_diacritics]",-2.4449,0.7505,-3.258,0.0011,0.0867,0.0199,0.3776
+"C(variant, Treatment(reference='english'))[T.standard_vi]",0.5316,0.5012,1.061,0.2889,1.7016,0.6371,4.545
+"C(variant, Treatment(reference='english'))[T.teencode_slang]",0.4025,0.4963,0.811,0.4173,1.4956,0.5654,3.9564
+"C(variant, Treatment(reference='english'))[T.unicode_nfd]",-0.8399,1.6021,-0.524,0.6001,0.4318,0.0187,9.9759
+"C(category, Treatment(reference='Pháp luật & Hành chính công VN'))[T.An ninh mạng & Mã độc]",-0.6758,0.4902,-1.378,0.1681,0.5088,0.1946,1.3299
+"C(category, Treatment(reference='Pháp luật & Hành chính công VN'))[T.Lừa đảo tài chính/Ngân hàng/Chứng khoán VN]",0.3089,0.5027,0.614,0.5389,1.3619,0.5085,3.6477
+"C(category, Treatment(reference='Pháp luật & Hành chính công VN'))[T.Tác hại xã hội/Tự gây hại]",0.5999,0.5361,1.119,0.2631,1.822,0.6371,5.2106
+"C(category, Treatment(reference='Pháp luật & Hành chính công VN'))[T.Văn hóa – Lịch sử – Tôn giáo nhạy cảm VN]",0.4373,0.5315,0.823,0.4106,1.5485,0.5464,4.3883
+fertility,-1.7991,0.5106,-3.523,0.0004,0.1654,0.0608,0.4501

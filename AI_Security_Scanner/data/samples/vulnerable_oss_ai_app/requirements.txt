@@ -1,0 +1,12 @@
+# Sample Open-Source AI Application Dependencies (For SCA Vulnerability Scanning)
+langchain==0.0.250
+langchain-experimental==0.0.42
+transformers==4.30.2
+torch==2.0.1
+gradio==4.8.0
+mlflow==2.8.1
+ray==2.6.3
+llama-index==0.9.40
+vllm==0.5.0
+pyyaml==5.3.1
+chromadb

@@ -11,6 +11,7 @@ Supports:
 """
 
 from typing import Optional, Tuple
+import threading
 import requests
 
 from core.config import cfg
@@ -42,11 +43,14 @@ class SimpleLLMClient:
         model_name: Optional[str] = None,
         timeout: Optional[int] = None,
         api_key: Optional[str] = None,
+        provider: Optional[str] = None,
     ) -> None:
         self.api_url = (api_url or cfg.get("scanner.target_url", "http://localhost:11434")).rstrip("/")
         self.model_name = model_name or cfg.get("scanner.target_model", "llama3")
         self.timeout = timeout if timeout is not None else cfg.get("scanner.timeout", 90)
         self.api_key = api_key if api_key is not None else cfg.get("scanner.api_key", "")
+        self.provider = (provider or cfg.get("scanner.provider", "auto") or "auto").strip().lower()
+        self._resolve_lock = threading.Lock()
 
         # Resilience & Connection pooling
         pool_conn = cfg.get("scanner.pool_connections", 10)
@@ -67,6 +71,27 @@ class SimpleLLMClient:
             recovery_timeout=cb_timeout,
         )
 
+    def _is_openai_compatible(self) -> bool:
+        if self.provider == "openai":
+            return True
+        if self.provider == "ollama":
+            return False
+        url_lower = self.api_url.lower()
+        return (
+            "openai" in url_lower
+            or "openrouter.ai" in url_lower
+            or "api.groq.com" in url_lower
+            or "api.deepseek.com" in url_lower
+            or "api.together.xyz" in url_lower
+            or url_lower.endswith("/v1")
+        )
+
+    def _openai_v1_url(self, suffix: str) -> str:
+        base = self.api_url.rstrip("/")
+        if base.lower().endswith("/v1"):
+            return f"{base}/{suffix.lstrip('/')}"
+        return f"{base}/v1/{suffix.lstrip('/')}"
+
     # ------------------------------------------------------------------
     # Ollama
     # ------------------------------------------------------------------
@@ -75,11 +100,11 @@ class SimpleLLMClient:
         """Queries the target server for available/installed models."""
         url_lower = self.api_url.lower()
         try:
-            if "openai" in url_lower or "api.openai" in url_lower:
+            if self._is_openai_compatible():
                 headers = {}
                 if self.api_key:
                     headers["Authorization"] = f"Bearer {self.api_key}"
-                resp = self.session.get(f"{self.api_url}/v1/models", headers=headers, timeout=5)
+                resp = self.session.get(self._openai_v1_url("models"), headers=headers, timeout=5)
                 if resp.status_code == 200:
                     data = resp.json()
                     all_ids = [m["id"] for m in data.get("data", [])]
@@ -118,13 +143,16 @@ class SimpleLLMClient:
         return []
 
     def resolve_model_name(self) -> str:
-        """
-        Attempts to match self.model_name against available models on target.
-        Handles aliases like 'llama3:8b' -> 'llama3:latest' or 'llama3' -> 'llama3:latest'.
-        """
+        """Thread-safe match of self.model_name against available models on target."""
         if getattr(self, "_model_resolved", False):
             return self.model_name
 
+        with self._resolve_lock:
+            if getattr(self, "_model_resolved", False):
+                return self.model_name
+            return self._resolve_model_name_unlocked()
+
+    def _resolve_model_name_unlocked(self) -> str:
         available = self.list_models()
         self.discovered_models = available
 
@@ -161,16 +189,24 @@ class SimpleLLMClient:
         self,
         prompt: str,
         system_prompt: Optional[str] = None,
+        seed: Optional[int] = None,
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
+        raise_on_error: bool = False,
     ) -> str:
         resolved_model = self.resolve_model_name()
+        options = {
+            "num_predict": max_tokens if max_tokens is not None else cfg.get("scanner.max_tokens", 512),
+            "temperature": temperature if temperature is not None else 0.1,
+        }
+        if seed is not None:
+            options["seed"] = seed
+
         payload = {
             "model": resolved_model,
             "prompt": prompt,
             "stream": False,
-            "options": {
-                "num_predict": cfg.get("scanner.max_tokens", 80),
-                "temperature": 0.1,
-            },
+            "options": options,
         }
         if system_prompt:
             payload["system"] = system_prompt
@@ -180,6 +216,7 @@ class SimpleLLMClient:
                 f"{self.api_url}/api/generate",
                 json=payload,
                 timeout=self.timeout,
+                allow_redirects=False,
             )
             if resp.status_code == 429:
                 raise RateLimitError(f"HTTP 429 Too Many Requests from Ollama: {resp.text}")
@@ -189,6 +226,8 @@ class SimpleLLMClient:
                     err_text = resp.json().get("error", resp.text)
                 except Exception:
                     err_text = resp.text
+                if raise_on_error:
+                    raise ScannerError(f"Model not found (Ollama): {err_text}")
                 return f"[-] Model not found (Ollama): {err_text}"
             resp.raise_for_status()
             data = resp.json()
@@ -203,18 +242,28 @@ class SimpleLLMClient:
             )
         except CircuitBreakerOpenError as exc:
             logger.error("Ollama request blocked: %s", exc)
+            if raise_on_error:
+                raise RuntimeError(f"Circuit breaker open: {exc}") from exc
             return f"[-] Circuit breaker open: {exc}"
         except requests.exceptions.ConnectionError as exc:
             logger.error("Ollama connection failed: %s", exc)
+            if raise_on_error:
+                raise RuntimeError(f"Connection error (Ollama): {exc}") from exc
             return f"[-] Connection error (Ollama): {exc}"
-        except requests.exceptions.Timeout:
+        except requests.exceptions.Timeout as exc:
             logger.warning("Ollama timed out after %ds", self.timeout)
+            if raise_on_error:
+                raise RuntimeError(f"Request timed out after {self.timeout}s (Ollama)") from exc
             return f"[-] Request timed out after {self.timeout}s (Ollama)"
         except requests.exceptions.HTTPError as exc:
             logger.error("Ollama HTTP error: %s", exc)
+            if raise_on_error:
+                raise RuntimeError(f"HTTP error (Ollama): {exc}") from exc
             return f"[-] HTTP error (Ollama): {exc}"
         except Exception as exc:
             logger.error("Unexpected error in Ollama client: %s", exc)
+            if raise_on_error:
+                raise RuntimeError(f"Unexpected error (Ollama): {exc}") from exc
             return f"[-] Unexpected error (Ollama): {exc}"
 
     # ------------------------------------------------------------------
@@ -225,6 +274,10 @@ class SimpleLLMClient:
         self,
         prompt: str,
         system_prompt: Optional[str] = None,
+        seed: Optional[int] = None,
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
+        raise_on_error: bool = False,
     ) -> str:
         messages = []
         if system_prompt:
@@ -238,16 +291,19 @@ class SimpleLLMClient:
         payload = {
             "model": self.model_name,
             "messages": messages,
-            "max_tokens": cfg.get("scanner.max_tokens", 80),
-            "temperature": 0.1,
+            "max_tokens": max_tokens if max_tokens is not None else cfg.get("scanner.max_tokens", 512),
+            "temperature": temperature if temperature is not None else 0.1,
         }
+        if seed is not None:
+            payload["seed"] = seed
 
         def _do_request():
             resp = self.session.post(
-                f"{self.api_url}/v1/chat/completions",
+                self._openai_v1_url("chat/completions"),
                 json=payload,
                 headers=headers,
                 timeout=self.timeout,
+                allow_redirects=False,
             )
             if resp.status_code == 429:
                 err_data = {}
@@ -277,7 +333,10 @@ class SimpleLLMClient:
                     err_data = resp.json().get("error", {})
                 except Exception:
                     pass
-                return f"[-] Model '{self.model_name}' không hỗ trợ chat hoặc không tồn tại (404 Not Found): {err_data.get('message', resp.text)}"
+                msg_404 = f"Model '{self.model_name}' không hỗ trợ chat hoặc không tồn tại (404 Not Found): {err_data.get('message', resp.text)}"
+                if raise_on_error:
+                    raise ScannerError(msg_404)
+                return f"[-] {msg_404}"
             resp.raise_for_status()
             data = resp.json()
             return data["choices"][0]["message"]["content"]
@@ -291,27 +350,43 @@ class SimpleLLMClient:
             )
         except QuotaExhaustedError as exc:
             logger.error("OpenAI Quota exhausted: %s", exc)
+            if raise_on_error:
+                raise RuntimeError(f"OpenAI quota exhausted: {exc}") from exc
             return f"[-] Lỗi hạn mức/Số dư OpenAI: {exc}"
         except RateLimitError as exc:
             logger.error("OpenAI Rate limited: %s", exc)
+            if raise_on_error:
+                raise RuntimeError(f"OpenAI rate limit: {exc}") from exc
             return f"[-] Lỗi giới hạn tần suất OpenAI (Rate Limit 429): {exc}"
         except CircuitBreakerOpenError as exc:
             logger.error("OpenAI request blocked: %s", exc)
+            if raise_on_error:
+                raise RuntimeError(f"Circuit breaker open: {exc}") from exc
             return f"[-] Circuit breaker open: {exc}"
         except requests.exceptions.ConnectionError as exc:
             logger.error("OpenAI connection failed: %s", exc)
+            if raise_on_error:
+                raise RuntimeError(f"Connection error (OpenAI): {exc}") from exc
             return f"[-] Connection error (OpenAI): {exc}"
-        except requests.exceptions.Timeout:
+        except requests.exceptions.Timeout as exc:
             logger.warning("OpenAI timed out after %ds", self.timeout)
+            if raise_on_error:
+                raise RuntimeError(f"Request timed out after {self.timeout}s (OpenAI)") from exc
             return f"[-] Request timed out after {self.timeout}s (OpenAI)"
         except requests.exceptions.HTTPError as exc:
             logger.error("OpenAI HTTP error: %s", exc)
+            if raise_on_error:
+                raise RuntimeError(f"HTTP error (OpenAI): {exc}") from exc
             return f"[-] HTTP error (OpenAI): {exc}"
         except (KeyError, IndexError) as exc:
             logger.error("Invalid OpenAI response schema: %s", exc)
+            if raise_on_error:
+                raise RuntimeError(f"Invalid OpenAI response format: {exc}") from exc
             return f"[-] Unexpected response format (OpenAI): {exc}"
         except Exception as exc:
             logger.error("Unexpected error in OpenAI client: %s", exc)
+            if raise_on_error:
+                raise RuntimeError(f"Unexpected error (OpenAI): {exc}") from exc
             return f"[-] Unexpected error (OpenAI): {exc}"
 
     # ------------------------------------------------------------------
@@ -322,20 +397,109 @@ class SimpleLLMClient:
         self,
         prompt: str,
         system_prompt: Optional[str] = None,
+        seed: Optional[int] = None,
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
+        raise_on_error: bool = False,
     ) -> str:
         url_lower = self.api_url.lower()
-        if "openai" in url_lower or "api.openai" in url_lower:
-            return self.send_prompt_openai(prompt, system_prompt)
-        return self.send_prompt_ollama(prompt, system_prompt)
+        if self._is_openai_compatible():
+            return self.send_prompt_openai(
+                prompt,
+                system_prompt=system_prompt,
+                seed=seed,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                raise_on_error=raise_on_error,
+            )
+        return self.send_prompt_ollama(
+            prompt,
+            system_prompt=system_prompt,
+            seed=seed,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            raise_on_error=raise_on_error,
+        )
 
     # ------------------------------------------------------------------
     # Health-check
     # ------------------------------------------------------------------
 
+    def send_chat(
+        self,
+        messages: list[dict[str, str]],
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
+    ) -> str:
+        """Send multi-turn chat messages via native /api/chat or /v1/chat/completions."""
+        url_lower = self.api_url.lower()
+        if self._is_openai_compatible():
+            headers = {"Content-Type": "application/json"}
+            if self.api_key:
+                headers["Authorization"] = f"Bearer {self.api_key}"
+            payload = {
+                "model": self.model_name,
+                "messages": messages,
+                "max_tokens": max_tokens if max_tokens is not None else cfg.get("scanner.max_tokens", 512),
+                "temperature": temperature if temperature is not None else 0.1,
+            }
+            def _do_chat_oai():
+                resp = self.session.post(
+                    self._openai_v1_url("chat/completions"),
+                    json=payload,
+                    headers=headers,
+                    timeout=self.timeout,
+                    allow_redirects=False,
+                )
+                if resp.status_code == 429:
+                    raise RateLimitError(f"HTTP 429 from OpenAI chat: {resp.text}")
+                resp.raise_for_status()
+                return resp.json()["choices"][0]["message"]["content"]
+            try:
+                return execute_with_retry(
+                    _do_chat_oai,
+                    max_retries=self.max_retries,
+                    backoff_factor=self.backoff_factor,
+                    circuit_breaker=self.circuit_breaker,
+                )
+            except Exception as exc:
+                return f"[-] Chat error (OpenAI): {exc}"
+        resolved_model = self.resolve_model_name()
+        payload = {
+            "model": resolved_model,
+            "messages": messages,
+            "stream": False,
+            "options": {
+                "num_predict": max_tokens if max_tokens is not None else cfg.get("scanner.max_tokens", 512),
+                "temperature": temperature if temperature is not None else 0.1,
+            },
+        }
+        def _do_chat_oll():
+            resp = self.session.post(
+                f"{self.api_url}/api/chat",
+                json=payload,
+                timeout=self.timeout,
+                allow_redirects=False,
+            )
+            if resp.status_code == 429:
+                raise RateLimitError(f"HTTP 429 from Ollama chat: {resp.text}")
+            resp.raise_for_status()
+            data = resp.json()
+            return data.get("message", {}).get("content", data.get("response", ""))
+        try:
+            return execute_with_retry(
+                _do_chat_oll,
+                max_retries=self.max_retries,
+                backoff_factor=self.backoff_factor,
+                circuit_breaker=self.circuit_breaker,
+            )
+        except Exception as exc:
+            return f"[-] Chat error (Ollama): {exc}"
+
     def test_connection(self) -> Tuple[bool, str]:
         url_lower = self.api_url.lower()
-        if "openai" in url_lower or "api.openai" in url_lower:
-            health_url = f"{self.api_url}/v1/models"
+        if self._is_openai_compatible():
+            health_url = self._openai_v1_url("models")
             headers = {}
             if self.api_key:
                 headers["Authorization"] = f"Bearer {self.api_key}"
@@ -355,11 +519,11 @@ class SimpleLLMClient:
             self.resolved_model = resolved
 
             # Với OpenAI: Thử kiểm tra hạn mức (quota) bằng một probe request nhỏ
-            if "openai" in url_lower or "api.openai" in url_lower:
+            if self._is_openai_compatible():
                 test_model = resolved if resolved and not any(resolved.startswith(k) for k in ["llama", "mistral", "qwen"]) else "gpt-4o-mini"
                 try:
                     probe_resp = self.session.post(
-                        f"{self.api_url}/v1/chat/completions",
+                        self._openai_v1_url("chat/completions"),
                         json={
                             "model": test_model,
                             "messages": [{"role": "user", "content": "ping"}],

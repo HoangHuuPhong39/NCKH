@@ -1,30 +1,74 @@
-# Virtual environments
+# ==============================================================================
+# Virtual Environments
+# ==============================================================================
 venv/
 .venv/
 */venv/
 */.venv/
+env/
 
-# Python bytecode & cache
+# ==============================================================================
+# Python Bytecode, Packaging & Test/Lint Caches
+# ==============================================================================
 __pycache__/
 *.py[cod]
 *$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.deepeval/
 
-# Databases & logs
+# ==============================================================================
+# Runtime Databases, Logs & Generated Reports
+# ==============================================================================
 *.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
 logs/
 *.log
+guard_audit.jsonl
+AI_Security_Scanner/reports/*.html
+AI_Security_Scanner/reports/*.json
+AI_Security_Scanner/reports/*.sarif
 
-# Temporary office / editor files
-~$*
+# ==============================================================================
+# Secrets & Local Environment Files
+# ==============================================================================
+.env
+.env.*
+!.env.example
+!AI_Security_Scanner/.env.example
+
+# ==============================================================================
+# OS & IDE Clutter
+# ==============================================================================
 .vscode/
 .idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*.swo
+~$*
 
-# Local personal documents & misc files (not pushed to GitHub)
+# ==============================================================================
+# Local Personal Documents, Scratch Notes & Archives (Not Pushed to GitHub)
+# ==============================================================================
 document/
 New folder/
-ai_guard_proxy.py
-Modelfile
+TOM_TAT_HE_THONG_CHO_CLAUDE.md
+/Modelfile
+*.zip
 *.docx
 *.pptx
 *.pdf
+!paper/figures/*.pdf

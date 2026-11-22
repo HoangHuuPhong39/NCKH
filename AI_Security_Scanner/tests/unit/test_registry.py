@@ -42,3 +42,14 @@ def test_registry_is_valid_module():
     assert is_valid_module("prompt_injection") is True
     assert is_valid_module("port_scan") is True
     assert is_valid_module("malicious_injection") is False
+
+
+def test_registry_code_and_oss_scanners():
+    assert is_valid_module("code_scanner") is True
+    assert is_valid_module("oss_security") is True
+    code_mod = load_module("code_scanner")
+    oss_mod = load_module("oss_security")
+    assert code_mod is not None
+    assert oss_mod is not None
+    assert get_detector_key("AI Source Code Scanner (SAST)") == "code_scanner"
+    assert get_detector_key("Open-Source AI Systems & Supply Chain Scanner") == "oss_security"

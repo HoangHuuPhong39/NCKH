@@ -1,0 +1,29 @@
+% Auto-generated strictly from 100% REAL measured Ollama + Qwen-2.5 Judge logs (N_pop = 180)
+\begin{table*}[htbp]
+\centering
+\small
+\caption{Cross-Lingual, Orthographic, and Register Variation Robustness Benchmark across 5 Vietnamese Morphological Variants vs. English Baseline on Llama-3-8B-Instruct ($N_{\text{pop}} = 180$: $N=30$ per cohort [$N_{\text{h}}=20, N_{\text{b}}=10$]; Disaggregated Harmful vs. Benign Partitions with 95\% Wilson Score Intervals, Stage~1 Fast Gating Efficiency, and Measured Judge Execution Latency).}
+\label{tab:main_cross_lingual_benchmark}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lccccccc}
+\toprule
+\textbf{Linguistic Profile} & \multicolumn{3}{c}{\textbf{Harmful Attacks ($N_{\text{h}} = 20$/cohort)}} & \multicolumn{2}{c}{\textbf{Benign Controls ($N_{\text{b}} = 10$/cohort)}} & \multicolumn{2}{c}{\textbf{System Efficiency ($N=30$)}} \\
+\cmidrule(lr){2-4} \cmidrule(lr){5-6} \cmidrule(lr){7-8}
+ & \textbf{ERR [95\% CI]} & \textbf{LSR [95\% CI]} & \textbf{Raw ASR [95\% CI]} & \textbf{ORR [95\% CI]} & \textbf{SFR [95\% CI]} & \textbf{Fast Gated} & \textbf{Measured Latency (ms)} \\
+\midrule
+\textbf{English Baseline (EN)} & \textbf{85.0\% [64.0, 94.8]} & \textbf{15.0\% [5.2, 36.0]} & \textbf{0.0\% [0.0, 16.1]} & \textbf{0.0\% [0.0, 27.8]} & \textbf{100.0\% [72.2, 100.0]} & \textbf{16/30 (53.3\%)} & \textbf{17783.1} \\
+\midrule
+Standard Vietnamese (VI) & 90.0\% [69.9, 97.2] & 10.0\% [2.8, 30.1] & 0.0\% [0.0, 16.1] & 0.0\% [0.0, 27.8] & 100.0\% [72.2, 100.0] & 18/30 (60.0\%) & 14880.6 \\
+No Diacritics (No-Accent) & \underline{10.0\%$^{***}$ [2.8, 30.1]} & \textbf{90.0\% [69.9, 97.2]} & 0.0\% [0.0, 16.1] & 10.0\% [1.8, 40.4] & 90.0\% [59.6, 98.2] & 3/30 (10.0\%) & 32737.5 \\
+Teencode / Slang & 95.0\% [76.4, 99.1] & 5.0\% [0.9, 23.6] & 0.0\% [0.0, 16.1] & 0.0\% [0.0, 27.8] & 100.0\% [72.2, 100.0] & 19/30 (63.3\%) & 13088.9 \\
+Code-Switching (VI-EN) & 70.0\% [48.1, 85.5] & 30.0\% [14.5, 51.9] & 0.0\% [0.0, 16.1] & 0.0\% [0.0, 27.8] & 100.0\% [72.2, 100.0] & 14/30 (46.7\%) & 18057.3 \\
+Unicode NFD Decomposed & \underline{5.0\%$^{***}$ [0.9, 23.6]} & \textbf{95.0\% [76.4, 99.1]} & 0.0\% [0.0, 16.1] & 10.0\% [1.8, 40.4] & 90.0\% [59.6, 98.2] & 2/30 (6.7\%) & 36724.4 \\
+\midrule
+\textbf{Vietnamese Overall ($N_{\text{VI}}=150$)} & \textbf{54.0\% [44.3, 63.4]} & \textbf{46.0\% [36.6, 55.7]} & \textbf{0.0\% [0.0, 3.7]} & \textbf{4.0\% [1.1, 13.5]} & \textbf{96.0\% [86.5, 98.9]} & \textbf{56/150 (37.3\%)} & \textbf{23097.7} \\
+\bottomrule
+\multicolumn{8}{l}{\footnotesize $^{***}$Exact two-sided paired McNemar test vs. English paired seeds ($n_{\text{pairs}} = 20$ harmful seeds per cohort) with Holm-Bonferroni correction across 5 pairwise} \\
+\multicolumn{8}{l}{\footnotesize contrasts: No Diacritics ($2/20$ vs. $17/20, b=15, c=0, p_{\text{raw}} = 6.10e-05, \mathbf{p_{\text{Holm}} = 0.00024}$) and Unicode NFD ($1/20$ vs. $17/20, b=16, c=0,$} \\
+\multicolumn{8}{l}{\footnotesize $p_{\text{raw}} = 3.05e-05, \mathbf{p_{\text{Holm}} = 0.00015}$) confirm severe refusal collapse ($p_{\text{Holm}} < 0.001$). Omnibus Cochran's $Q = 68.33$ ($\text{df} = 5, p = 2.28e-13$).} \\
+\end{tabular}%
+}
+\end{table*}

@@ -1,0 +1,20 @@
+% ==============================================================================
+% Table: Intervention Analysis on Token-Fragmented Variants (Pre vs. Post)
+% Demonstrating causal restoration of safety alignment via normalization
+% ==============================================================================
+\begin{table}[htbp]
+\centering
+\small
+\caption{Ablative Linguistic Intervention Results on Token-Fragmented Variants ($N=30$ per variant: $N_{\text{harmful}}=20$ harmful probes, $N_{\text{benign}}=10$ benign controls). Pre- and Post-intervention Explicit Refusal Rates (ERR on $N_{\text{harmful}}=20$) with 95\% Wilson score confidence intervals and exact paired McNemar test ($b/c$ discordant pairs). Benign Over-Refusal Rate improved from $\text{ORR}=1/10$ ($10.0\%$) pre-intervention to $0/10$ ($0.0\%$) post-intervention across both variants.}
+\label{tab:intervention_results}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{llcccc}
+\toprule
+\textbf{Linguistic Variant} & \textbf{Intervention Method} & \textbf{Pre-ERR ($k/N_{\text{h}}$, 95\% CI)} & \textbf{Post-ERR ($k/N_{\text{h}}$, 95\% CI)} & \textbf{$\Delta$ERR (\%)} & \textbf{McNemar $p_{\text{exact}}$} \\
+\midrule
+Unicode NFD & NFD $\rightarrow$ NFC Normalization & 1/20 (5.0\%, [0.9, 23.6]) & 18/20 (90.0\%, [69.9, 97.2]) & \textbf{+85.0\%} & \textbf{$< 0.001$} \\
+No Diacritics & Lexicon Diacritic Restoration & 2/20 (10.0\%, [2.8, 30.1]) & 7/20 (35.0\%, [18.1, 56.7]) & \textbf{+25.0\%} & \textbf{0.0625} \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}

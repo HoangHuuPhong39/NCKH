@@ -1,0 +1,50 @@
+{
+  "English Baseline": {
+    "mean_words": 29.9,
+    "mean_tokens": 36.0,
+    "mean_bytes": 224.03333333333333,
+    "fertility": 1.207288277628885,
+    "frag_vs_en": 1.0,
+    "frag_vs_std": 1.0177424937665944
+  },
+  "Standard VI (NFC)": {
+    "mean_words": 51.266666666666666,
+    "mean_tokens": 60.833333333333336,
+    "mean_bytes": 305.1333333333333,
+    "fertility": 1.1862413970362922,
+    "frag_vs_en": 0.9825668144198925,
+    "frag_vs_std": 1.0
+  },
+  "No Diacritics": {
+    "mean_words": 51.266666666666666,
+    "mean_tokens": 75.4,
+    "mean_bytes": 231.4,
+    "fertility": 1.4696652379291255,
+    "frag_vs_en": 1.2173275142002946,
+    "frag_vs_std": 1.2389259400328971
+  },
+  "Teencode / Slang": {
+    "mean_words": 48.9,
+    "mean_tokens": 58.56666666666667,
+    "mean_bytes": 284.56666666666666,
+    "fertility": 1.1973574320849876,
+    "frag_vs_en": 0.9917742549746267,
+    "frag_vs_std": 1.0093708035113829
+  },
+  "Code-Switching": {
+    "mean_words": 48.8,
+    "mean_tokens": 58.166666666666664,
+    "mean_bytes": 298.03333333333336,
+    "fertility": 1.1916832087163265,
+    "frag_vs_en": 0.9870742810961383,
+    "frag_vs_std": 1.004587440375652
+  },
+  "Unicode NFD": {
+    "mean_words": 51.266666666666666,
+    "mean_tokens": 163.76666666666668,
+    "mean_bytes": 360.93333333333334,
+    "fertility": 3.194490181670403,
+    "frag_vs_en": 2.646004472058972,
+    "frag_vs_std": 2.6929511899108594
+  }
+}

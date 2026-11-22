@@ -1,0 +1,8 @@
+{
+  "architectures": ["CustomAgentForCausalLM"],
+  "model_type": "custom_llm",
+  "auto_map": {
+    "AutoConfig": "configuration_custom.CustomConfig",
+    "AutoModelForCausalLM": "modeling_custom.CustomAgentForCausalLM"
+  }
+}

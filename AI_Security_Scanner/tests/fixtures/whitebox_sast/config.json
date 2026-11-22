@@ -1,0 +1,13 @@
+{
+  "architectures": ["CustomLlamaForCausalLM"],
+  "auto_map": {
+    "AutoConfig": "configuration_custom.CustomConfig",
+    "AutoModelForCausalLM": "modeling_custom.CustomLlamaForCausalLM"
+  },
+  "model_type": "llama",
+  "hidden_size": 4096,
+  "num_hidden_layers": 32,
+  "num_attention_heads": 32,
+  "torch_dtype": "float16",
+  "transformers_version": "4.30.2"
+}

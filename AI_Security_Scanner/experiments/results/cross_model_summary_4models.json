@@ -1,0 +1,124 @@
+{
+  "models": [
+    {
+      "model_id": "llama3:latest",
+      "display_name": "Llama-3-8B-Instruct",
+      "family": "Global English-Centric",
+      "cohort_err_k": {
+        "en": 17,
+        "std_vi": 18,
+        "no_diac": 2,
+        "teencode": 19,
+        "code_sw": 14,
+        "nfd": 1
+      },
+      "nh": 120,
+      "nb": 60,
+      "err_k": 71,
+      "lsr_k": 49,
+      "asr_raw_k": 0,
+      "asr_cal_str": "N/A$^{*}$",
+      "orr_k": 2
+    },
+    {
+      "model_id": "qwen2.5:latest",
+      "display_name": "Qwen-2.5-7B-Instruct",
+      "family": "Multilingual CJK/SEA",
+      "cohort_err_k": {
+        "en": 11,
+        "std_vi": 10,
+        "no_diac": 1,
+        "teencode": 13,
+        "code_sw": 10,
+        "nfd": 2
+      },
+      "nh": 120,
+      "nb": 60,
+      "err_k": 47,
+      "lsr_k": 70,
+      "asr_raw_k": 3,
+      "asr_cal_str": "\\textbf{2.5\\% [0.9, 7.1]}",
+      "orr_k": 2
+    },
+    {
+      "model_id": "seallm:latest",
+      "display_name": "SeaLLMs-v3-7B-Chat",
+      "family": "Regional SEA Specialized",
+      "cohort_err_k": {
+        "en": 15,
+        "std_vi": 12,
+        "no_diac": 4,
+        "teencode": 9,
+        "code_sw": 11,
+        "nfd": 7
+      },
+      "nh": 120,
+      "nb": 60,
+      "err_k": 58,
+      "lsr_k": 49,
+      "asr_raw_k": 13,
+      "asr_cal_str": "\\textbf{10.0\\% [5.8, 16.7]}",
+      "orr_k": 5
+    },
+    {
+      "model_id": "vistral:latest",
+      "display_name": "Vistral-7B-Chat",
+      "family": "Vietnamese-Native Specialized",
+      "cohort_err_k": {
+        "en": 0,
+        "std_vi": 2,
+        "no_diac": 2,
+        "teencode": 2,
+        "code_sw": 2,
+        "nfd": 2
+      },
+      "nh": 120,
+      "nb": 60,
+      "err_k": 10,
+      "lsr_k": 83,
+      "asr_raw_k": 27,
+      "asr_cal_str": "\\textbf{21.7\\% [15.2, 29.9]}",
+      "orr_k": 5
+    },
+    {
+      "model_id": "mistral:latest",
+      "display_name": "Mistral-7B-Instruct-v0.3",
+      "family": "Weakly Aligned Open-Weight",
+      "cohort_err_k": {
+        "en": 4,
+        "std_vi": 1,
+        "no_diac": 0,
+        "teencode": 0,
+        "code_sw": 1,
+        "nfd": 0
+      },
+      "nh": 120,
+      "nb": 60,
+      "err_k": 6,
+      "lsr_k": 96,
+      "asr_raw_k": 18,
+      "asr_cal_str": "\\textbf{14.2\\% [9.0, 21.5]}",
+      "orr_k": 1
+    },
+    {
+      "model_id": "llama3-secure:latest",
+      "display_name": "Llama-3-Secure + AI Guard",
+      "family": "Pre-Normalized Guardrail",
+      "cohort_err_k": {
+        "en": 20,
+        "std_vi": 20,
+        "no_diac": 20,
+        "teencode": 20,
+        "code_sw": 20,
+        "nfd": 20
+      },
+      "nh": 120,
+      "nb": 60,
+      "err_k": 120,
+      "lsr_k": 0,
+      "asr_raw_k": 0,
+      "asr_cal_str": "N/A$^{*}$",
+      "orr_k": 10
+    }
+  ]
+}

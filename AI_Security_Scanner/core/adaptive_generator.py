@@ -105,6 +105,7 @@ class AdaptiveGenerator(PayloadMutator):
         self._coverage: Set[str] = set()          # "payload_name::strategy"
         self._success_strategies: List[str] = []  # strategies dẫn đến detect=True
         self._failure_strategies: List[str] = []  # strategies dẫn đến detect=False
+        self._last_strategy_by_payload: Dict[str, str] = {}
         self._fallback_rotation_idx: int = 0
         self._iteration_history: List[Dict[str, Any]] = []
 
@@ -147,23 +148,25 @@ class AdaptiveGenerator(PayloadMutator):
 
         payload_name = base_payload.get("name", "unknown")
 
+        # Attribute previous iteration's detector_result to the strategy that was ACTUALLY tested
+        prev_strategy = self._last_strategy_by_payload.get(payload_name)
+        if prev_strategy:
+            if detector_result:
+                if prev_strategy not in self._success_strategies:
+                    self._success_strategies.append(prev_strategy)
+            else:
+                if prev_strategy not in self._failure_strategies:
+                    self._failure_strategies.append(prev_strategy)
+
         if detector_result:
-            # Thành công → reinforce: dùng lại strategies đã thành công
-            # hoặc escalate với strategies mạnh hơn
             strategy = self._pick_reinforce_strategy(payload_name, category)
         else:
-            # Thất bại → explore: thử chiến lược khác chưa được thử
             strategy = self._pick_explore_strategy(payload_name, category, model_response)
 
-        # Đánh dấu coverage
+        # Mark coverage & record newly chosen strategy for attribution on the next iteration
         coverage_key = f"{payload_name}::{strategy}"
         self._coverage.add(coverage_key)
-        if detector_result:
-            if strategy not in self._success_strategies:
-                self._success_strategies.append(strategy)
-        else:
-            if strategy not in self._failure_strategies:
-                self._failure_strategies.append(strategy)
+        self._last_strategy_by_payload[payload_name] = strategy
 
         # Áp dụng mutation
         text = base_payload.get("payload", "")

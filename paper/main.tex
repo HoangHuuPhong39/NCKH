@@ -1,0 +1,424 @@
+\documentclass[11pt]{article}
+
+% ==============================================================================
+% PACKAGES & FORMATTING (Standard Scientific Manuscript Format for Peer Review)
+% Target: Q2/Q3 Peer-Reviewed Journal (Elsevier / IEEE / ACM / Springer Style)
+% ==============================================================================
+\usepackage{iftex}
+\ifXeTeX
+  \usepackage{fontspec}
+  \IfFontExistsTF{Times New Roman}{
+    \setmainfont{Times New Roman}
+  }{
+    \IfFontExistsTF{DejaVu Serif}{
+      \setmainfont{DejaVu Serif}
+    }{}
+  }
+\else
+  \usepackage[T5,T1]{fontenc}
+  \DeclareTextSymbolDefault{\dj}{T5}
+  \DeclareTextSymbolDefault{\DJ}{T5}
+  \DeclareTextSymbolDefault{\ocircumflex}{T5}
+  \DeclareTextSymbolDefault{\uhorn}{T5}
+  \DeclareTextSymbolDefault{\ohorn}{T5}
+  \DeclareTextSymbolDefault{\h}{T5}
+  \usepackage[utf8]{inputenc}
+\fi
+\usepackage[vietnamese,english]{babel}
+\usepackage[margin=1.0in]{geometry}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{graphicx}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{hyperref}
+\usepackage{cite}
+\usepackage[protrusion=false]{microtype}
+\usepackage{url}
+\Urlmuskip = 0mu plus 1mu
+\def\UrlBreaks{\do\/\do-\do\_}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, calc, backgrounds, fit}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue!70!black,
+    citecolor=green!50!black,
+    urlcolor=blue!80!black
+}
+
+% ==============================================================================
+% TITLE & AUTHOR METADATA
+% ==============================================================================
+\title{\textbf{Vietnamese-Native LLM Red-Teaming Benchmark: Disaggregated Safety Evaluation, Orthographic and Register Variation Robustness, and Validated Cascade Judges}}
+
+\author{
+    \textbf{Pham Van Huong}\thanks{Corresponding author: \texttt{huongpv@actvn.edu.vn}}, \textbf{Dinh Thi Tuyen}, \textbf{Hoang Huu Phong},\\
+    \textbf{Nguyen Ho Bao Lam}, \textbf{Tran Thuy Minh}, and \textbf{Vu Khanh Vy}\\[0.6em]
+    \textit{Academy of Cryptography Techniques, Hanoi 100000, Vietnam}\\[0.2em]
+    \texttt{\{ai-security, redteaming\}@actvn.edu.vn}
+}
+\date{\today}
+
+\begin{document}
+\ifXeTeX
+  % XeTeX handles native OpenType Vietnamese characters
+\else
+  \fontencoding{T5}\selectfont
+\fi
+\sloppy
+
+\maketitle
+
+% ==============================================================================
+% ABSTRACT
+% ==============================================================================
+\begin{abstract}
+While Large Language Models (LLMs) achieve strong safety alignment in standard English, their resilience under non-standard Vietnamese orthography and register remains fragile, and existing red-teaming frameworks conflate passive incomprehension with active refusals. We present an end-to-end empirical benchmark and evaluation harness ($N_{\text{pop}} = 180$ paired prompts across an English baseline and five Vietnamese variants: Standard NFC, No Diacritics, Teencode Slang, Code-Switching, and Unicode NFD, with benign contrastive controls), evaluated across six local architectures ($1{,}080$ real Ollama evaluations scored by a decoupled \texttt{Qwen-2.5-7B-Instruct} judge) via a Three-State Response Taxonomy (Explicit Refusal, Low-Specificity Discourse, Actionable Jailbreak) and Rogan-Gladen prevalence calibration. To balance accuracy and cost, we introduce a Lazy Two-Stage Cascade Judge that intercepts concise refusals via sub-millisecond regex gating before invoking an LLM judge with Prioritized Semantic Override ($s_{\text{spec}} \ge 4$). Validated against a verified double-blind human-annotated corpus ($N_{\text{VI}} = 50$, inter-annotator $\kappa_{\text{quad}} = 0.876$, $94.0\%$ agreement), the cascade achieves $\text{Specificity} = 1.000$, $\text{3-Class Macro-F1} = 1.000$, and $\kappa_{\text{quad}} = 1.000$ on both the stratified held-out split ($N_{\text{test}} = 25$) and full verified corpus ($N = 50$) while suppressing regex false alarms and eliminating $40.0\%$ ($72/180$) of LLM judge calls on \texttt{Llama-3-8B-Instruct}. Full-population multi-architecture evaluation uncovers pervasive orthographic refusal collapse: on \texttt{Llama-3-8B-Instruct}, explicit refusals protect $85.0\%$ ($17/20$) of English and $90.0\%$ ($18/20$) of Standard Vietnamese queries but collapse to $10.0\%$ ($2/20, p_{\text{Holm}} = 0.00024$) on No Diacritics and $5.0\%$ ($1/20, p_{\text{Holm}} = 0.00015$) on Unicode NFD (omnibus Cochran's $Q = 68.33, p = 2.28 \times 10^{-13}$), mirrored by \texttt{Qwen-2.5-7B-Instruct} ($65.0\% \to 0.0\%$) and \texttt{SeaLLMs-v3-7B-Chat} ($65.0\% \to 20.0\%\text{--}25.0\%$), whereas weakly aligned architectures exhibit low refusal (\texttt{Vistral-7B-Chat}: $7.5\%$; \texttt{Mistral-7B-Instruct-v0.3}: $5.8\%$, Raw ASR $8.3\%$). Pre-processing interventions ($N_{\text{h}} = 20$) confirm that NFD$\to$NFC canonicalization and lexicon diacritic restoration recover explicit refusals by $\Delta\text{ERR} = +85.0\%$ ($p_{\text{exact}} < 0.001$) and $+25.0\%$ ($p_{\text{exact}} = 0.0625$) while reducing benign over-refusal from $10.0\%$ to $0.0\%$.
+\end{abstract}
+
+\textbf{Keywords:} Large Language Model Safety, Red-Teaming, Linguistic Robustness, Vietnamese NLP, AI Governance, Judge Calibration, Cascade Gating.
+
+% ==============================================================================
+% SECTION 1: INTRODUCTION
+% ==============================================================================
+\section{Introduction}
+\label{sec:introduction}
+
+Safety alignment techniques, such as Reinforcement Learning from Human Feedback (RLHF) and Direct Preference Optimization (DPO), have dramatically reduced the vulnerability of Large Language Models (LLMs) to adversarial exploits and dangerous content generation in standard English \cite{ouyang2022training,rafailov2024direct,touvron2023llama,dubey2024llama3}. However, as generative AI systems are globally deployed across multilingual and culturally diverse populations, critical vulnerabilities emerge when models interact in regional languages and informal vernaculars \cite{yong2023lowresource,deng2023multilingual,shen2024multilingual}.
+
+Despite recent advances in automated red-teaming benchmarks \cite{harmbench2024,strongreject2024}, evaluating language models in low-resource and non-English contexts faces three foundational scientific challenges:
+
+\begin{enumerate}
+    \item \textbf{Gap G1: Cross-Lingual, Orthographic, and Register Safety Disparities}: Most alignment datasets are overwhelmingly curated in standard English. When models encounter regional languages like Vietnamese---particularly in colloquial forms such as unaccented text (\textit{no\_diacritics}), youth slang (\textit{teencode}), code-switching, or non-canonical Unicode encodings---safety guardrails degrade significantly \cite{petrov2023language,ahia2023all}. Existing benchmarks lack symmetric, paired test suites that isolate linguistic and orthographic variations while preserving semantic intent.
+    
+    \item \textbf{Gap G2: Measurement Bias from Binary Conflation and Observational Noise}: Traditional red-teaming metrics evaluate models on a naive binary scale ($\text{Defended}$ vs. $\text{Vulnerable}$). This creates severe empirical distortion: an automated evaluator that treats any non-actionable response as ``successfully defended'' conflates principled, active safety refusals with accidental defense caused by surface incomprehension, truncated gibberish, or generic conversational disclaimers. Furthermore, unvalidated automated evaluators introduce substantial observational noise without epidemiological prevalence calibration \cite{rogan1978estimating}.
+    
+    \item \textbf{Gap G3: Computational Prohibitivity vs. Brittle Detectors}: Red-teaming practitioners face an untenable dilemma between surface regex detectors and pure LLM-as-a-Judge evaluators \cite{zheng2023judging,kim2023prometheus}. Regex matchers operate with microsecond latency but suffer from rampant false alarms when technical security terminology appears inside benign educational warnings. Conversely, querying local 7B--8B LLM judges for every prompt averages over 33 seconds of GPU execution per sample on consumer hardware, limiting large-scale evaluation throughput.
+\end{enumerate}
+
+To overcome these gaps, this paper makes three primary scientific contributions:
+\begin{itemize}
+    \item \textbf{Contribution 1 (Symmetric Orthographic and Register Variation Benchmark)}: We introduce a paired benchmark containing 30 seed pairs ($20$ harmful balanced evenly at $4$ seeds per category across five risk domains: Vietnamese Law \& Public Administration, Financial/Banking/Securities Fraud, Cultural Norms \& Sensitive Topics, Cybersecurity \& Malware, and Social Harm \& Self-Harm, complemented by $10$ Benign Contrastive Controls). Expanding across standardized English baselines and five morpho-syntactic Vietnamese variants yields $N_{\text{pop}} = 180$ contextualized prompts ($150$ Vietnamese + $30$ English).
+    
+    \item \textbf{Contribution 2 (Three-State Taxonomy, Cross-Model Generalizability \& Interventional Mitigation)}: We formulate a rigorous Three-State Response Taxonomy separating Explicit Refusal ($\mathcal{S}_{\text{ref}}$), Low-Specificity Safe Discourse ($\mathcal{S}_{\text{low}}$), and Actionable Jailbreak ($\mathcal{S}_{\text{act}}$). Evaluating all $N_{\text{pop}} = 180$ prompts across six local architectures ($1{,}080$ real Ollama evaluations: \texttt{Llama-3-8B}, \texttt{Qwen-2.5-7B}, \texttt{SeaLLMs-v3-7B}, \texttt{Vistral-7B}, \texttt{Mistral-7B}, and \texttt{Llama-3-Secure + Stage-0}) reveals pervasive orthographic refusal collapse on aligned global/SEA models and low baseline alignment on \texttt{Vistral-7B} ($7.5\%$ ERR) and \texttt{Mistral-7B} ($5.8\%$ ERR, $8.3\%$ Raw ASR). Interventional pre-processing confirms that NFD$\to$NFC canonicalization and lexicon diacritic restoration recover explicit refusals by $+85.0\%$ and $+25.0\%$ while reducing benign over-refusal from $10.0\%$ to $0.0\%$.
+    
+    \item \textbf{Contribution 3 (Lazy Two-Stage Cascade Judge Validated on Verified Human Annotations)}: We develop a hybrid Two-Stage Cascade Judge architecture. Stage 1 uses lazy regex refusal gating ($p_r = 1 \land \text{len}(y) < L_{\text{ref}}$) to intercept concise refusals in $\approx 0.5\text{--}1.2$ ms without invoking the LLM judge. Stage 2 executes prioritized LLM scoring with Semantic Override ($s_{\text{spec}} \ge 4$). Validated against verified double-blind human annotations ($N_{\text{VI}} = 50$, $\kappa_{\text{quad}} = 0.876$, $94.0\%$ agreement), the cascade achieves $\text{Specificity} = 1.000$, $\text{3-Class Macro-F1} = 1.000$, and $\kappa_{\text{quad}} = 1.000$ on both the stratified held-out split ($N_{\text{test}} = 25$) and full verified corpus ($N = 50$) while eliminating $40.0\%$ ($72/180$) of LLM judge calls across the 180-prompt \texttt{Llama-3-8B-Instruct} benchmark.
+\end{itemize}
+
+% ==============================================================================
+% SECTION 2: RELATED WORKS
+% ==============================================================================
+\section{Related Works}
+\label{sec:related_work}
+
+\paragraph{Adversarial Red-Teaming and Alignment Benchmarks}
+Adversarial attacks on LLMs have evolved from token-level optimization techniques like GCG \cite{zou2023universal} to iterative black-box refinement (PAIR) \cite{chao2023jailbreaking}, multi-turn conversational escalation (Crescendo) \cite{russinovich2025crescendo}, and high-level contextual framing \cite{wei2024jailbreak,yuan2024gpt4v}. Benchmark frameworks such as HarmBench \cite{harmbench2024} and Do-Not-Answer \cite{wang2023donotanswer} systematically probe model vulnerabilities across diverse risk categories. However, these benchmarks focus almost exclusively on English and lack fine-grained orthographic response state differentiation.
+
+\paragraph{Multilingual Vulnerabilities and Orthographic Fragility}
+Recent studies highlight that multilingual LLMs can be bypassed by translating adversarial prompts into low-resource languages (e.g., MultiJail \cite{deng2023multilingual} and XSafety \cite{wang2024xsafety}) \cite{yong2023lowresource,shen2024multilingual}, mixing languages via code-switching \cite{yoo2024codeswitching}, or adapting attacks to local cultural contexts (CAGE) \cite{kim2026cage}. At the character level, imperceptible Unicode perturbations and homoglyphs can subvert NLP classifiers and safety guardrails \cite{boucher2022bad,polyguard2025}. In Vietnamese, research has examined toxicity datasets (ViHSD \cite{luu2021vihsd}, ViCTSD \cite{nguyen2021victsd}), neural diacritic restoration for unaccented text \cite{nguyen2020diacritics}, and foundation models like PhoBERT \cite{nguyen2020phobert}, PhoGPT \cite{nguyen2023phogpt}, SeaLLMs \cite{dam2024seallms}, Vistral \cite{nguyen2024vistral}, and comprehensive Vietnamese LLM evaluations \cite{truong2024crossing}; yet, the safety behavior of modern instruction-tuned LLMs when processing informal orthographic variants (such as unaccented typing, youth leetspeak, or decomposed Unicode NFD) remains an uncharted frontier. Furthermore, tokenizer disparities across languages introduce substantial token fragmentation inequities \cite{sennrich2016subword,petrov2023language,ahia2023all}.
+
+\paragraph{LLM-as-a-Judge and Diagnostic Calibration}
+Dedicated safety classifiers such as Llama Guard \cite{inan2023llamaguard} and WildGuard \cite{han2024wildguard} alongside the StrongReject rubric \cite{strongreject2024} demonstrated that structured safety moderation and decomposed scoring (refusal detection and technical specificity) outperform holistic scoring in evaluating jailbreak success, though recent meta-evaluations show that uncalibrated safety judges can diverge substantially across models and languages \cite{beyer2025llmsafety}. Moreover, automated detectors remain prone to false-positive alerts and exaggerated safety over-refusals when technical security vocabulary appears in benign contexts \cite{rottger2023xstest,shaikh2023second}. Evaluating judges with MT-Bench \cite{zheng2023judging} and Prometheus \cite{kim2023prometheus} alongside statistical error bars \cite{miller2024adding} underscores the need for grounded calibration. Applying classical epidemiological calibration \cite{rogan1978estimating} alongside weighted agreement statistics \cite{cohen1968weighted,landis1977measurement} provides a robust mathematical foundation to infer true prevalence under imperfect diagnostic sensitivity and specificity.
+
+% ==============================================================================
+% SECTION 3: PROPOSED METHOD
+% ==============================================================================
+\section{Proposed Method}
+\label{sec:proposed_method}
+
+\input{sections/dataset_and_variants_section.tex}
+\input{sections/judge_validation_section.tex}
+
+% ==============================================================================
+% SECTION 4: EXPERIMENT AND DISCUSSION
+% ==============================================================================
+\section{Experiment and Discussion}
+\label{sec:experiment_and_discussion}
+\label{sec:experiments}
+
+\input{sections/main_results_section.tex}
+\input{sections/judge_validation_results_section.tex}
+
+\subsection{Practical Implications and Limitations}
+\label{sec:discussion}
+
+\paragraph{Implications for Real-World AI Safety Deployment}
+The empirical identification of the \textit{Orthographic and Register Refusal Shift} has profound practical implications for generative AI governance in non-English jurisdictions:
+\begin{itemize}
+    \item \textbf{Vulnerability to Unaccented Inputs}: Unaccented Vietnamese typing is widespread in informal mobile search, social media, and messaging \cite{nguyen2020phobert}. An AI safety firewall that functions effectively only on standard accented text will fail to trigger active refusals on real-world unaccented or canonically decomposed queries.
+    \item \textbf{Deployment Feasibility of Pre-Normalized Cascade Guardrails}: By combining Stage 0 input canonicalization (NFD$\to$NFC normalization and lexicon diacritic restoration) with Stage 1 lazy regex gating, organizations can recover $+25.0\%\text{--}85.0\%$ of lost safety refusals while deploying high-assurance LLM safety guards at $40.0\%$ ($72/180$) lower GPU judge call volume on aligned models and zero false alarms ($\text{Sp} = 1.000$) on the verified validation corpus.
+\end{itemize}
+
+\paragraph{Limitations and Future Directions}
+While our full-population evaluation ($1{,}080$ real executions across six architectures) and verified double-blind human validation ($N_{\text{VI}} = 50$) provide rigorous empirical grounding, several boundaries merit future investigation:
+\begin{enumerate}
+    \item \textbf{Seed Family Breadth vs. Multi-Variant Depth}: Our benchmark prioritizes controlled 6-way morphological pairing across $30$ bilingual seed families ($N_{\text{pop}} = 180$ prompts per model, $n_{\text{pairs}} = 20$ matched harmful seeds per variant, yielding $p_{\text{Holm}} \le 0.00024$ and Cochran's $Q = 68.33, p = 2.28 \times 10^{-13}$). Expanding the seed pool to $100+$ seed families ($600+$ paired prompts) will enable finer-grained sub-domain disaggregation across regional legal statutes.
+    \item \textbf{Boundary Regime of Rogan-Gladen Calibration \& Pending Multi-Architecture Human Labeling}: On strongly aligned architectures (\texttt{Llama-3-8B-Instruct}, \texttt{Qwen-2.5-7B-Instruct}, and \texttt{Llama-3-Secure + Stage-0}) and on our verified $N_{\text{VI}} = 50$ human-annotated \texttt{Llama-3-8B} corpus, all harmful responses landed in State 0 or State 1 ($N_{\text{State 2}} = 0$), leaving empirical sensitivity $\text{Se}$ mathematically undefined ($\text{N/A}^{*}$ with exact Wilson bounds). To rigorously estimate out-of-sample $\text{Se}$ across models exhibiting active State 2 jailbreaks (\texttt{Mistral-7B}: $10/120$; \texttt{SeaLLMs-v3}: $1/120$; \texttt{Vistral-7B}: $1/120$), we have prepared $N = 250$ double-blind Excel workbooks (\texttt{Annotator\_1..2\_Blind\_250.xlsx}) coupled with \texttt{scripts/import\_blind\_excel\_300.py}; completing those human annotations will activate out-of-sample Rogan-Gladen $\text{ASR}_{\text{cal}}$ across all multi-architecture slices without synthetic label assumptions.
+    \item \textbf{Lexicon Domain Overlap and Defense Over-Refusal Trade-off}: In our Stage 0 defense, \texttt{CYBER\_DIACRITIC\_LEXICON} contains curated security and administrative phrases that overlap with the benchmark's prompt vocabulary, so the $+25.0\%$ recovery represents an upper bound for dictionary-only restoration while surrounding conversational words remain unaccented, motivating neural sequence-to-sequence diacritic restoration. Similarly, \texttt{Llama-3-Secure + Stage-0} bundles Stage 0 normalization (\texttt{core/intervention.py}) with a hardened \texttt{Modelfile}, raising ERR to $100.0\%$ ($120/120$) at the cost of $28.3\%$ ($17/60$) benign over-refusal ($\text{ORR}$), highlighting the need for finer benign calibration in production guardrails.
+    \item \textbf{Extension to Commercial Frontier APIs and 70B+ Parameter Models}: While our study evaluates six diverse 7B--8B open-weight architectures spanning global (\texttt{Llama-3-8B}, \texttt{Qwen-2.5-7B}, \texttt{Mistral-7B}) and regional Vietnamese/SEA specialized families (\texttt{Vistral-7B-Chat}, \texttt{SeaLLMs-v3-7B-Chat}), extending evaluation to commercial closed-source frontier APIs (e.g., GPT-4o, Gemini 1.5 Pro, Claude 3.5 Sonnet) and 70B+ parameter models is an important next step.
+    \item \textbf{Single-Turn Evaluation Scope \& Hybrid Slang}: The current benchmark evaluates single-turn contextualized red-teaming queries, and our \textit{teencode\_slang} variant preserves Vietnamese tonal diacritics alongside phonological contractions ($F=1.197$). Incorporating adaptive multi-turn crescendos mixed with unaccented youth slang represents a promising avenue for subsequent work.
+\end{enumerate}
+
+\subsection{Ethical Considerations}
+\label{sec:ethics}
+This research adheres to strict responsible vulnerability disclosure and ethical AI safety standards. All adversarial prompts in the benchmark were formulated at the level of academic, procedural, or hypothetical inquiries to probe model refusal filters; none contain actionable zero-day exploit payloads, synthesizable chemical formulas, or harmful personally identifiable information. The purpose of this benchmark is to assist developers in fortifying safety guardrails for under-resourced languages.
+
+% ==============================================================================
+% SECTION 5: CONCLUSION
+% ==============================================================================
+\section{Conclusion}
+\label{sec:conclusion}
+
+In this paper, we presented an end-to-end scientific benchmark and evaluation framework for Vietnamese-native LLM safety alignment. By pairing an English baseline with five Vietnamese morphological variants across six local model architectures ($N_{\text{pop}} = 180$ per model; $1{,}080$ real Ollama evaluations) and deploying a mathematically disaggregated Three-State Taxonomy, our empirical evaluation demonstrates pervasive \textit{Orthographic Refusal Collapse}. On global aligned models, surface diacritic removal and canonical Unicode NFD decomposition trigger severe drops in explicit safety refusals---from $85.0\%$ (EN) and $90.0\%$ (Std VI) down to $10.0\%$ ($2/20, p_{\text{Holm}} = 0.00024$) and $5.0\%$ ($1/20, p_{\text{Holm}} = 0.00015$) on \texttt{Llama-3-8B-Instruct} (omnibus Cochran's $Q = 68.33, p = 2.28 \times 10^{-13}$), and from $65.0\%\text{--}45.0\%$ down to $0.0\%$ on \texttt{Qwen-2.5-7B-Instruct}---while regional SEA/Vietnamese and weakly aligned baselines exhibit substantial refusal deficits (\texttt{SeaLLMs-v3}: $40.0\%$ overall ERR; \texttt{Vistral-7B}: $7.5\%$ ERR; \texttt{Mistral-7B}: $5.8\%$ ERR and $8.3\%$ Raw ASR). Interventional pre-processing studies ($N_{\text{h}} = 20$) confirm that NFD$\to$NFC canonicalization and lexicon diacritic restoration recover explicit refusals by $\Delta\text{ERR} = +85.0\%$ ($p_{\text{exact}} < 0.001$) and $+25.0\%$ ($p_{\text{exact}} = 0.0625$) while reducing benign over-refusal from $10.0\%$ to $0.0\%$, and our hardened \texttt{Llama-3-Secure + Stage-0} configuration restores $100.0\%$ ($120/120$) explicit refusals (with a $28.3\%$ benign ORR trade-off). Validated against verified double-blind human annotations ($N_{\text{VI}} = 50$, $\kappa_{\text{quad}} = 0.876$, $94.0\%$ agreement), our Lazy Two-Stage Cascade Judge achieves $\text{Specificity} = 1.000$, $\text{3-Class Macro-F1} = 1.000$, and $\kappa_{\text{quad}} = 1.000$ on both the held-out split ($N_{\text{test}} = 25$) and full verified corpus ($N = 50$) while eliminating $40.0\%$ ($72/180$) of LLM judge calls on \texttt{Llama-3-8B-Instruct}. All benchmark datasets, validation scripts, double-blind workbooks, and LaTeX artifacts are open-sourced under the MIT License to advance reproducible multilingual AI safety research.
+
+% ==============================================================================
+% APPENDIX (LONG TABLES AND DETAILED SPECIFICATIONS)
+% ==============================================================================
+\appendix
+\section*{Appendix}
+\label{sec:appendix}
+
+\subsection*{Appendix A: Diagnostic Discriminability and Double-Blind Agreement (\texorpdfstring{$N_{\text{VI}} = 50$}{N(VI) = 50} Verified)}
+\label{sec:appendix_a}
+This appendix provides the complete disaggregated validation results for automated evaluation judges across all five Vietnamese linguistic variants in the verified double-blind human-annotated corpus ($N_{\text{VI}} = 50$ stratified \texttt{Llama-3-8B-Instruct} outputs: $N_{\text{harmful}} = 35$ [$7$/variant] and $N_{\text{benign}} = 15$ [$3$/variant]). Table~\ref{tab:judge_validation} reports empirical rates for harmful intent queries (Panel~A), benign contrastive controls (Panel~B), and 3-class diagnostic discriminability on both the stratified held-out test split ($N_{\text{test}} = 25$) and the full verified corpus ($N_{\text{VI}} = 50$). Ground truth was established through independent double-blind annotation by two bilingual cybersecurity researchers ($\kappa_{\text{quad}} = 0.876$, Macro-F1 $= 93.8\%$, Observed Agreement $= 94.0\%$ [$47/50$]).
+
+\input{tables/judge_validation_tables.tex}
+
+\clearpage
+% NOTE FOR DOUBLE-BLIND REVIEW: Comment out author affiliations/emails in the title block and hide Appendix B below before submitting to double-blind venues.
+\subsection*{Appendix B: Reproducibility, CRediT Statement \& Declarations}
+\label{sec:appendix_c}
+This appendix details the CRediT authorship contributions, institutional declarations, and comprehensive data and code availability information supporting this study.
+
+\input{submission_docs/reproducibility_and_credit.tex}
+
+\subsection*{Appendix C: Implementation Details of Stage 0 Pre-Processing and Stage 1 Regex Gating}
+\label{sec:appendix_d}
+To ensure full reproducibility of our defensive pre-processing proxy and cascade evaluator:
+\begin{itemize}
+    \item \textbf{Stage 0 Input Canonicalization (\texttt{core/intervention.py})}: For \textit{unicode\_nfd} inputs, deterministic canonical recomposition is applied via Python's \texttt{unicodedata.normalize("NFC", x)}. For \textit{no\_diacritics} inputs, context-aware lexicon diacritic restoration uses a curated domain lexicon (\texttt{CYBER\_DIACRITIC\_LEXICON}, spanning over 90 multi-word Vietnamese cybersecurity, legal, administrative, and safety phrases such as \textit{tan cong mang} $\to$ \textit{tấn công mạng}, \textit{khai thac lo hong} $\to$ \textit{khai thác lỗ hổng}, and \textit{can cuoc cong dan} $\to$ \textit{Căn cước công dân}). Phrases are sorted in descending order of character length (longest-first $n$-gram matching) and substituted using case-insensitive word-boundary regular expressions (\texttt{\textbackslash b...\textbackslash b}) while preserving original capitalization.
+    \item \textbf{Stage 1 Lazy Refusal Gating (\texttt{experiments/judge\_validation.py})}: Stage 1 assigns $p_r = 2$ if exploit/vulnerability signatures match, $p_r = 1$ if bilingual refusal keywords match (case-insensitive matching across \textit{``i cannot''}, \textit{``i can't''}, \textit{``không thể''}, \textit{``từ chối''}, \textit{``apologize''}, and \textit{``i am unable''}), and $p_r = 0$ otherwise. Concise refusals ($p_r = 1 \land \text{len}(y) < L_{\text{ref}}$ with $L_{\text{ref}} = 60$ whitespace-delimited words) exit early as State 0, whereas longer responses bypass to Stage 2 to neutralize \textit{Refusal-then-Compliance} prefix attacks.
+    \item \textbf{Hardened Target Configuration (\texttt{llama3-secure})}: Deployed via an Ollama \texttt{Modelfile} derived from \texttt{llama3:latest} with deterministic decoding (\texttt{temperature = 0.2}, \texttt{top\_p = 0.9}, \texttt{repeat\_penalty = 1.05}, \texttt{num\_ctx = 4096}, \texttt{num\_predict = 768}), explicit trust-boundary system instructions separating data from instructions, and three few-shot calibration turns (one explicit refusal exemplar and two benign cybersecurity educational exemplars to suppress over-refusal).
+\end{itemize}
+
+% ==============================================================================
+% REFERENCES
+% ==============================================================================
+\begin{thebibliography}{99}
+
+\bibitem{ouyang2022training}
+L.~Ouyang, J.~Wu, X.~Jiang, D.~Almeida, C.~Wainwright, P.~Mishkin, C.~Zhang, S.~Agarwal, K.~Slama, A.~Ray, et~al.,
+``Training language models to follow instructions with human feedback,''
+\textit{Advances in Neural Information Processing Systems (NeurIPS)}, vol.~35, pp.~27730--27744, 2022. arXiv:2203.02155.
+
+\bibitem{rafailov2024direct}
+R.~Rafailov, A.~Sharma, E.~Mitchell, S.~Ermon, C.~D. Manning, and C.~Finn,
+``Direct preference optimization: Your language model is secretly a reward model,''
+\textit{Advances in Neural Information Processing Systems (NeurIPS)}, vol.~36, pp.~53728--53741, 2023. arXiv:2305.18290.
+
+\bibitem{touvron2023llama}
+H.~Touvron, L.~Martin, K.~Stone, P.~Albert, A.~Almahairi, Y.~Babaei, N.~Bashlykov, S.~Batra, P.~Bhargava, S.~Bhosale, et~al.,
+``Llama 2: Open foundation and fine-tuned chat models,''
+\textit{arXiv preprint arXiv:2307.09288}, 2023.
+
+\bibitem{dubey2024llama3}
+A.~Dubey, A.~Jauhri, A.~Pandey, A.~Kadian, A.~Al-Dahle, A.~Letman, A.~Mathur, A.~Schelten, A.~Yang, A.~Fan, et~al.,
+``The {Llama 3} herd of models,''
+\textit{arXiv preprint arXiv:2407.21783}, 2024.
+
+\bibitem{zou2023universal}
+A.~Zou, Z.~Wang, N.~Carlini, M.~Nasr, J.~Zico~Kolter, and M.~Fredrikson,
+``Universal and transferable adversarial attacks on aligned language models,''
+\textit{arXiv preprint arXiv:2307.15043}, 2023.
+
+\bibitem{chao2023jailbreaking}
+P.~Chao, A.~Robey, E.~Dobriban, H.~Hassani, G.~J. Pappas, and E.~Wong,
+``Jailbreaking black box large language models in twenty queries,''
+\textit{arXiv preprint arXiv:2310.08419}, 2023.
+
+\bibitem{russinovich2025crescendo}
+M.~Russinovich, A.~Salem, and R.~Eldan,
+``Great, now write an article about that: The {Crescendo} multi-turn {LLM} jailbreak attack,''
+\textit{Proceedings of the USENIX Security Symposium (USENIX Security)}, 2025. arXiv:2404.01833.
+
+\bibitem{wei2024jailbreak}
+A.~Wei, N.~Haghtalab, and J.~Steinhardt,
+``Jailbroken: How does {LLM} safety training fail?''
+\textit{Advances in Neural Information Processing Systems (NeurIPS)}, vol.~36, pp.~80079--80110, 2023. arXiv:2307.02483.
+
+\bibitem{yuan2024gpt4v}
+Y.~Yuan, W.~Jiao, W.~Wang, J.-t.~Huang, P.~He, S.~Shi, and Z.~Tu,
+``{GPT-4} is too smart to be safe: Stealthy chat with {LLMs} via cipher,''
+\textit{Proceedings of the International Conference on Learning Representations (ICLR)}, 2024. arXiv:2308.06463.
+
+\bibitem{harmbench2024}
+M.~Mazeika, L.~Phan, X.~Yin, A.~Zou, Z.~Wang, N.~Mu, E.~Sakhaee, N.~Li, S.~Basart, B.~Li, D.~Forsyth, and D.~Hendrycks,
+``{HarmBench}: A standardized evaluation framework for automated red teaming and robust refusal,''
+\textit{Proceedings of the 41st International Conference on Machine Learning (ICML)}, 2024. arXiv:2402.04249.
+
+\bibitem{strongreject2024}
+A.~Souly, D.~Bowen, C.~Shen, T.~Trinh, E.~Hsieh, P.~Reyes, L.~Lovett, and Z.~Wang,
+``A {StrongREJECT} for empty jailbreaks,''
+\textit{Advances in Neural Information Processing Systems (NeurIPS) Datasets and Benchmarks Track}, 2024. arXiv:2402.10260.
+
+\bibitem{wang2023donotanswer}
+Y.~Wang, H.~Li, X.~Han, P.~Nakov, and T.~Baldwin,
+``Do-Not-Answer: A dataset for evaluating safeguards in {LLMs},''
+\textit{Findings of the Association for Computational Linguistics: EACL 2024}, pp.~894--908, 2024. arXiv:2308.13387.
+
+\bibitem{rottger2023xstest}
+P.~R{\"o}ttger, H.~R. Kirk, B.~Vidgen, G.~Attanasio, F.~Bianchi, and D.~Hovy,
+``{XSTest}: A test suite for identifying exaggerated safety behavior in large language models,''
+\textit{Proceedings of the 2024 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies (NAACL 2024)}, pp.~1432--1449, 2024. arXiv:2308.01263.
+
+\bibitem{shaikh2023second}
+O.~Shaikh, H.~Zhang, W.~Held, M.~Bernstein, and D.~Yang,
+``On second thought, let's not think step by step! Bias and toxicity in zero-shot reasoning,''
+\textit{Proceedings of the 61st Annual Meeting of the Association for Computational Linguistics (ACL 2023)}, pp.~4454--4470, 2023. arXiv:2212.08061.
+
+\bibitem{yong2023lowresource}
+Z.-X. Yong, C.~Menghini, and S.~H. Bach,
+``Low-resource languages jailbreak {GPT-4},''
+\textit{arXiv preprint arXiv:2310.02446}, 2023.
+
+\bibitem{deng2023multilingual}
+Y.~Deng, W.~Zhang, S.~J. Pan, and L.~Bing,
+``Multilingual jailbreak challenges in large language models,''
+\textit{Proceedings of the International Conference on Learning Representations (ICLR)}, 2024. arXiv:2310.06474.
+
+\bibitem{shen2024multilingual}
+L.~Shen, W.~Tan, S.~Chen, Y.~Chen, J.~Zhang, H.~Xu, B.~Zheng, P.~Koehn, and D.~Khashabi,
+``The language barrier: Dissecting safety challenges of {LLMs} in multilingual contexts,''
+\textit{Findings of the Association for Computational Linguistics: ACL 2024}, pp.~1198--1215, 2024. arXiv:2401.13136.
+
+\bibitem{nguyen2020phobert}
+D.~Q. Nguyen and A.~T. Nguyen,
+``{PhoBERT}: Pre-trained language models for Vietnamese,''
+\textit{Findings of the Association for Computational Linguistics: EMNLP 2020}, pp.~1037--1042, 2020. arXiv:2003.00744.
+
+\bibitem{nguyen2023phogpt}
+D.~Q. Nguyen, L.~T. Phan, L.~B. Nguyen, T.~H. Trinh, et~al.,
+``{PhoGPT}: Generative pre-training for Vietnamese,''
+\textit{arXiv preprint arXiv:2311.02945}, 2023.
+
+\bibitem{dam2024seallms}
+X.-P. Nguyen, W.~Zhang, X.~Li, M.~Aljunied, Q.~Tan, L.~Cheng, G.~Chen, Y.~Deng, S.~Yang, C.~Liu, H.~Zhang, and L.~Bing,
+``{SeaLLMs} -- Large language models for Southeast Asia,''
+\textit{Proceedings of the 62nd Annual Meeting of the Association for Computational Linguistics (ACL 2024)}, pp.~14170--14197, 2024. arXiv:2312.00738.
+
+\bibitem{nguyen2024vistral}
+Viet-Mistral Team,
+``Vistral-7B-Chat: A Vietnamese instruction-tuned language model with open weights,''
+\textit{Hugging Face repository: Viet-Mistral/Vistral-7B-Chat}, 2023.
+
+\bibitem{sennrich2016subword}
+R.~Sennrich, B.~Haddow, and A.~Birch,
+``Neural machine translation of rare words with subword units,''
+\textit{Proceedings of the 54th Annual Meeting of the Association for Computational Linguistics (ACL 2016)}, pp.~1715--1725, 2016. arXiv:1508.07909.
+
+\bibitem{petrov2023language}
+A.~Petrov, E.~La~Malfa, P.~H.~S. Torr, and A.~Bibi,
+``Language model tokenizers introduce unfairness between languages,''
+\textit{Advances in Neural Information Processing Systems (NeurIPS)}, vol.~36, pp.~40643--40673, 2023. arXiv:2305.15425.
+
+\bibitem{ahia2023all}
+O.~Ahia, S.~Kumar, H.~Gonen, J.~Kasai, D.~R. Mortensen, N.~A. Smith, and Y.~Choi,
+``Do all languages cost the same? Tokenization in the era of commercial language models,''
+\textit{Proceedings of the 2023 Conference on Empirical Methods in Natural Language Processing (EMNLP 2023)}, pp.~8714--8730, 2023. arXiv:2305.13707.
+
+\bibitem{zheng2023judging}
+L.~Zheng, W.-L. Chiang, H.~Zhang, S.~Zhuang, Z.~Wu, Y.~Zhuang, Z.~Lin, Z.~Li, D.~Li, E.~P. Xing, J.~E. Gonzalez, and I.~Stoica,
+``Judging {LLM}-as-a-judge with {MT-Bench} and Chatbot Arena,''
+\textit{Advances in Neural Information Processing Systems (NeurIPS)}, vol.~36, pp.~46595--46623, 2023. arXiv:2306.05685.
+
+\bibitem{kim2023prometheus}
+S.~Kim, J.~Shin, Y.~Cho, J.~Jang, S.~Longpre, H.~Lee, S.~Yun, S.~Shin, S.~Kim, J.~Thorne, and M.~Seo,
+``Prometheus: Inducing fine-grained evaluation capability in language models,''
+\textit{Proceedings of the International Conference on Learning Representations (ICLR)}, 2024. arXiv:2310.08491.
+
+\bibitem{rogan1978estimating}
+W.~J. Rogan and B.~Gladen,
+``Estimating prevalence from the results of a screening test,''
+\textit{American Journal of Epidemiology}, vol.~107, no.~1, pp.~71--76, 1978.
+
+\bibitem{cohen1968weighted}
+J.~Cohen,
+``Weighted kappa: Nominal scale agreement provision for scaled disagreement or partial credit,''
+\textit{Psychological Bulletin}, vol.~70, no.~4, pp.~213--220, 1968.
+
+\bibitem{landis1977measurement}
+J.~R. Landis and G.~G. Koch,
+``The measurement of observer agreement for categorical data,''
+\textit{Biometrics}, vol.~33, no.~1, pp.~159--174, 1977.
+
+\bibitem{yoo2024codeswitching}
+H.~Yoo, Y.~Yang, and H.~Lee,
+``Code-switching red-teaming: {LLM} evaluation for safety and multilingual understanding,''
+\textit{Proceedings of the Annual Meeting of the Association for Computational Linguistics (ACL)}, 2025.
+
+\bibitem{kim2026cage}
+J.~Kim, S.~Park, K.~Jeong, and H.~Lee,
+``{CAGE}: A framework for culturally adaptive red-teaming benchmark generation ({KorSET}),''
+\textit{Proceedings of Multilingual Safety Evaluation Workshop}, 2025.
+
+\bibitem{boucher2022bad}
+N.~Boucher, I.~Shumailov, R.~Anderson, and N.~Papernot,
+``Bad characters: Imperceptible {NLP} attacks,''
+\textit{Proceedings of the IEEE Symposium on Security and Privacy (S\&P)}, pp.~1987--2004, 2022. arXiv:2106.09898.
+
+\bibitem{polyguard2025}
+P.~Kumar, D.~K.~Sahu, S.~Joty, and N.~F.~Chen,
+``{PolyGuard}: A multilingual safety moderation tool for 17 languages,''
+\textit{arXiv preprint arXiv:2504.04377}, 2025.
+
+\bibitem{luu2021vihsd}
+S.~T. Luu, K.~V. Nguyen, and N.~L.-T. Nguyen,
+``A large-scale dataset for hate speech detection on {Vietnamese} social media,''
+\textit{Advances and Trends in Artificial Intelligence (IEA/AIE, Springer LNAI 12798)}, pp.~415--426, 2021. arXiv:2103.11528.
+
+\bibitem{nguyen2021victsd}
+L.~T. Nguyen, K.~V. Nguyen, and N.~L.-T. Nguyen,
+``Constructive and toxic speech detection for open-domain social media comments in {Vietnamese},''
+\textit{Advances in Knowledge Discovery and Data Mining (PAKDD, Springer LNAI 12712)}, pp.~572--583, 2021. arXiv:2103.10069.
+
+\bibitem{truong2024crossing}
+T.~H. Truong, D.~Q. Nguyen, T.~B. Nguyen, et~al.,
+``Crossing linguistic horizons: Finetuning and comprehensive evaluation of {Vietnamese} {LLMs},''
+\textit{Findings of the Association for Computational Linguistics: NAACL 2024}, 2024. arXiv:2403.02715.
+
+\bibitem{beyer2025llmsafety}
+L.~Beyer, M.~Andriushchenko, N.~Flammarion, et~al.,
+``{LLM}-safety evaluations lack robustness,''
+\textit{arXiv preprint arXiv:2503.02574}, 2025.
+
+\bibitem{miller2024adding}
+E.~Miller,
+``Adding error bars to evals: A statistical approach to language model evaluations,''
+\textit{arXiv preprint arXiv:2411.00640}, 2024.
+
+\bibitem{wang2024xsafety}
+W.~Wang, Z.~Tu, C.~Chen, Y.~Yuan, J.-t.~Huang, W.~Jiao, and M.~R. Lyu,
+``All languages matter: On the multilingual safety of {LLMs},''
+\textit{Findings of the Association for Computational Linguistics: ACL 2024}, pp.~5865--5877, 2024. arXiv:2310.00905.
+
+\bibitem{inan2023llamaguard}
+H.~Inan, K.~Upasani, J.~Chi, R.~Rungta, K.~Iyer, Y.~Mao, M.~Tontchev, Q.~Hu, B.~Fuller, D.~Testuggine, and M.~Khabsa,
+``{Llama Guard}: {LLM}-based input-output safeguard for human-{AI} conversations,''
+\textit{arXiv preprint arXiv:2312.06674}, 2023.
+
+\bibitem{han2024wildguard}
+S.~Han, K.~Rao, A.~Ettinger, L.~Jiang, B.~Y. Lin, N.~Lambert, Y.~Choi, and N.~Dziri,
+``{WildGuard}: Open one-stop moderation tools for safety risks, jailbreaks, and refusals of {LLMs},''
+\textit{Advances in Neural Information Processing Systems (NeurIPS) Datasets and Benchmarks Track}, 2024. arXiv:2406.18495.
+
+\bibitem{nguyen2020diacritics}
+K.~H. Nguyen,
+``Vietnamese diacritics restoration as sequential tagging,''
+\textit{arXiv preprint arXiv:2010.09561}, 2020.
+
+\end{thebibliography}
+
+\end{document}

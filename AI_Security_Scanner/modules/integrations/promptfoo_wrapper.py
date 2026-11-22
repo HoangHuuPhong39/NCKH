@@ -2,16 +2,12 @@
 """
 modules/integrations/promptfoo_wrapper.py - Promptfoo LLM Testing Integration
 
-Wrapper cho Promptfoo (https://github.com/promptfoo/promptfoo):
-một công cụ open-source để evaluate và red-team LLM.
-
-Promptfoo chạy qua Node.js (``npx promptfoo``), wrapper này:
-1. Kiểm tra xem ``npx`` và ``promptfoo`` có sẵn không.
-2. Sinh file config YAML cho từng kịch bản test.
-3. Chạy ``npx promptfoo eval`` qua subprocess.
-4. Parse kết quả JSON/text output về findings format.
-
-Install: npm install -g promptfoo
+Hardened wrapper for Promptfoo (https://github.com/promptfoo/promptfoo):
+1. Checks for a locally installed ``promptfoo`` binary (or ``npx --no-install``).
+2. Serializes YAML configuration safely via ``yaml.safe_dump()`` with strict
+   plugin allowlisting and provider prefix validation (prevents YAML/exec injection).
+3. Validates target URLs and confines explicit ``config_path`` to allowed scan roots.
+4. Returns explicit UNAVAILABLE status instead of fabricated simulated vulnerabilities.
 """
 
 import json
@@ -22,11 +18,9 @@ import subprocess
 import tempfile
 from typing import Any, Dict, List, Optional
 
-logger = logging.getLogger(__name__)
+import yaml
 
-# ---------------------------------------------------------------------------
-# Supported test types → OWASP / MITRE mappings
-# ---------------------------------------------------------------------------
+logger = logging.getLogger(__name__)
 
 _TEST_TYPE_META: Dict[str, Dict[str, str]] = {
     "prompt_injection":    {"owasp": "LLM01", "mitre": "AML.T0051", "severity": "HIGH"},
@@ -39,100 +33,52 @@ _TEST_TYPE_META: Dict[str, Dict[str, str]] = {
     "system_prompt_leak":  {"owasp": "LLM07", "mitre": "AML.T0054", "severity": "CRITICAL"},
 }
 
-# Default test types dùng khi không chỉ định
 _DEFAULT_TEST_TYPES = ["prompt_injection", "jailbreak", "pii_extraction"]
+_DISALLOWED_PROVIDER_PREFIXES = ("exec:", "file:", "python:", "script:", "webhook:")
 
 
 class PromptfooWrapper:
-    """
-    Integration wrapper around the Promptfoo LLM red-team tool.
-
-    Promptfoo is executed as a Node.js subprocess (``npx promptfoo eval``).
-    This wrapper handles:
-    - Availability checking (``npx`` + ``promptfoo`` version check)
-    - YAML config generation for various test scenarios
-    - Subprocess execution with timeout handling
-    - JSON/text output parsing into framework findings format
-
-    Example::
-
-        pfw = PromptfooWrapper()
-        if pfw.is_available():
-            findings = pfw.run_redteam(
-                target_url="http://localhost:8080/v1/chat",
-                model_name="gpt-4o",
-                test_types=["prompt_injection", "jailbreak"],
-            )
-        else:
-            print(pfw.get_install_instructions())
-    """
+    """Hardened integration wrapper around the Promptfoo LLM red-team CLI."""
 
     def __init__(self, timeout: int = 300):
-        """
-        Initialise the Promptfoo wrapper.
-
-        Args:
-            timeout (int): Subprocess timeout in seconds (default: 300).
-        """
         self.timeout = timeout
-        self._available: Optional[bool] = None  # cached
-
-    # ------------------------------------------------------------------
-    # Availability
-    # ------------------------------------------------------------------
+        self._available: Optional[bool] = None
 
     def is_available(self) -> bool:
         """
-        Check whether ``npx`` is available and ``promptfoo`` can be resolved.
-
-        Runs ``npx promptfoo --version`` and checks for a successful exit code.
-        Result is cached after the first call.
-
-        Returns:
-            bool: ``True`` if Promptfoo is available via npx.
+        Check whether a locally installed ``promptfoo`` CLI is available without
+        triggering remote npm downloads.
         """
         if self._available is not None:
             return self._available
 
-        # Bước 1: kiểm tra npx có tồn tại không
-        if shutil.which("npx") is None:
-            logger.warning("npx not found — Node.js is required for Promptfoo.")
+        pf_bin = shutil.which("promptfoo")
+        if pf_bin:
+            cmd = [pf_bin, "--version"]
+        elif shutil.which("npx"):
+            cmd = ["npx", "--no-install", "promptfoo", "--version"]
+        else:
+            logger.debug("Neither promptfoo nor npx found on PATH.")
             self._available = False
             return False
 
-        # Bước 2: thử chạy npx promptfoo --version
         try:
             proc = subprocess.run(
-                ["npx", "promptfoo", "--version"],
+                cmd,
                 capture_output=True,
                 text=True,
-                timeout=30,
+                timeout=8,
             )
             self._available = proc.returncode == 0
-            if self._available:
-                version = proc.stdout.strip() or proc.stderr.strip()
-                logger.info("Promptfoo available: %s", version)
-            else:
-                logger.warning("Promptfoo not available (exit code %d).", proc.returncode)
         except (subprocess.TimeoutExpired, FileNotFoundError, OSError) as exc:
-            logger.warning("Promptfoo availability check failed: %s", exc)
+            logger.debug("Promptfoo availability check failed: %s", exc)
             self._available = False
 
         return self._available
 
     @staticmethod
     def get_install_instructions() -> str:
-        """
-        Return the npm global install command for Promptfoo.
-
-        Returns:
-            str: Shell command string.
-        """
         return "npm install -g promptfoo"
-
-    # ------------------------------------------------------------------
-    # Config generation
-    # ------------------------------------------------------------------
 
     def generate_config(
         self,
@@ -141,54 +87,53 @@ class PromptfooWrapper:
         test_types: Optional[List[str]] = None,
     ) -> str:
         """
-        Generate a Promptfoo YAML configuration for a red-team evaluation.
-
-        Args:
-            target_url (str): Target LLM API endpoint URL.
-            model_name (str): Model identifier (e.g. ``"gpt-4o"``).
-            test_types (list[str], optional): List of test type keys from
-                ``_TEST_TYPE_META``. Defaults to ``["prompt_injection", "jailbreak", "pii_extraction"]``.
-
-        Returns:
-            str: YAML configuration string ready to write to a file.
+        Safely generate a Promptfoo YAML configuration using ``yaml.safe_dump()``.
+        Validates test types against ``_TEST_TYPE_META``, blocks arbitrary code
+        provider prefixes (``exec:``, ``file:``, ``python:``), and validates URL.
         """
+        from core.path_security import validate_safe_identifier
+        from core.url_security import validate_target_url
+
         types = test_types or _DEFAULT_TEST_TYPES
-
-        # Build test list YAML block
-        tests_yaml_lines: List[str] = []
+        clean_types: List[str] = []
         for ttype in types:
-            tests_yaml_lines.append(f"  - type: {ttype}")
+            key = str(ttype).strip()
+            if key not in _TEST_TYPE_META:
+                raise ValueError(
+                    f"Unsupported Promptfoo test type '{key}'. Allowed: {sorted(_TEST_TYPE_META.keys())}"
+                )
+            clean_types.append(key)
 
-        tests_block = "\n".join(tests_yaml_lines)
+        clean_model = validate_safe_identifier(str(model_name), "model_name")
+        if any(clean_model.lower().startswith(prefix) for prefix in _DISALLOWED_PROVIDER_PREFIXES):
+            raise ValueError(f"Disallowed Promptfoo provider prefix in model_name: '{clean_model}'.")
 
-        config = (
-            f"# Promptfoo Red-Team Configuration\n"
-            f"# Generated by AI Security Scanner\n"
-            f"# Target: {target_url} | Model: {model_name}\n"
-            f"\n"
-            f"targets:\n"
-            f"  - id: {model_name}\n"
-            f"    config:\n"
-            f"      apiBaseUrl: {target_url}\n"
-            f"\n"
-            f"redteam:\n"
-            f"  purpose: >-\n"
-            f"    AI Security Scanner red-team evaluation against {model_name}.\n"
-            f"  plugins:\n"
-            f"{tests_block}\n"
-            f"\n"
-            f"defaultTest:\n"
-            f"  options:\n"
-            f"    provider:\n"
-            f"      id: {model_name}\n"
-            f"      config:\n"
-            f"        apiBaseUrl: {target_url}\n"
-        )
-        return config
+        clean_url = str(target_url).strip()
+        url_ok, url_err = validate_target_url(clean_url)
+        if not url_ok:
+            raise ValueError(url_err or "Invalid target URL for Promptfoo.")
 
-    # ------------------------------------------------------------------
-    # Red-team runner
-    # ------------------------------------------------------------------
+        config_obj = {
+            "targets": [
+                {
+                    "id": clean_model,
+                    "config": {"apiBaseUrl": clean_url},
+                }
+            ],
+            "redteam": {
+                "purpose": f"AI Security Scanner red-team evaluation against {clean_model}.",
+                "plugins": [{"id": t} for t in clean_types],
+            },
+            "defaultTest": {
+                "options": {
+                    "provider": {
+                        "id": clean_model,
+                        "config": {"apiBaseUrl": clean_url},
+                    }
+                }
+            },
+        }
+        return yaml.safe_dump(config_obj, sort_keys=False, allow_unicode=True)
 
     def run_redteam(
         self,
@@ -197,29 +142,13 @@ class PromptfooWrapper:
         config_path: Optional[str] = None,
         test_types: Optional[List[str]] = None,
     ) -> List[Dict[str, Any]]:
-        """
-        Execute a Promptfoo red-team evaluation and return parsed findings.
-
-        If ``config_path`` is provided, uses that YAML file directly.
-        Otherwise, generates a temporary config and cleans it up after the run.
-
-        Args:
-            target_url (str): Target LLM API endpoint URL.
-            model_name (str): Model identifier.
-            config_path (str, optional): Path to an existing Promptfoo YAML config.
-            test_types (list[str], optional): Test types to include in generated config.
-
-        Returns:
-            list[dict]: Parsed findings in framework format.
-        """
+        """Execute Promptfoo when installed; otherwise return explicit UNAVAILABLE status."""
         if not self.is_available():
-            logger.warning(
-                "Promptfoo not available. Returning simulated results. "
-                "Run: %s", self.get_install_instructions()
-            )
+            logger.warning("Promptfoo not available. Run: %s", self.get_install_instructions())
             return self._simulate_results(target_url, model_name, test_types)
 
-        # Tạo config tạm nếu không có sẵn
+        from core.path_security import resolve_safe_path
+
         tmp_config: Optional[str] = None
         if config_path is None:
             yaml_content = self.generate_config(target_url, model_name, test_types)
@@ -233,21 +162,22 @@ class PromptfooWrapper:
                 f.write(yaml_content)
                 tmp_config = f.name
             config_path = tmp_config
-            logger.info("Generated Promptfoo config at: %s", config_path)
+        else:
+            config_path = str(resolve_safe_path(config_path, must_exist=True))
 
-        # Build output file path
         output_fd, output_path = tempfile.mkstemp(suffix=".json", prefix="promptfoo_output_")
         os.close(output_fd)
 
+        pf_bin = shutil.which("promptfoo")
+        base_cmd = [pf_bin] if pf_bin else ["npx", "--no-install", "promptfoo"]
         cmd = [
-            "npx", "promptfoo", "eval",
+            *base_cmd, "eval",
             "--config", config_path,
             "--output", output_path,
             "--output-format", "json",
             "--no-progress-bar",
         ]
 
-        logger.info("Running Promptfoo: %s", " ".join(cmd))
         raw_output = ""
         try:
             proc = subprocess.run(
@@ -256,11 +186,12 @@ class PromptfooWrapper:
                 text=True,
                 timeout=self.timeout,
             )
-            raw_output = proc.stdout + "\n" + proc.stderr
-            # Đọc output JSON nếu có
-            if os.path.exists(output_path):
+            raw_output = (proc.stdout or "") + "\n" + (proc.stderr or "")
+            if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
                 with open(output_path, "r", encoding="utf-8") as f:
-                    raw_output = f.read()
+                    file_content = f.read().strip()
+                if file_content:
+                    raw_output = file_content
         except subprocess.TimeoutExpired:
             logger.error("Promptfoo timed out after %d s.", self.timeout)
             raw_output = f"TIMEOUT after {self.timeout} seconds"
@@ -268,7 +199,6 @@ class PromptfooWrapper:
             logger.error("Promptfoo subprocess error: %s", exc)
             raw_output = str(exc)
         finally:
-            # Dọn dẹp file tạm
             if tmp_config and os.path.exists(tmp_config):
                 os.unlink(tmp_config)
             if os.path.exists(output_path):
@@ -276,43 +206,14 @@ class PromptfooWrapper:
 
         return self.parse_promptfoo_output(raw_output, test_types or _DEFAULT_TEST_TYPES)
 
-    # ------------------------------------------------------------------
-    # Output parser
-    # ------------------------------------------------------------------
-
     def parse_promptfoo_output(
         self,
         output: str,
         test_types: Optional[List[str]] = None,
     ) -> List[Dict[str, Any]]:
-        """
-        Parse Promptfoo JSON or text output into framework findings format.
-
-        Promptfoo JSON output has structure::
-
-            {
-              "results": {
-                "results": [
-                  {
-                    "prompt": {"raw": "..."},
-                    "response": {"output": "..."},
-                    "pass": true/false,
-                    "testCase": {"metadata": {"pluginId": "..."}}
-                  }, ...
-                ]
-              }
-            }
-
-        Args:
-            output (str): Raw stdout/JSON output from the Promptfoo subprocess.
-            test_types (list[str], optional): Test types that were run (for fallback labelling).
-
-        Returns:
-            list[dict]: Parsed findings.
-        """
+        """Parse Promptfoo JSON or text output into framework findings format."""
         findings: List[Dict[str, Any]] = []
 
-        # Thử parse JSON
         try:
             data = json.loads(output)
             raw_results = (
@@ -340,9 +241,8 @@ class PromptfooWrapper:
             if findings:
                 return findings
         except (json.JSONDecodeError, KeyError, TypeError):
-            pass  # Fallback to text parsing below
+            pass
 
-        # Text parsing: tìm PASS/FAIL lines
         for line in output.splitlines():
             line = line.strip()
             if not line:
@@ -364,7 +264,6 @@ class PromptfooWrapper:
                     "response": "",
                 })
 
-        # Nếu hoàn toàn không parse được
         if not findings:
             types_used = test_types or _DEFAULT_TEST_TYPES
             findings.append({
@@ -381,30 +280,29 @@ class PromptfooWrapper:
 
         return findings
 
-    # ------------------------------------------------------------------
-    # Fallback simulation
-    # ------------------------------------------------------------------
-
     def _simulate_results(
         self,
         target_url: str,
         model_name: str,
         test_types: Optional[List[str]] = None,
     ) -> List[Dict[str, Any]]:
-        """Return simulated findings when Promptfoo is not available."""
+        """Return explicit UNAVAILABLE status when Promptfoo is not installed (no fake findings)."""
         types = test_types or _DEFAULT_TEST_TYPES
+        clean_model = str(model_name).replace("\n", "").replace("\r", "")
+        clean_url = str(target_url).replace("\n", "").replace("\r", "")
         results: List[Dict[str, Any]] = []
         for ttype in types:
-            meta = _TEST_TYPE_META.get(ttype, {"owasp": "N/A", "mitre": "N/A", "severity": "MEDIUM"})
+            meta = _TEST_TYPE_META.get(ttype, {"owasp": "N/A", "mitre": "N/A", "severity": "INFO"})
             results.append({
                 "probe": ttype,
-                "result": "SIMULATED",
+                "result": "UNAVAILABLE",
+                "simulated": False,
                 "severity": "INFO",
                 "owasp_code": meta["owasp"],
                 "mitre_code": meta["mitre"],
                 "detail": (
                     f"Promptfoo not available (run: {self.get_install_instructions()}). "
-                    f"Simulated result for test type '{ttype}' against {model_name} @ {target_url}."
+                    f"No live test executed for '{ttype}' against {clean_model} @ {clean_url}."
                 ),
                 "prompt": "",
                 "response": "",

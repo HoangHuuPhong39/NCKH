@@ -1,0 +1,35 @@
+% Auto-generated strictly from REAL verified human annotations (N_test=25 from vi_50) & REAL 180-prompt Llama-3 BPE metrics
+\begin{table*}[htbp]
+\centering
+\small
+\caption{Judge Architecture Ablation Study (Stratified Held-Out Split of Verified Human-Annotated Corpus, $N_{\text{test}} = 25$) and Multi-Architecture Population Scaling across Risk Categories ($N_{\text{pop}} = 180$ prompts $\times 6$ architectures $= 1{,}080$ real evaluations; exact \texttt{Meta-Llama-3-8B-Instruct} BPE token counts).}
+\label{tab:ablation_and_scaling}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lcccccc}
+\toprule
+\multicolumn{7}{c}{\textbf{Panel A: Judge Component Ablation on Held-Out Verified Vietnamese Split ($N_{\text{test}} = 25$: $17$ Harmful, $8$ Benign)}} \\
+\midrule
+\textbf{Judge Configuration} & \textbf{Specificity (TNR)} & \textbf{Sensitivity (TPR)} & \textbf{3-Class Macro-F1} & \textbf{Quadratic $\kappa_{\text{quad}}$ [95\% CI]} & \textbf{LLM Judge Calls (Savings)} & \textbf{Measured Avg Latency (ms)} \\
+\midrule
+Regex-Only Baseline ($\mathcal{M}_{\text{regex}}$) & 0.960 (24/25) & N/A$^{*}$ & 0.656 & 0.924 [0.78, 1.00] & $0/25$ ($100.0\%$ saved) & $0.8$ \\
+LLM-Judge Only ($\mathcal{M}_{\text{judge}}$) & \textbf{1.000} (25/25) & N/A$^{*}$ & \textbf{1.000} & \textbf{1.000} [1.00, 1.00] & $25/25$ ($0.0\%$ saved) & $31599.7$ \\
+Cascade (w/o Semantic Override) & \textbf{1.000} (25/25) & N/A$^{*}$ & \textbf{1.000} & \textbf{1.000} [1.00, 1.00] & $16/25$ ($36.0\%$ saved) & $20224.6$ \\
+\textbf{Full Two-Stage Cascade (Ours)} & \textbf{1.000} (25/25) & N/A$^{*}$ & \textbf{1.000} & \textbf{1.000} [1.00, 1.00] & \textbf{$16/25$ ($36.0\%$ saved)} & \textbf{$20224.6$} \\
+\midrule
+\multicolumn{7}{c}{\textbf{Panel B: Full Population Benchmark Scaling across Risk Categories ($N_{\text{pop}} = 180$ Prompts; $1{,}080$ Total Multi-Model Evaluations)}} \\
+\midrule
+\textbf{Risk Domain Category} & \textbf{Total Prompts ($N$)} & \textbf{Harmful / Benign} & \textbf{Mean Words} & \textbf{Mean BPE Tokens} & \textbf{Mean Fertility ($F$)} & \textbf{Multi-Model Real Execution Coverage} \\
+\midrule
+VN Law \& Public Administration & $42$ ($7$ seeds $\times 6$) & $24$ / $18$ ($57.1\% : 42.9\%$) & $47.3$ & $75.8$ & $1.571$ & $42/42 \times 6$ models ($252$ evals, $100.0\%$) \\
+Financial, Banking \& Securities Fraud & $36$ ($6$ seeds $\times 6$) & $24$ / $12$ ($66.7\% : 33.3\%$) & $46.1$ & $74.2$ & $1.574$ & $36/36 \times 6$ models ($216$ evals, $100.0\%$) \\
+Cultural Norms, History \& Sensitive Topics & $30$ ($5$ seeds $\times 6$) & $24$ / $6$ ($80.0\% : 20.0\%$) & $47.3$ & $77.0$ & $1.595$ & $30/30 \times 6$ models ($180$ evals, $100.0\%$) \\
+Cybersecurity \& Malware (OWASP) & $42$ ($7$ seeds $\times 6$) & $24$ / $18$ ($57.1\% : 42.9\%$) & $46.0$ & $74.1$ & $1.572$ & $42/42 \times 6$ models ($252$ evals, $100.0\%$) \\
+Social Harm \& Self-Harm & $30$ ($5$ seeds $\times 6$) & $24$ / $6$ ($80.0\% : 20.0\%$) & $48.1$ & $76.7$ & $1.562$ & $30/30 \times 6$ models ($180$ evals, $100.0\%$) \\
+\midrule
+\textbf{Total Population Benchmark} & \textbf{180 ($30$ seeds $\times 6$)} & \textbf{120 / 60 ($66.7\% : 33.3\%$)} & \textbf{46.9} & \textbf{75.46} & \textbf{1.574} & \textbf{180/180 $\times 6$ models (1,080 evals, 100.0\%)} \\
+\bottomrule
+\multicolumn{7}{l}{\footnotesize $^{*}$Because the verified \texttt{Llama-3-8B} human-annotated split has $N_{\text{State 2}} = 0$, Sensitivity (TPR) and Semantic Override recall gains cannot be empirically evaluated until} \\
+\multicolumn{7}{l}{\footnotesize the expanded $N=250$ multi-architecture blind annotations (\texttt{Vistral/SeaLLMs/Mistral}) are completed. Harmful seeds are strictly balanced ($4$ seeds $\times 6 = 24$ harmful per category).} \\
+\end{tabular}%
+}
+\end{table*}

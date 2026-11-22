@@ -1,7 +1,6 @@
 # ==============================================================================
 # Gunicorn Production WSGI Server Configuration
 # ==============================================================================
-import multiprocessing
 import os
 
 # Server socket
@@ -9,12 +8,14 @@ bind = os.environ.get("GUNICORN_BIND", "0.0.0.0:5000")
 backlog = 2048
 
 # Worker processes & threading
-# We use gthread (threaded workers) to properly support SSE streaming and async I/O
-workers = int(os.environ.get("GUNICORN_WORKERS", 2))
-threads = int(os.environ.get("GUNICORN_THREADS", 4))
+# IMPORTANT: Keep workers=1 while SSE subscriber queues, scan locks, and runtime
+# config live in-process. Increase threads to handle concurrent SSE + REST requests.
+# Scale to workers > 1 only after migrating scan state/pub-sub to Redis.
+workers = int(os.environ.get("GUNICORN_WORKERS", 1))
+threads = int(os.environ.get("GUNICORN_THREADS", 16))
 worker_class = "gthread"
 worker_connections = 1000
-timeout = 120
+timeout = 300
 keepalive = 5
 
 # Process naming

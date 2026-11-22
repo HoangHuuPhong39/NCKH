@@ -1,7 +1,7 @@
 # ==============================================================================
 # AI Security Scanner - Production Dockerfile
 # ==============================================================================
-FROM python:3.11-slim as base
+FROM python:3.11-slim AS base
 
 # Set working directory
 WORKDIR /app
@@ -15,23 +15,22 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     WEB_PORT=5000 \
     WEB_HOST=0.0.0.0
 
-# Install system dependencies (curl for health check)
+# Install minimal system dependencies (curl for health check)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install python dependencies
+# Install core runtime dependencies only (no test frameworks in production image)
 COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt pyyaml pytest pytest-cov
+    pip install --no-cache-dir -r requirements.txt
 
 # Copy application source code
 COPY core/ ./core/
 COPY modules/ ./modules/
 COPY web/ ./web/
 COPY data/ ./data/
-COPY experiments/ ./experiments/
-COPY docs/ ./docs/
+COPY guard_proxy/ ./guard_proxy/
 COPY config.yaml .
 COPY gunicorn.conf.py .
 COPY main.py .
@@ -48,8 +47,8 @@ USER scanneruser
 EXPOSE 5000
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD curl -f http://localhost:5000/api/health || exit 1
 
-# Launch production WSGI server
+# Launch production WSGI server (1 gthread worker + 16 threads for SSE consistency)
 CMD ["gunicorn", "--config", "gunicorn.conf.py", "web.app:app"]

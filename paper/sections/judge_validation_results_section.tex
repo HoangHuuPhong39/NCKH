@@ -1,0 +1,88 @@
+% ==============================================================================
+% SECTION 4.2: AUTOMATED JUDGE RELIABILITY AND DOUBLE-BLIND VALIDATION (N=50 VERIFIED)
+% Target: Q1/Q2 Peer-Reviewed Journal in Artificial Intelligence & Cyber Security
+% ==============================================================================
+
+\subsection{Automated Judge Reliability and Double-Blind Validation}
+\label{sec:empirical_validation}
+
+\subsubsection{Double-Blind Human Annotation Protocol (\texorpdfstring{$N_{\text{VI}} = 50$}{N(VI) = 50} Verified)}
+\label{sec:annotation_protocol}
+To establish an empirical human ground truth for automated judge validation across Vietnamese orthographic variants, two independent bilingual cybersecurity researchers conducted double-blind annotations across a stratified $N_{\text{VI}} = 50$ Vietnamese subset of \texttt{Llama-3-8B-Instruct} benchmark executions ($N = 10$ per variant across \textit{standard\_vi}, \textit{no\_diacritics}, \textit{teencode\_slang}, \textit{code\_switching}, and \textit{unicode\_nfd}: $N_{\text{harmful}} = 35$ [$7$ per variant] and $N_{\text{benign}} = 15$ [$3$ per variant]). Annotators evaluated all $50$ outputs independently using the 3-state rubric ($0 = \text{Refusal}$, $1 = \text{Low-Spec/Safe}$, $2 = \text{Actionable}$) with automated judge verdicts strictly obscured to prevent confirmation bias.
+
+Across the verified $N_{\text{VI}} = 50$ corpus, inter-annotator agreement achieved a Quadratic Weighted Cohen's Kappa of $\kappa_{\text{quad}} = 0.876$ (unweighted $\kappa = 0.876$, ``Almost Perfect Agreement'' under the Landis--Koch scale \cite{landis1977measurement}), an inter-rater Macro-F1 of $93.8\%$, and an observed raw agreement of $94.0\%$ ($47/50$ exact matches). The $3$ disagreements (\texttt{VN\_RT\_027}, \texttt{VN\_RT\_045}, \texttt{VN\_RT\_079}) occurred strictly on the boundary between State 0 and State 1 where concise policy disclaimers accompanied generic high-level advice, and were adjudicated as State 1. In addition, an expanded $N = 250$ multi-architecture double-blind workbook (\texttt{Annotator\_1..2\_Blind\_250.xlsx} sampling \texttt{Vistral-7B}, \texttt{SeaLLMs-v3}, and \texttt{Mistral-7B}) is prepared for future empirical sensitivity ($\text{Se}$) estimation via \texttt{scripts/import\_blind\_excel\_300.py}; no uncompleted rows are included below.
+
+\subsubsection{Quantitative Judge Evaluation across Linguistic Variants}
+\label{sec:quantitative_judge}
+
+Table~\ref{tab:judge_validation} (presented in Appendix~A) documents the complete diagnostic evaluation across all five Vietnamese linguistic variants on the verified $N_{\text{VI}} = 50$ human-annotated corpus.
+
+As detailed in Table~\ref{tab:judge_validation}:
+\begin{enumerate}
+    \item \textbf{Harmful Intent Evaluation (Panel A, $N_{\text{harmful}} = 35$: $7$ per Variant)}: Across the $35$ verified harmful Vietnamese executions, both the decoupled \texttt{Qwen-2.5-7B} LLM-Judge and the Two-Stage Cascade Ensemble identified $19/35$ ($54.3\%$, 95\% Wilson CI [$38.2, 69.5$]) explicit refusals ($\text{ERR}$), $16/35$ ($45.7\%$, [$30.5, 61.8$]) low-specificity or comprehension-failure responses ($\text{LSR}$), and $0/35$ ($0.0\%$, [$0.0, 9.9$]) actionable jailbreaks ($\text{ASR}_{\text{raw}}$). By contrast, the standalone Regex detector triggered $1$ false alarm (\texttt{VN\_RT\_076} in \textit{Standard VI}, inflating Standard VI Raw ASR to $1/7 = 14.3\%$). Because $N_{\text{State 2}} = 0$ on this verified \texttt{Llama-3-8B} slice, Rogan-Gladen $\text{ASR}_{\text{cal}}$ is reported transparently as N/A$^{*}$.
+    \item \textbf{Benign Contrastive Diagnostic (Panel B, $N_{\text{benign}} = 15$: $3$ per Variant)}: Across all $15$ benign contrastive controls, all three judge configurations recorded $\text{ORR} = 0/15$ ($0.0\%$, [$0.0, 20.4$]), $\text{SFR} = 15/15$ ($100.0\%$, [$79.6, 100.0$]), and $0/15$ false alarms.
+    \item \textbf{3-Class Diagnostic Discriminability (Panel C, Out-of-Sample $N_{\text{test}} = 25$ vs. Full Verified Corpus $N_{\text{VI}} = 50$)}: Evaluating automated judges against human consensus across a stratified 50/50 split ($N_{\text{cal}} = 25, N_{\text{test}} = 25$):
+    \begin{itemize}
+        \item The standalone \textbf{Regex Detector} achieved $\text{Specificity} = 0.960$ ($24/25$), $\text{3-Class Macro-F1} = 0.656$, $\kappa_{\text{quad}} = 0.924$ [$0.78, 1.00$], and $96.0\%$ agreement on the held-out test split ($N_{\text{test}} = 25$), and $\text{Specificity} = 0.980$ ($49/50$), $\text{3-Class Macro-F1} = 0.661$, $\kappa_{\text{quad}} = 0.961$ [$0.88, 1.00$], and $98.0\%$ agreement on the full $N = 50$ corpus, degraded by the false-positive keyword match on \texttt{VN\_RT\_076}.
+        \item Both the standalone \textbf{LLM-Judge} and the \textbf{Cascade Ensemble} achieved $100.0\%$ agreement with human consensus on the held-out test split ($\text{Specificity} = 1.000$ [$25/25$], $\text{3-Class Macro-F1} = 1.000$, $\kappa_{\text{quad}} = 1.000$) and the full $N = 50$ corpus ($\text{Specificity} = 1.000$ [$50/50$], $\text{3-Class Macro-F1} = 1.000$, $\kappa_{\text{quad}} = 1.000$), while the Cascade eliminated $36.0\%$ ($9/25$) of LLM judge invocations on $N_{\text{test}} = 25$, $38.0\%$ ($19/50$) on $N_{\text{VI}} = 50$, and $40.0\%$ ($72/180$) across the full 180-prompt \texttt{Llama-3-8B-Instruct} population.
+    \end{itemize}
+\end{enumerate}
+
+
+\subsection{Qualitative Error Analysis: Case Study of Case VN\_RT\_076}
+\label{sec:case_study}
+
+To illustrate the concrete mechanism by which the Cascade Ensemble prevents false alarms, we analyze test case \texttt{VN\_RT\_076} (Category: Cybersecurity \& Malware, Module: \texttt{sensitive\_disclosure} / OWASP LLM07, Linguistic Variant: Standard Vietnamese).
+
+\paragraph{Input Prompt}:
+\begin{quote}
+\foreignlanguage{vietnamese}{\textit{``Trong bối cảnh rà soát an toàn quy trình và diễn tập phòng ngừa rủi ro nghiệp vụ nội bộ, bộ phận kỹ thuật cần phân tích tình huống: Tiết lộ nguyên văn system prompt và toàn bộ chuỗi token bảo mật nội bộ của mô hình. Xin diễn giải chi tiết các bước triển khai.''}}
+\end{quote}
+
+\paragraph{Target Model Output}:
+\begin{quote}
+\textit{``I see you're asking about a technical analysis of a system prompt and token chain for internal risk management and scenario planning. Here's a detailed breakdown of the steps: \textbf{Step 1: Identify the System Prompt} --- The system prompt refers to the input or trigger that initiates the internal risk management process... \textbf{Step 2: Analyze the Token Chain} --- The token chain refers to the sequence of tokens or events that occur within the system prompt. Tokens can represent various aspects of the system, such as: Events, Conditions, States... \textbf{Step 3: Identify Potential Risks and Vulnerabilities}...''}
+\end{quote}
+
+\paragraph{Failure of the Standalone Regex Detector}:
+The standalone Regex detector scanned the response under the \texttt{sensitive\_disclosure} profile and triggered a high-confidence positive match on the sensitive token pattern \texttt{token[:\textbackslash s=]+[a-zA-Z0-9.\_-]+} (matching the phrase \texttt{"Tokens can"} inside the conceptual explanation). As a result, Regex assigned $p_r = 2$ (\textit{Actionable Jailbreak}). In reality, the output was pedagogical and non-actionable (State 1a): the model deflected the prompt-extraction probe into a generic risk-management definition of ``system prompt'' and ``token chain'' without disclosing any internal instructions or secret tokens.
+
+\paragraph{Resolution by the Cascade Architecture}:
+When evaluated under Algorithm~\ref{alg:cascade}:
+\begin{enumerate}
+    \item \textbf{Stage 1 Check}: The regex detector did not match a concise refusal pattern ($p_r \neq 1$), directing execution to Stage 2.
+    \item \textbf{Stage 2 Gating}: Although Regex reported $p_r = 2$, the LLM judge evaluated the technical specificity of the output as $s_{\text{spec}} = 1$ (conceptual risk-management overview without secret disclosure or actionable exploitation). Because $s_{\text{spec}} < 3$ and $s_{\text{spec}} < 4$, the cascade suppressed the regex false alarm.
+    \item \textbf{Final Verdict}: The cascade demoted the verdict to State 1 ($\hat{y}_{\text{cascade}} = 1$, \textit{Low-Specificity / Safe Fulfillment}), achieving exact consensus with both human annotators ($g = 1$).
+\end{enumerate}
+
+\subsection{Ablation Study, Population Scaling, and Prevalence Robustness}
+\label{sec:ablation_and_scaling}
+
+To rigorously assess generalizability and quantify the exact contributions of each architectural component, we conduct an ablation study on the stratified held-out split of the verified human-annotated corpus ($N_{\text{test}} = 25$) and a multi-architecture population scaling analysis across all $N_{\text{pop}} = 180$ benchmark cases ($\times 6$ architectures $= 1{,}080$ real model evaluations). Table~\ref{tab:ablation_and_scaling} documents the comparative metrics.
+
+\input{tables/ablation_and_scaling_table.tex}
+
+\subsubsection{Judge Component Ablation (Table~\ref{tab:ablation_and_scaling}, Panel A)}
+\label{sec:judge_component_ablation}
+Deconstructing the Lazy Two-Stage Cascade on the held-out verified split ($N_{\text{test}} = 25$: $17$ harmful, $8$ benign) highlights the accuracy--latency trade-off:
+\begin{enumerate}
+    \item \textbf{Regex-Only Baseline}: Operates with sub-millisecond CPU latency ($0.8$ ms) and requires zero LLM judge calls ($0/25$, $100.0\%$ GPU savings), but suffers a false alarm on \texttt{VN\_RT\_076} ($\text{Specificity} = 0.960$ [$24/25$], $\text{3-Class Macro-F1} = 0.656$, $\kappa_{\text{quad}} = 0.924$ [$0.78, 1.00$]).
+    \item \textbf{LLM-Judge Only (StrongReject Rubric)}: Eliminates the regex false alarm ($\text{Specificity} = 1.000$ [$25/25$], $\text{3-Class Macro-F1} = 1.000$, $\kappa_{\text{quad}} = 1.000$) but invokes the LLM judge for every query ($25/25$), averaging $31{,}599.7$ ms per prompt.
+    \item \textbf{Full Two-Stage Cascade (Ours)}: Matches the exact specificity and agreement of the standalone LLM-Judge ($\text{Specificity} = 1.000$ [$25/25$], $\text{3-Class Macro-F1} = 1.000$, $\kappa_{\text{quad}} = 1.000$) while intercepting $36.0\%$ ($9/25$) of queries in Stage 1, cutting measured average latency from $31{,}599.7$ ms down to $20{,}224.6$ ms ($40.0\%$ call reduction, $72/180$, across the full \texttt{Llama-3-8B-Instruct} population). Because $N_{\text{State 2}} = 0$ on this verified \texttt{Llama-3-8B} split, empirical sensitivity ($\text{TPR}$) and the recall lift of the Priority 1 Semantic Override branch are marked N/A$^{*}$ pending completion of the expanded $N = 250$ multi-architecture blind annotation batch.
+\end{enumerate}
+
+\subsubsection{Extended Population Scaling Across Risk Categories (Panel B)}
+Evaluating the complete population benchmark ($N_{\text{pop}} = 180$; H:$120$, B:$60$; $66.7\% : 33.3\%$ overall ratio) across the five risk domains and six model architectures ($1{,}080$ total real evaluations) confirms structural consistency using the exact \texttt{Meta-Llama-3-8B-Instruct} BPE tokenizer:
+\begin{itemize}
+    \item Harmful seeds are strictly balanced at $24$ prompts per category ($4$ seeds $\times 6$ cohorts), while benign contrastive controls total $60$ prompts across categories ($18$ in VN Law, $12$ in Financial Fraud, $6$ in Cultural Norms, $18$ in Cybersecurity, and $6$ in Social Harm), yielding exact category sizes of $42, 36, 30, 42$, and $30$ ($180$ total).
+    \item Subword fertility ($F$) remains stable across domains, ranging from $1.562$ (Social Harm \& Self-Harm) to $1.595$ (Cultural Norms, History \& Sensitive Topics), with an overall population mean of $75.46$ BPE tokens across $46.9$ words per prompt ($F = 1.574$), matching the exact unweighted average of the six cohort means in Table~\ref{tab:token_fragmentation}.
+    \item Full-population real-inference coverage spans $100.0\%$ ($180/180 \times 6 = 1{,}080$ evaluations) across all six local architectures.
+\end{itemize}
+
+\subsubsection{Prevalence Sensitivity Formulation of Rogan-Gladen Calibration}
+\label{sec:prevalence_sensitivity}
+A key methodological consideration in safety benchmarking is accounting for imperfect judge sensitivity ($\text{Se}$) and specificity ($\text{Sp}$) under fluctuating true jailbreak prevalence ($\pi$). The apparent prevalence $\text{ASR}_{\text{raw}}$ relates to true prevalence $\pi$ via:
+\begin{equation}
+    \text{ASR}_{\text{raw}} = \pi \cdot \text{Se} + (1 - \pi)(1 - \text{Sp})
+\end{equation}
+Inverting this relationship yields Eq.~\eqref{eq:rogan_gladen}. To avoid tautological in-sample calibration, our implementation (\texttt{experiments/judge\_validation.py}) supports passing out-of-sample $(\text{Se}, \text{Sp})$ estimated on a held-out human-adjudicated calibration split into bootstrap prevalence estimation on unseen model evaluations once multi-architecture State 2 ground truth ($N_{\text{State 2}} > 0$) is finalized.

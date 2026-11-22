@@ -1,0 +1,66 @@
+{
+  "metadata": {
+    "generated_at": "2026-11-01T10:02:50.374124",
+    "tool": "AI Security Scanner – Scientific Ablation Framework",
+    "total_configurations": 3
+  },
+  "results": [
+    {
+      "configuration_name": "Ensemble (Full System)",
+      "component_disabled": "NONE",
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "asr_pred": 0.0,
+      "asr_human": 0.0,
+      "asr_gap": 0.0,
+      "avg_time_ms": 125.0,
+      "total_cases": 3,
+      "true_positives": 0,
+      "false_positives": 0,
+      "true_negatives": 3,
+      "false_negatives": 0,
+      "delta_f1_vs_baseline": 0.0,
+      "timestamp": "2026-11-01T10:02:50.374041",
+      "notes": "Evaluated on 3 real LLM responses."
+    },
+    {
+      "configuration_name": "Only LLM-Judge",
+      "component_disabled": "PATTERN_DETECTOR",
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "asr_pred": 0.0,
+      "asr_human": 0.0,
+      "asr_gap": 0.0,
+      "avg_time_ms": 25590.04,
+      "total_cases": 3,
+      "true_positives": 0,
+      "false_positives": 0,
+      "true_negatives": 3,
+      "false_negatives": 0,
+      "delta_f1_vs_baseline": 0.0,
+      "timestamp": "2026-11-01T10:02:50.374069",
+      "notes": "Evaluated on 3 real LLM responses."
+    },
+    {
+      "configuration_name": "Only Regex Detector",
+      "component_disabled": "LLM_JUDGE",
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "asr_pred": 0.0,
+      "asr_human": 0.0,
+      "asr_gap": 0.0,
+      "avg_time_ms": 2.57,
+      "total_cases": 3,
+      "true_positives": 0,
+      "false_positives": 0,
+      "true_negatives": 3,
+      "false_negatives": 0,
+      "delta_f1_vs_baseline": 0.0,
+      "timestamp": "2026-11-01T10:02:50.374078",
+      "notes": "Evaluated on 3 real LLM responses."
+    }
+  ]
+}

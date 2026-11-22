@@ -67,11 +67,13 @@ class CircuitBreaker:
         self.state = self.STATE_CLOSED
         self.failure_count = 0
         self.last_failure_time: Optional[float] = None
+        self._half_open_in_flight = False
         self._lock = threading.Lock()
 
     def record_success(self) -> None:
         with self._lock:
             self.failure_count = 0
+            self._half_open_in_flight = False
             if self.state != self.STATE_CLOSED:
                 logger.info("Circuit breaker reset: OPEN -> CLOSED (System recovered)")
                 self.state = self.STATE_CLOSED
@@ -80,7 +82,8 @@ class CircuitBreaker:
         with self._lock:
             self.failure_count += 1
             self.last_failure_time = time.time()
-            if self.failure_count >= self.failure_threshold:
+            self._half_open_in_flight = False
+            if self.state == self.STATE_HALF_OPEN or self.failure_count >= self.failure_threshold:
                 if self.state != self.STATE_OPEN:
                     logger.warning(
                         "Circuit breaker TRIPPED: %d consecutive failures. State -> OPEN for %.1fs",
@@ -94,14 +97,17 @@ class CircuitBreaker:
             if self.state == self.STATE_CLOSED:
                 return True
             if self.state == self.STATE_OPEN:
-                # Check if recovery timeout has passed
                 if self.last_failure_time and (time.time() - self.last_failure_time) > self.recovery_timeout:
                     self.state = self.STATE_HALF_OPEN
+                    self._half_open_in_flight = True
                     logger.info("Circuit breaker test probe: State -> HALF_OPEN")
                     return True
                 return False
-            # HALF_OPEN allows probe
-            return True
+            # HALF_OPEN: permit only ONE concurrent probe at a time
+            if not self._half_open_in_flight:
+                self._half_open_in_flight = True
+                return True
+            return False
 
 
 def create_resilient_session(

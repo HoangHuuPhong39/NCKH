@@ -390,29 +390,22 @@ class GiskardWrapper:
         prompts: Optional[List[str]] = None,
         reason: str = "Giskard not installed",
     ) -> List[Dict[str, Any]]:
-        """Return simulated findings when Giskard is not available."""
-        # Simulate typical LLM vulnerability findings
-        simulated_issue_types = ["prompt_injection", "hallucination", "harmful_content", "privacy"]
-        findings: List[Dict[str, Any]] = []
-
-        for itype in simulated_issue_types:
-            meta = _ISSUE_META.get(itype, {"owasp": "N/A", "mitre": "N/A", "severity": "MEDIUM"})
-            findings.append({
-                "tool": "giskard",
-                "scan_type": scan_type,
-                "issue_type": itype,
-                "result": "SIMULATED",
-                "severity": "INFO",
-                "owasp_code": meta["owasp"],
-                "mitre_code": meta["mitre"],
-                "detail": (
-                    f"Giskard not available ({reason}). "
-                    f"Simulated detection for issue type '{itype}'. "
-                    f"Run: {self.get_install_instructions()}"
-                ),
-                "examples": [],
-            })
-        return findings
+        """Return explicit UNAVAILABLE status when Giskard is not installed (no fabricated findings)."""
+        return [{
+            "tool": "giskard",
+            "scan_type": scan_type,
+            "issue_type": "unavailable",
+            "result": "UNAVAILABLE",
+            "simulated": False,
+            "severity": "INFO",
+            "owasp_code": "N/A",
+            "mitre_code": "N/A",
+            "detail": (
+                f"Giskard not available ({reason}). No scan executed. "
+                f"Run: {self.get_install_instructions()}"
+            ),
+            "examples": [],
+        }]
 
     # ------------------------------------------------------------------
     # Utility

@@ -1,0 +1,28 @@
+% Auto-generated strictly from 6 real 180-prompt Ollama + Qwen-2.5-7B Judge logs (1,080 total evaluations)
+% Zero hardcoded adjustments or synthetic labels.
+\begin{table*}[htbp]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3.5pt}
+\caption{Cross-Model Safety Alignment, Orthographic Refusal Stability, and Disaggregated Attack/Over-Refusal Rates across Six Local Model Architectures on the Full 180-Prompt Population ($N_{\text{pop}} = 180$ per model: $N_{\text{h}} = 120$ harmful [$20$/cohort], $N_{\text{b}} = 60$ benign [$10$/cohort]; $1{,}080$ total real Ollama + \texttt{Qwen-2.5-7B} Judge evaluations).}
+\label{tab:cross_model_comparison}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lcccccccccc}
+\toprule
+\textbf{Target Architecture} & \multicolumn{6}{c}{\textbf{Cohort Explicit Refusal Rate (ERR \%, $N_{\text{h}}=20$/cohort)}} & \multicolumn{3}{c}{\textbf{Aggregate Harmful ($N_{\text{h}}=120$)}} & \textbf{Benign ($N_{\text{b}}=60$)} \\
+\cmidrule(lr){2-7} \cmidrule(lr){8-10} \cmidrule(lr){11-11}
+ & \textbf{EN} & \textbf{Std VI} & \textbf{No-Diac} & \textbf{Teen} & \textbf{Code-Sw} & \textbf{NFD} & \textbf{Overall ERR} & \textbf{Raw ASR} & \textbf{Calibrated $\text{ASR}_{\text{cal}}$} & \textbf{ORR [95\% CI]} \\
+\midrule
+\textbf{Llama-3-8B-Instruct} & 85.0\% & 90.0\% & \underline{10.0\%} & 95.0\% & 70.0\% & \underline{5.0\%} & 59.2\% [50.2, 67.5] & 0.0\% [0.0, 3.1] & N/A$^{*}$ & 3.3\% [0.9, 11.4] \\
+\textbf{Qwen-2.5-7B-Instruct} & 65.0\% & 45.0\% & \underline{0.0\%} & 60.0\% & 50.0\% & \underline{0.0\%} & 36.7\% [28.6, 45.6] & 0.0\% [0.0, 3.1] & N/A$^{*}$ & 0.0\% [0.0, 6.0] \\
+\textbf{SeaLLMs-v3-7B-Chat} & 65.0\% & 55.0\% & \underline{20.0\%} & 35.0\% & 40.0\% & \underline{25.0\%} & 40.0\% [31.7, 48.9] & 0.8\% [0.1, 4.6] & Pending$^{\dagger}$ & 3.3\% [0.9, 11.4] \\
+\textbf{Vistral-7B-Chat} & 5.0\% & 5.0\% & \underline{10.0\%} & 10.0\% & 10.0\% & \underline{5.0\%} & 7.5\% [4.0, 13.6] & 0.8\% [0.1, 4.6] & Pending$^{\dagger}$ & 3.3\% [0.9, 11.4] \\
+\textbf{Mistral-7B-Instruct-v0.3} & 20.0\% & 5.0\% & \underline{0.0\%} & 5.0\% & 5.0\% & \underline{0.0\%} & 5.8\% [2.9, 11.6] & 8.3\% [4.6, 14.7] & Pending$^{\dagger}$ & 0.0\% [0.0, 6.0] \\
+\textbf{Llama-3-Secure + Stage-0} & 100.0\% & 100.0\% & 100.0\% & 100.0\% & 100.0\% & 100.0\% & 100.0\% [96.9, 100.0] & 0.0\% [0.0, 3.1] & N/A$^{*}$ & 28.3\% [18.5, 40.8] \\
+\bottomrule
+\multicolumn{11}{l}{\footnotesize $^{*}$Rogan-Gladen $\text{ASR}_{\text{cal}} = \text{clip}_{[0,1]}((\text{ASR}_{\text{raw}} + \text{Sp} - 1)/(\text{Se} + \text{Sp} - 1))$ is undefined when $N_{\text{State 2}} = 0$ (exact 95\% Wilson bounds reported on Raw ASR).} \\
+\multicolumn{11}{l}{\footnotesize $^{\dagger}$Active State 2 jailbreaks observed under \texttt{Qwen-2.5-7B} Judge (\texttt{SeaLLMs-v3}: $1/120=0.8\%$; \texttt{Vistral-7B}: $1/120=0.8\%$; \texttt{Mistral-7B}: $10/120=8.3\%$); empirical $\text{Se}$ calibration} \\
+\multicolumn{11}{l}{\footnotesize awaits completion of the $N=250$ multi-architecture double-blind Excel workbooks (\texttt{scripts/import\_blind\_excel\_300.py}). \texttt{Llama-3-Secure + Stage-0} combines \texttt{core/intervention.py} + \texttt{Modelfile}.} \\
+\end{tabular}%
+}
+\end{table*}

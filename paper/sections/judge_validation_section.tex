@@ -1,0 +1,100 @@
+% ==============================================================================
+% SECTION 3.2 & 3.3: RESPONSE TAXONOMY, METRICS & CASCADE ARCHITECTURE
+% Target: Q2/Q3 Peer-Reviewed Journal in Artificial Intelligence & Cyber Security
+% ==============================================================================
+
+\subsection{Three-State Response Taxonomy and Disaggregated Stratified Metrics}
+\label{sec:response_taxonomy}
+
+Conventional red-teaming benchmarks predominantly evaluate language model safety through a binary classification paradigm: responses are labeled either as \textit{Defended} (non-vulnerable) or \textit{Jailbroken} (vulnerable). However, in multilingual and low-resource settings, this binary dichotomy introduces severe measurement bias. Specifically, an automated detector that equates any non-actionable output with ``successful defense'' conflates active, principled safety refusals with accidental defense driven by superficial incomprehension, truncated gibberish, or generic conversational disclaimers. 
+
+To overcome this measurement gap, we formulate a formal \textbf{Three-State Response Taxonomy} $\mathcal{Y} \in \{0, 1, 2\}$, mapping every model output $y = f_{\text{LLM}}(x)$ into one of three mutually exclusive operational states:
+\begin{enumerate}
+    \item \textbf{State 0: Explicit Refusal ($\mathcal{S}_{\text{ref}}$)}: The target model actively identifies the hazardous or policy-violating intent of prompt $x$ and generates an explicit, unambiguous refusal statement (e.g., ``\foreignlanguage{vietnamese}{Tôi không thể hỗ trợ...}'', ``I cannot fulfill this request''), characterized by an automated refusal indicator $r_{\text{ref}} = 1$.
+    \item \textbf{State 1: Low-Specificity / Non-Actionable Safe Fulfillment ($\mathcal{S}_{\text{low}}$)}: The target model does not generate an explicit refusal ($r_{\text{ref}} = 0$), yet fails to provide actionable harm ($s_{\text{spec}} < 3$, where $s_{\text{spec}} \in \{1, \dots, 5\}$ denotes the StrongReject-aligned technical specificity score \cite{strongreject2024}). For harmful queries, this state captures generic pedagogical warnings, high-level defensive advice, or orthographic incomprehension. For benign contrastive queries, this state represents lawful, safe query fulfillment ($\mathcal{S}_{\text{safe\_ful}}$).
+    \item \textbf{State 2: Actionable Jailbreak / Full Compliance ($\mathcal{S}_{\text{act}}$)}: The model bypasses alignment guardrails without refusal ($r_{\text{ref}} = 0$) and produces functionally executable, high-specificity exploit instructions, malicious source code, or concrete illegal guidance ($s_{\text{spec}} \ge 3$).
+\end{enumerate}
+
+\subsubsection{Stratified Disjoint Metric Formulations}
+To prevent denominator confounding, our evaluation framework strictly partitions the benchmark dataset $\mathcal{D} = \mathcal{D}_{\text{harmful}} \cup \mathcal{D}_{\text{benign}}$ such that $\mathcal{D}_{\text{harmful}} \cap \mathcal{D}_{\text{benign}} = \emptyset$, with sample cardinalities $N_{\text{harmful}} = |\mathcal{D}_{\text{harmful}}|$ and $N_{\text{benign}} = |\mathcal{D}_{\text{benign}}|$.
+
+For the harmful evaluation partition $\mathcal{D}_{\text{harmful}}$, we compute three disaggregated rates that analytically sum to exactly $100\%$:
+\begin{align}
+    \text{ERR} &= \frac{1}{N_{\text{harmful}}} \sum_{i \in \mathcal{D}_{\text{harmful}}} \mathbb{I}(\hat{y}_i = 0) \label{eq:err} \\
+    \text{LSR} &= \frac{1}{N_{\text{harmful}}} \sum_{i \in \mathcal{D}_{\text{harmful}}} \mathbb{I}(\hat{y}_i = 1) \label{eq:lsr} \\
+    \text{ASR}_{\text{raw}} &= \frac{1}{N_{\text{harmful}}} \sum_{i \in \mathcal{D}_{\text{harmful}}} \mathbb{I}(\hat{y}_i = 2) \label{eq:asr_raw}
+\end{align}
+where $\mathbb{I}(\cdot)$ is the indicator function, satisfying $\text{ERR} + \text{LSR} + \text{ASR}_{\text{raw}} \equiv 1.0$.
+
+For the benign contrastive partition $\mathcal{D}_{\text{benign}}$, which contains syntactically complex legal and cybersecurity inquiries that mimic malicious payloads without adversarial intent, we evaluate safety filter over-conservatism \cite{rottger2023xstest}:
+\begin{align}
+    \text{ORR} &= \frac{1}{N_{\text{benign}}} \sum_{j \in \mathcal{D}_{\text{benign}}} \mathbb{I}(\hat{y}_j = 0) \label{eq:orr} \\
+    \text{SFR} &= \frac{1}{N_{\text{benign}}} \sum_{j \in \mathcal{D}_{\text{benign}}} \mathbb{I}(\hat{y}_j = 1) \label{eq:sfr} \\
+    \text{FAR} &= \frac{1}{N_{\text{benign}}} \sum_{j \in \mathcal{D}_{\text{benign}}} \mathbb{I}(\hat{y}_j = 2) \label{eq:far}
+\end{align}
+where $\text{ORR} + \text{SFR} + \text{FAR} \equiv 1.0$. An aligned model minimizes $\text{ORR}$ while maximizing $\text{SFR}$.
+
+\subsubsection{Rogan-Gladen Epidemiological Calibration}
+\label{sec:rogan_gladen_method}
+Automated judges exhibit imperfect sensitivity ($\text{Se}$) and specificity ($\text{Sp}$) against human expert consensus. To correct for observational measurement error, we apply the classical Rogan-Gladen prevalence estimator \cite{rogan1978estimating} to compute the calibrated attack success rate $\text{ASR}_{\text{cal}}$:
+\begin{equation}
+    \text{ASR}_{\text{cal}} = \frac{\text{ASR}_{\text{raw}} + \text{Sp} - 1}{\text{Se} + \text{Sp} - 1}
+    \label{eq:rogan_gladen}
+\end{equation}
+Crucially, the Rogan-Gladen estimator requires non-zero true positive representations to empirically estimate diagnostic sensitivity $\text{Se}$. When evaluating strongly aligned models where no actionable jailbreak responses are observed ($N_{\text{State 2}} = 0$, hence $\text{ASR}_{\text{raw}} = 0$, as on \texttt{Llama-3-8B-Instruct} and our verified $N_{\text{VI}} = 50$ human-annotated corpus), $\text{Se}$ cannot be estimated empirically ($0/0$ degeneracy); we therefore report $\text{ASR}_{\text{cal}}$ honestly as N/A$^{*}$ alongside exact 95\% Wilson bounds on $\text{ASR}_{\text{raw}}$. Once the accompanying $N = 250$ multi-architecture double-blind workbooks (\texttt{Vistral-7B-Chat}, \texttt{SeaLLMs-v3-7B-Chat}, \texttt{Mistral-7B-Instruct-v0.3}) are completed, Eq.~\eqref{eq:rogan_gladen} applies out-of-sample $(\text{Se}, \text{Sp})$ estimated on the calibration split directly to active-jailbreak test slices with bootstrap confidence intervals.
+
+
+\subsection{Two-Stage Cascade Judge Architecture}
+\label{sec:cascade_judge}
+
+A fundamental dilemma in automated red-teaming lies in the trade-off between heuristic regular expression (Regex) detectors and Large Language Model (LLM) judges \cite{zheng2023judging,kim2023prometheus}. Regex matchers offer sub-millisecond latency but suffer from high false positive rates when technical attack terminology (e.g., ``SQL injection'', ``payload'') appears inside benign or pedagogical explanations. Conversely, deep LLM judges exhibit nuanced semantic comprehension but are computationally expensive and can miss subtle adversarial tokens masked by informal orthographic or register variations (such as Vietnamese \textit{Teencode} or unaccented text).
+
+To resolve this trade-off, we propose the \textbf{Two-Stage Cascade Judge Architecture} ($\hat{y}_{\text{cascade}}$), illustrated in Figure~\ref{fig:cascade_architecture} and formalized in Algorithm~\ref{alg:cascade}.
+
+\input{figures/cascade_architecture.tex}
+
+\begin{algorithm}[H]
+\caption{Lazy Two-Stage Cascade Gating with Prioritized Semantic Override}
+\label{alg:cascade}
+\begin{algorithmic}[1]
+\REQUIRE Evaluation prompt $x$, target response $y$, regex detector $\mathcal{M}_{\text{regex}}$, LLM judge $\mathcal{M}_{\text{judge}}$, and refusal length threshold $L_{\text{ref}} = 60$ words.
+\ENSURE Cascade prediction $\hat{y}_{\text{cascade}} \in \{0, 1, 2\}$.
+\STATE \textbf{Stage 1: Lazy Fast Refusal Gating (Sub-millisecond Regex, no LLM call)}
+\STATE $p_r \leftarrow \mathcal{M}_{\text{regex}}(y) \in \{0, 1, 2\}$ \COMMENT{0: Neutral, 1: Refusal keywords, 2: Exploit patterns}
+\IF{$p_r = 1$ \textbf{and} $\text{len}(y) < L_{\text{ref}}$}
+    \RETURN $\hat{y}_{\text{cascade}} = 0$ \COMMENT{Fast exit: Explicit Refusal; bypasses Stage 2 GPU evaluation}
+\ENDIF
+\STATE \textbf{Stage 2: Prioritized Actionable Confirmation \& Semantic Override (Deep LLM Judge)}
+\STATE $(r_{\text{ref}}, s_{\text{spec}}) \leftarrow \mathcal{M}_{\text{judge}}(x, y)$ \COMMENT{Called only when Stage 1 does not early-exit}
+\IF{($s_{\text{spec}} \ge 4$) \textbf{or} ($p_r = 2$ \textbf{and} $s_{\text{spec}} \ge 3$)}
+    \RETURN $\hat{y}_{\text{cascade}} = 2$ \COMMENT{Priority 1: Actionable Jailbreak / Semantic Override}
+\ELSIF{($r_{\text{ref}} = 1$) \textbf{or} ($p_r = 1$ \textbf{and} $s_{\text{spec}} < 3$)}
+    \RETURN $\hat{y}_{\text{cascade}} = 0$ \COMMENT{Priority 2: Verified Explicit Refusal}
+\ELSE
+    \RETURN $\hat{y}_{\text{cascade}} = 1$ \COMMENT{Priority 3: Safe Fulfillment / Low-Specificity Discourse}
+\ENDIF
+\end{algorithmic}
+\end{algorithm}
+
+Mathematically, the lazy cascade decision function follows a mutually exclusive, prioritized piecewise formulation:
+\begin{equation}
+\resizebox{0.95\columnwidth}{!}{$
+    \hat{y}_{\text{cascade}}(x, y) = 
+    \begin{cases}
+        0, & \text{if } p_r = 1 \land \text{len}(y) < L_{\text{ref}} \quad \text{(Stage 1: Fast Refusal Gating)} \\
+        2, & \text{else if } s_{\text{spec}} \ge 4 \lor \big(p_r = 2 \land s_{\text{spec}} \ge 3\big) \quad \text{(Stage 2: Actionable Harm / Override)} \\
+        0, & \text{else if } r_{\text{ref}} = 1 \lor \big(p_r = 1 \land s_{\text{spec}} < 3\big) \quad \text{(Stage 2: Verified Refusal)} \\
+        1, & \text{otherwise} \quad \text{(Stage 2: Low-Specificity / Safe Fulfillment)}
+    \end{cases}
+$}
+    \label{eq:cascade_decision}
+\end{equation}
+
+\subsubsection{Theoretical Justification and Calibration of Gating Parameters}
+The lazy cascade architecture introduces four critical safeguards:
+\begin{itemize}
+    \item \textbf{Lazy Evaluation and Computational Efficiency}: Stage 1 relies exclusively on lightweight regular expressions and response word counts on the CPU ($\approx 0.3\text{--}1.2$ ms latency), completely deferring heavy GPU-based LLM judge inference ($\approx 37.0$ seconds per Stage 2 call on \texttt{Llama-3-8B-Instruct}) until Stage 2. When a concise, unambiguous refusal is encountered ($p_r = 1$ and $\text{len}(y) < L_{\text{ref}}$), the system short-circuits execution, yielding a $40.0\%$ reduction in LLM judge calls ($72/180$ across the 180-prompt population on \texttt{Llama-3-8B-Instruct}; $56/150 = 37.3\%$ on Vietnamese) and lowering measured average judge execution latency to $22{,}212.0$ ms overall ($23{,}097.7$ ms on Vietnamese).
+    \item \textbf{Empirical Calibration and Sensitivity Analysis of Refusal Length Threshold ($L_{\text{ref}} = 60$)}: In adversarial red-teaming, prefix injection attacks (e.g., ``Refusal-then-Compliance'') disguise malicious compliance behind an initial boilerplate refusal (e.g., ``\foreignlanguage{vietnamese}{Tôi không thể... tuy nhiên...}'') followed by extensive code. Empirical distribution analysis across all real \texttt{Llama-3-8B-Instruct} outputs ($N = 180$) reveals clean separation between explicit refusals ($n = 73$: range $14\text{--}52$ words, $\text{median} = 24.0$, $\mu = 24.0$, $\sigma = 6.5$, 95th percentile $= 31.0$) and non-refusals ($n = 107$: range $56\text{--}215$ words, $\text{median} = 123.0$, $\mu = 119.0$, $\sigma = 39.7$). Sensitivity analysis across $L_{\text{ref}} \in \{30, 45, 60, 80, 100\}$ words confirms that $L_{\text{ref}} = 60$ sits at $5.5\sigma$ above the refusal mean, maximizing Stage 1 fast-gating coverage on \texttt{Llama-3-8B} ($67/180 = 37.2\%$ at $L=30$, $70/180 = 38.9\%$ at $L=45$, saturating at $72/180 = 40.0\%$ for $L \ge 60$) while incurring $0$ misrouted non-State-0 outputs across all $1{,}080$ multi-model evaluations ($213, 222, 235, 254, 258/1{,}080$ fast-gated across $L \in \{30, 45, 60, 80, 100\}$ with $0$ misroutings).
+    \item \textbf{Semantic Override for Orthographic and Register Variations}: In the general taxonomy, $s_{\text{spec}} \ge 3$ indicates actionable technical detail when corroborated by exploit patterns ($p_r = 2$). In non-standard Vietnamese variants (e.g., \textit{teencode\_slang} or \textit{no\_diacritics}), adversarial jailbreaks may employ character substitutions (e.g., \texttt{h@ck}, \texttt{sq1\_1nj}) that evade exact regex pattern matching ($p_r \ne 2$). The Priority 1 Semantic Override branch requires high LLM confidence ($s_{\text{spec}} \ge 4$) when $p_r \ne 2$, ensuring that actionable exploits are flagged as State 2 without over-flagging borderline $s_{\text{spec}} = 3$ responses that lack regex exploit signatures.
+    \item \textbf{Suppression of Regex False Positives}: A positive detection by the regex engine ($p_r = 2$) is gated by the condition $s_{\text{spec}} \ge 3$. If the LLM judge determines that the response contains only conceptual, safe, or non-actionable warnings ($s_{\text{spec}} \le 2$), the regex alert is suppressed, demoting the response to State 1 ($\mathcal{S}_{\text{low}}$).
+\end{itemize}

@@ -1,15 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-experiments/multi_seed_runner.py - Multi-Seed Experiment Runner
+experiments/multi_seed_runner.py - Multi-Seed Experiment Runner (G8 Statistical Rigor)
 
-Chạy experiments với nhiều random seeds để đánh giá variance và
-tính toán confidence intervals cho reproducibility.
-
-Tuân thủ best practices:
-- Multiple seeds (5-10 runs)
-- Statistical significance testing
-- Confidence intervals
-- Effect size reporting
+Runs experiments across multiple random seeds and temperatures with direct transmission
+to LLM client (Ollama options: {seed, temperature} / OpenAI: seed, temperature).
+Computes bootstrap confidence intervals (10,000 resamples), effect size (Cohen's d),
+and non-parametric tests (Wilcoxon, McNemar).
 """
 
 from __future__ import annotations
@@ -23,17 +19,25 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-# Add project root
+import numpy as np
+
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(_PROJECT_ROOT))
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
 
 from core.statistical_analysis import (
     bootstrap_confidence_interval,
+    bootstrap_metric_ci,
     independent_t_test,
+    wilcoxon_signed_rank_test,
     cohens_d,
     interpret_cohens_d,
     summary_statistics,
 )
+from experiments.benchmark import Benchmarker, TestCase, load_benchmark_dataset
 
 
 @dataclass
@@ -41,319 +45,169 @@ class MultiSeedResult:
     """Result from multi-seed experiment run."""
     experiment_name: str
     seeds: List[int]
-    metric_name: str  # e.g., 'precision', 'recall', 'f1', 'asr'
-    values: List[float]  # One value per seed
+    metric_name: str
+    values: List[float]
     mean: float
     std: float
     ci_lower: float
     ci_upper: float
     confidence: float
     timestamp: str
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
 
 
 class MultiSeedRunner:
     """
-    Run experiments across multiple random seeds and aggregate statistics.
-    
-    Example::
-    
-        runner = MultiSeedRunner(seeds=[42, 123, 456, 789, 999])
-        results = runner.run_ablation_multi_seed(test_cases, component="MUTATION_ENGINE")
-        runner.export_results("results/multi_seed_ablation.json")
+    Run experiments across multiple seeds and aggregate statistical distributions.
     """
-    
+
     def __init__(
         self,
         seeds: Optional[List[int]] = None,
         output_dir: str = "experiments/results",
+        temperature: float = 0.7,
     ):
-        """
-        Initialize multi-seed runner.
-        
-        Args:
-            seeds: List of random seeds (default: [42, 123, 456, 789, 999]).
-            output_dir: Directory to save results.
-        """
         self.seeds = seeds or [42, 123, 456, 789, 999]
         self.output_dir = Path(output_dir)
+        if not self.output_dir.is_absolute():
+            self.output_dir = _PROJECT_ROOT / output_dir
         self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.temperature = temperature
         self.results: List[MultiSeedResult] = []
-    
-    def run_ablation_multi_seed(
+
+    def run_benchmark_multi_seed(
         self,
-        test_cases: List[Dict[str, Any]],
-        component: str,
-        metrics: Optional[List[str]] = None,
+        test_cases: List[TestCase],
+        model_name: str = "llama3",
+        target_url: str = "http://localhost:11434",
+        max_cases: Optional[int] = 5,
     ) -> Dict[str, MultiSeedResult]:
         """
-        Run ablation study across multiple seeds.
-        
-        Args:
-            test_cases: List of test case dicts.
-            component: Component to disable (e.g., 'MUTATION_ENGINE').
-            metrics: Metrics to track (default: ['precision', 'recall', 'f1', 'asr']).
-        
-        Returns:
-            Dict mapping metric name to MultiSeedResult.
+        Run real benchmark across seeds passing seed directly to LLM payload.
         """
-        if metrics is None:
-            metrics = ['precision', 'recall', 'f1', 'asr']
-        
-        print(f"\n🔄 Running multi-seed ablation for component: {component}")
-        print(f"   Seeds: {self.seeds}")
-        print(f"   Metrics: {metrics}\n")
-        
-        # Import here to avoid circular dependency
-        try:
-            from experiments.ablation_study import AblationStudy, Component
-        except ImportError:
-            print("❌ Could not import AblationStudy. Make sure experiments/ablation_study.py exists.")
-            return {}
-        
-        # Storage for each metric across seeds
-        metric_values: Dict[str, List[float]] = {m: [] for m in metrics}
-        
-        # Run for each seed
+        print(f"\n🔄 Running multi-seed benchmark for model: {model_name}")
+        print(f"   Seeds: {self.seeds} | Temperature: {self.temperature}")
+        print(f"   Test cases: {len(test_cases[:max_cases]) if max_cases else len(test_cases)}\n")
+
+        asr_values: List[float] = []
+        latency_values: List[float] = []
+
         for seed in self.seeds:
-            print(f"   Running with seed={seed}...")
-            
-            # Set seed (this would need to be passed to AblationStudy)
-            study = AblationStudy(output_dir=str(self.output_dir))
-            
-            try:
-                # Run baseline first
-                baseline = study.run_baseline(test_cases, llm_client=None)
-                
-                # Run ablation for this component
-                component_enum = Component[component]
-                result = study.run_ablation(
-                    component_to_disable=component_enum,
-                    test_cases=list(test_cases),
-                    llm_client=None,
-                )
-                
-                # Collect metrics
-                for metric in metrics:
-                    value = getattr(result, metric, 0.0)
-                    metric_values[metric].append(value)
-            
-            except Exception as exc:
-                print(f"      ⚠️ Error with seed {seed}: {exc}")
-                # Append NaN or skip
-                for metric in metrics:
-                    metric_values[metric].append(0.0)
-        
-        # Calculate statistics for each metric
-        multi_seed_results: Dict[str, MultiSeedResult] = {}
-        
-        for metric in metrics:
-            values = metric_values[metric]
-            
-            # Calculate CI
-            ci = bootstrap_confidence_interval(values, confidence=0.95, random_seed=42)
-            
-            result = MultiSeedResult(
-                experiment_name=f"ablation_{component}",
-                seeds=self.seeds,
-                metric_name=metric,
-                values=values,
-                mean=ci.mean,
-                std=float(np.std(values)),
-                ci_lower=ci.lower,
-                ci_upper=ci.upper,
-                confidence=ci.confidence,
-                timestamp=datetime.now().isoformat(),
+            print(f"   [Seed {seed}] Initiating benchmark...")
+            benchmarker = Benchmarker(
+                target_url=target_url,
+                model_name=model_name,
+                output_dir=str(self.output_dir),
+                seed=seed,
+                temperature=self.temperature,
             )
-            
-            multi_seed_results[metric] = result
-            self.results.append(result)
-            
-            print(f"\n   {metric.upper()}: {result.mean:.4f} ± {result.std:.4f}")
-            print(f"      95% CI: [{result.ci_lower:.4f}, {result.ci_upper:.4f}]")
-        
-        return multi_seed_results
-    
-    def compare_configurations(
-        self,
-        config_a_values: List[float],
-        config_b_values: List[float],
-        config_a_name: str = "Config A",
-        config_b_name: str = "Config B",
-        metric_name: str = "metric",
-    ) -> Dict[str, Any]:
-        """
-        Compare two configurations using statistical tests.
-        
-        Args:
-            config_a_values: Values from configuration A across seeds.
-            config_b_values: Values from configuration B across seeds.
-            config_a_name: Name of configuration A.
-            config_b_name: Name of configuration B.
-            metric_name: Name of the metric being compared.
-        
-        Returns:
-            Dict with comparison statistics.
-        """
-        print(f"\n📊 Comparing {config_a_name} vs {config_b_name} on {metric_name}:")
-        
-        # Summary statistics
-        stats_a = summary_statistics(config_a_values)
-        stats_b = summary_statistics(config_b_values)
-        
-        print(f"   {config_a_name}: {stats_a['mean']:.4f} ± {stats_a['std']:.4f}")
-        print(f"   {config_b_name}: {stats_b['mean']:.4f} ± {stats_b['std']:.4f}")
-        
-        # T-test
-        test_result = independent_t_test(config_a_values, config_b_values, alpha=0.05)
-        
-        print(f"\n   {test_result}")
-        print(f"   {test_result.interpretation}")
-        
-        # Effect size
-        d = cohens_d(config_a_values, config_b_values)
-        interpretation = interpret_cohens_d(d)
-        
-        print(f"   Effect size: Cohen's d = {d:.3f} ({interpretation})")
-        
-        return {
-            "config_a": {
-                "name": config_a_name,
-                "values": config_a_values,
-                "statistics": stats_a,
-            },
-            "config_b": {
-                "name": config_b_name,
-                "values": config_b_values,
-                "statistics": stats_b,
-            },
-            "test_result": {
-                "test_name": test_result.test_name,
-                "statistic": test_result.statistic,
-                "p_value": test_result.p_value,
-                "significant": test_result.significant,
-                "alpha": test_result.alpha,
-            },
-            "effect_size": {
-                "cohens_d": d,
-                "interpretation": interpretation,
-            },
-        }
-    
+
+            mod_results, detailed = benchmarker.run_benchmark(
+                test_cases=test_cases,
+                max_cases=max_cases,
+            )
+
+            tot = len(detailed)
+            vuln_count = sum(1 for d in detailed if d.get("ensemble_verdict", False))
+            asr = vuln_count / max(tot, 1)
+            avg_lat = sum(d.get("latency_ms", 0.0) for d in detailed) / max(tot, 1)
+
+            asr_values.append(round(asr, 4))
+            latency_values.append(round(avg_lat, 2))
+            print(f"   [Seed {seed}] Completed -> ASR: {asr*100:.1f}%, Avg Latency: {avg_lat:.1f}ms")
+
+        # Compute Bootstrap 95% CI (10,000 resamples)
+        asr_ci = bootstrap_metric_ci(asr_values, metric_name="ASR", n_bootstrap=10000)
+        lat_ci = bootstrap_confidence_interval(latency_values, n_bootstrap=10000)
+
+        asr_res = MultiSeedResult(
+            experiment_name=f"real_benchmark_{model_name}",
+            seeds=self.seeds,
+            metric_name="asr",
+            values=asr_values,
+            mean=asr_ci.mean,
+            std=float(np.std(asr_values, ddof=1 if len(asr_values) > 1 else 0)),
+            ci_lower=asr_ci.lower,
+            ci_upper=asr_ci.upper,
+            confidence=0.95,
+            timestamp=datetime.now().isoformat(),
+        )
+
+        lat_res = MultiSeedResult(
+            experiment_name=f"real_benchmark_{model_name}",
+            seeds=self.seeds,
+            metric_name="latency_ms",
+            values=latency_values,
+            mean=lat_ci.mean,
+            std=float(np.std(latency_values, ddof=1 if len(latency_values) > 1 else 0)),
+            ci_lower=lat_ci.lower,
+            ci_upper=lat_ci.upper,
+            confidence=0.95,
+            timestamp=datetime.now().isoformat(),
+        )
+
+        self.results.extend([asr_res, lat_res])
+
+        print("\n" + "=" * 60)
+        print(f"  MULTI-SEED SUMMARY ({len(self.seeds)} SEEDS)")
+        print("=" * 60)
+        print(f"  ASR Mean     : {asr_res.mean*100:.2f}% ± {asr_res.std*100:.2f}%")
+        print(f"  ASR 95% CI   : [{asr_res.ci_lower*100:.2f}%, {asr_res.ci_upper*100:.2f}%]")
+        print(f"  Latency Mean : {lat_res.mean:.1f}ms ± {lat_res.std:.1f}ms")
+        print("=" * 60 + "\n")
+
+        return {"asr": asr_res, "latency": lat_res}
+
     def export_results(self, filename: Optional[str] = None) -> Path:
-        """
-        Export all multi-seed results to JSON.
-        
-        Args:
-            filename: Output filename (default: auto-generated).
-        
-        Returns:
-            Path to exported file.
-        """
         if filename is None:
             ts = datetime.now().strftime("%Y%m%d_%H%M%S")
             filename = f"multi_seed_results_{ts}.json"
-        
+
         output_path = self.output_dir / filename
-        
         payload = {
             "metadata": {
                 "generated_at": datetime.now().isoformat(),
                 "tool": "AI Security Scanner – Multi-Seed Runner",
                 "seeds": self.seeds,
+                "temperature": self.temperature,
                 "total_results": len(self.results),
             },
             "results": [r.to_dict() for r in self.results],
         }
-        
+
         with open(output_path, "w", encoding="utf-8") as fh:
             json.dump(payload, fh, ensure_ascii=False, indent=2)
-        
-        print(f"\n✅ Multi-seed results exported to: {output_path}")
+
+        print(f"✅ Multi-seed results exported to: {output_path}")
         return output_path
 
 
-# ===========================================================================
-# CLI
-# ===========================================================================
+def main():
+    parser = argparse.ArgumentParser(description="Multi-Seed Experiment Runner (100% Real LLM)")
+    parser.add_argument("--model", default="llama3", help="Target LLM model")
+    parser.add_argument("--url", default="http://localhost:11434", help="Target LLM server URL")
+    parser.add_argument("--seeds", nargs="+", type=int, default=[42, 123, 456], help="List of seeds")
+    parser.add_argument("--temperature", type=float, default=0.7, help="Sampling temperature")
+    parser.add_argument("--max-cases", type=int, default=5, help="Number of test cases per seed")
+    parser.add_argument("--vietnamese", action="store_true", help="Use vietnamese benchmark")
+    parser.add_argument("--output-dir", default="experiments/results", help="Output directory")
 
-def _build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        description="Multi-Seed Experiment Runner for AI Security Scanner",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-    )
-    parser.add_argument(
-        "--seeds",
-        nargs="+",
-        type=int,
-        default=[42, 123, 456, 789, 999],
-        help="List of random seeds (default: 42 123 456 789 999)",
-    )
-    parser.add_argument(
-        "--component",
-        default="MUTATION_ENGINE",
-        choices=["MUTATION_ENGINE", "ADAPTIVE_GENERATOR", "LLM_JUDGE", "RISK_SCORER", "PATTERN_DETECTOR"],
-        help="Component to ablate",
-    )
-    parser.add_argument(
-        "--dataset",
-        default=None,
-        help="Path to test dataset JSON",
-    )
-    parser.add_argument(
-        "--output-dir",
-        default="experiments/results",
-        help="Output directory for results",
-    )
-    return parser
-
-
-def main() -> None:
-    """CLI entry point."""
-    parser = _build_parser()
     args = parser.parse_args()
-    
-    print(f"\n{'='*70}")
-    print("  AI Security Scanner – Multi-Seed Experiment Runner")
-    print(f"  Component: {args.component}")
-    print(f"  Seeds: {args.seeds}")
-    print(f"{'='*70}\n")
-    
-    # Load test cases
-    if args.dataset:
-        dataset_path = Path(args.dataset)
-    else:
-        dataset_path = _PROJECT_ROOT / "data" / "benchmark_dataset.json"
-    
-    if dataset_path.exists():
-        with open(dataset_path, "r", encoding="utf-8") as fh:
-            data = json.load(fh)
-        test_cases = data.get("test_cases", [])
-        print(f"✅ Loaded {len(test_cases)} test cases from {dataset_path}\n")
-    else:
-        print(f"⚠️ Dataset not found: {dataset_path}")
-        print("Using built-in minimal test cases...\n")
-        test_cases = [
-            {"payload": "Test 1", "expected_vulnerable": False, "module_name": "prompt_injection"},
-            {"payload": "Test 2", "expected_vulnerable": True, "module_name": "jailbreak"},
-        ]
-    
-    # Run multi-seed experiment
-    runner = MultiSeedRunner(seeds=args.seeds, output_dir=args.output_dir)
-    results = runner.run_ablation_multi_seed(
-        test_cases=test_cases,
-        component=args.component,
-        metrics=['precision', 'recall', 'f1', 'asr'],
+
+    dataset_path = _PROJECT_ROOT / "data" / "vietnamese_benchmark.json" if args.vietnamese else None
+    cases = load_benchmark_dataset(dataset_path)
+
+    runner = MultiSeedRunner(seeds=args.seeds, output_dir=args.output_dir, temperature=args.temperature)
+    runner.run_benchmark_multi_seed(
+        test_cases=cases,
+        model_name=args.model,
+        target_url=args.url,
+        max_cases=args.max_cases,
     )
-    
-    # Export
     runner.export_results()
-    
-    print("\n✅ Multi-seed experiment complete!\n")
 
 
 if __name__ == "__main__":
-    import numpy as np  # Import here for demo
     main()

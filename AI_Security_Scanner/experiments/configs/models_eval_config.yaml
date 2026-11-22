@@ -1,0 +1,69 @@
+# ==============================================================================
+# CẤU HÌNH THỰC NGHIỆM ĐÁNH GIÁ MỞ RỘNG TRÊN 5 MÔ HÌNH LLM (180 PROMPTS)
+# ==============================================================================
+# Hỗ trợ chạy lặp 3 lần với temperature cố định và seed xác định.
+# Tự động lưu response kèm metadata ra JSONL, có cơ chế resume checkpointing.
+# ==============================================================================
+
+experiment:
+  name: "vietredbench_extended_5models_evaluation"
+  description: "Đánh giá an toàn diện rộng trên 5 kiến trúc LLM qua 5 biến thể tiếng Việt và tiếng Anh"
+  benchmark_files:
+    - "data/vietnamese_benchmark.json"
+    - "data/english_baseline_benchmark.json"
+  total_prompts: 180
+  
+  # Siêu tham số thực nghiệm
+  num_repeats: 3
+  seeds: [42, 100, 2026]
+  temperature: 0.0          # Greedy decoding để đảm bảo tính tất định và khả năng tái lập
+  max_tokens: 512
+  top_p: 1.0
+  timeout_seconds: 90
+  
+  # Quản lý output và checkpointing
+  output_dir: "experiments/results/extended_evaluations"
+  jsonl_file: "experiments/results/extended_evaluations/raw_responses.jsonl"
+  resume: true              # Bỏ qua các lượt (model_id, prompt_id, run_index) đã có trong JSONL
+
+# Danh sách 5 mô hình mục tiêu được cấu hình để đánh giá
+models:
+  - id: "llama-3.1-8b"
+    display_name: "Llama-3.1-8B-Instruct"
+    provider: "ollama"      # Hỗ trợ: ollama, openai, vllm, mock
+    model_name: "llama3.1:8b"
+    api_url: "http://localhost:11434"
+    api_key: ""
+    description: "Mô hình mã nguồn mở thế hệ mới của Meta, tokenizer 128k token, căn chỉnh an toàn cao"
+
+  - id: "qwen2.5-7b"
+    display_name: "Qwen2.5-7B-Instruct"
+    provider: "ollama"
+    model_name: "qwen2.5:7b"
+    api_url: "http://localhost:11434"
+    api_key: ""
+    description: "Mô hình đa ngữ tiên tiến từ Alibaba, tokenizer hỗ trợ tốt tiếng châu Á"
+
+  - id: "gemma-2-9b"
+    display_name: "Gemma-2-9B-It"
+    provider: "ollama"
+    model_name: "gemma2:9b"
+    api_url: "http://localhost:11434"
+    api_key: ""
+    description: "Mô hình của Google DeepMind, kiến trúc sliding window attention, căn chỉnh RLHF nghiêm ngặt"
+
+  - id: "mistral-7b"
+    display_name: "Mistral-7B-Instruct-v0.3"
+    provider: "ollama"
+    model_name: "mistral:7b"
+    api_url: "http://localhost:11434"
+    api_key: ""
+    description: "Mô hình baseline phổ biến từ Mistral AI, tokenizer SentencePiece BPE 32k"
+
+  - id: "vistral-7b"
+    display_name: "Vistral-7B-Chat"
+    provider: "ollama"
+    model_name: "vistral:7b"
+    api_url: "http://localhost:11434"
+    api_key: ""
+    description: "Mô hình tối ưu hóa chuyên biệt cho tiếng Việt (Vietnamese-adapted Mistral-7B)"

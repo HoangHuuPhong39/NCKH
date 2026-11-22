@@ -63,6 +63,15 @@ class Config:
         default_jwt = self.data["web"]["jwt_secret_key"]
         default_api_key = self.data["web"]["admin_api_key"]
 
+        _INSECURE_PLACEHOLDERS = {
+            "",
+            "ai-security-scanner-secret-key-change-in-production",
+            "ai-scanner-admin-secret-token",
+            "default-fallback-secret-key",
+            "changeme",
+            "secret",
+        }
+
         if self.config_path.exists() and yaml:
             try:
                 with open(self.config_path, "r", encoding="utf-8") as f:
@@ -72,12 +81,30 @@ class Config:
             except Exception as e:
                 print(f"[!] Warning loading config.yaml: {e}, using defaults.", file=sys.stderr)
 
+        # Treat empty / known-placeholder secrets in config.yaml as unset so random defaults apply
+        if str(self.data["web"].get("jwt_secret_key") or "").strip() in _INSECURE_PLACEHOLDERS:
+            self.data["web"]["jwt_secret_key"] = default_jwt
+        if str(self.data["web"].get("admin_api_key") or "").strip() in _INSECURE_PLACEHOLDERS:
+            self.data["web"]["admin_api_key"] = default_api_key
+
         self._apply_env_overrides()
-        
-        if self.data["web"]["jwt_secret_key"] == default_jwt or self.data["web"]["admin_api_key"] == default_api_key:
-            print("[WARNING] Using randomly generated secrets for jwt_secret_key or admin_api_key. "
-                  "Please set them properly in config.yaml or environment variables (SCANNER_JWT_SECRET / SCANNER_ADMIN_API_KEY) "
-                  "for persistence across restarts.", file=sys.stderr)
+
+        using_ephemeral = (
+            self.data["web"]["jwt_secret_key"] == default_jwt
+            or self.data["web"]["admin_api_key"] == default_api_key
+        )
+        strict_secrets = os.environ.get("SCANNER_STRICT_SECRETS", "").lower() in ("true", "1", "yes")
+        if using_ephemeral:
+            if strict_secrets and self.data["web"].get("require_auth", False):
+                raise RuntimeError(
+                    "SCANNER_STRICT_SECRETS is enabled with require_auth=true, "
+                    "but SCANNER_JWT_SECRET and SCANNER_ADMIN_API_KEY are not configured."
+                )
+            print(
+                "[WARNING] Using randomly generated ephemeral secrets for jwt_secret_key / admin_api_key. "
+                "Set SCANNER_JWT_SECRET and SCANNER_ADMIN_API_KEY in environment or .env for persistence.",
+                file=sys.stderr,
+            )
 
         self._initialized = True
 
@@ -87,8 +114,10 @@ class Config:
             "scanner": {
                 "target_url": "http://localhost:11434",
                 "target_model": "llama3",
+                "judge_model": "qwen2.5",
+                "provider": "auto",
                 "timeout": 90,
-                "max_tokens": 80,
+                "max_tokens": 512,
                 "api_key": "",
                 "max_retries": 1,
                 "backoff_factor": 1.0,
@@ -101,11 +130,19 @@ class Config:
                 },
             },
             "web": {
-                "host": "0.0.0.0",
+                "host": "127.0.0.1",
                 "port": 5000,
                 "debug": False,
                 "require_auth": True,
                 "trust_proxy": False,
+                "cors_origins": [
+                    "http://localhost:5000",
+                    "http://127.0.0.1:5000",
+                    "https://localhost:5000",
+                    "https://127.0.0.1:5000",
+                ],
+                "allowed_internal_hosts": ["ollama", "ai-guard-proxy"],
+                "allowed_local_ports": [],
                 "jwt_secret_key": secrets.token_hex(32),
                 "jwt_access_token_expires_minutes": 1440,
                 "admin_api_key": secrets.token_urlsafe(32),
@@ -123,6 +160,19 @@ class Config:
             "storage": {
                 "database_path": "data/scanner.db",
                 "reports_dir": "reports",
+                "allowed_scan_roots": [],
+            },
+            "governance": {
+                "enforce_scope_whitelist": False,
+                "authorized_targets": ["localhost", "127.0.0.1", "::1"],
+                "allow_destructive_actions": False,
+                "redact_reports": True,
+                "audit_log_path": "logs/governance_audit.jsonl",
+                "budget": {
+                    "max_requests": 200,
+                    "max_tokens": 100000,
+                    "max_duration_sec": 600,
+                },
             },
         }
 
@@ -139,6 +189,8 @@ class Config:
             self.data["scanner"]["target_url"] = os.environ["SCANNER_TARGET_URL"]
         if "SCANNER_TARGET_MODEL" in os.environ:
             self.data["scanner"]["target_model"] = os.environ["SCANNER_TARGET_MODEL"]
+        if "SCANNER_JUDGE_MODEL" in os.environ:
+            self.data["scanner"]["judge_model"] = os.environ["SCANNER_JUDGE_MODEL"]
         if "SCANNER_TIMEOUT" in os.environ:
             try:
                 self.data["scanner"]["timeout"] = int(os.environ["SCANNER_TIMEOUT"])
@@ -176,6 +228,22 @@ class Config:
             self.data["logging"]["level"] = os.environ["LOG_LEVEL"].upper()
         if "DATABASE_PATH" in os.environ:
             self.data["storage"]["database_path"] = os.environ["DATABASE_PATH"]
+        if "SCANNER_ALLOWED_SCAN_ROOTS" in os.environ:
+            roots = [
+                p.strip()
+                for p in os.environ["SCANNER_ALLOWED_SCAN_ROOTS"].split(os.pathsep)
+                if p.strip()
+            ]
+            self.data["storage"]["allowed_scan_roots"] = roots
+        if "SCANNER_CORS_ORIGINS" in os.environ:
+            origins = [
+                o.strip()
+                for o in os.environ["SCANNER_CORS_ORIGINS"].split(",")
+                if o.strip()
+            ]
+            self.data["web"]["cors_origins"] = origins
+        if "SCANNER_PROVIDER" in os.environ:
+            self.data["scanner"]["provider"] = os.environ["SCANNER_PROVIDER"].strip().lower()
 
     def get(self, key_path: str, default: Any = None) -> Any:
         """Access nested config values via dot-notation, e.g. 'scanner.target_url'."""
@@ -187,6 +255,16 @@ class Config:
             else:
                 return default
         return val
+
+    def set(self, key_path: str, value: Any) -> None:
+        """Set nested config value at runtime via dot-notation."""
+        keys = key_path.split(".")
+        target = self.data
+        for k in keys[:-1]:
+            if k not in target or not isinstance(target[k], dict):
+                target[k] = {}
+            target = target[k]
+        target[keys[-1]] = value
 
 
 # Singleton instance for easy import

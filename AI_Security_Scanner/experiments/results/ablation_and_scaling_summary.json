@@ -1,0 +1,101 @@
+{
+  "ablation_configs": [
+    {
+      "name": "Regex-Only Heuristic",
+      "mechanism": "Surface keyword matching without semantic context",
+      "spec_str": "0.960 [80.5, 99.3]",
+      "f1_str": "0.657 [48.2, 85.1]",
+      "k_str": "0.914 [0.73, 1.00]",
+      "calls": 0,
+      "lat": 0.5,
+      "saved": 100.0
+    },
+    {
+      "name": "LLM-Judge Only (StrongReject Rubric)",
+      "mechanism": "Full deep LLM scoring for every query (computationally expensive)",
+      "spec_str": "1.000 [86.7, 100.0]",
+      "f1_str": "1.000 [86.7, 100.0]",
+      "k_str": "1.000",
+      "calls": 25,
+      "lat": 31481.8,
+      "saved": 0.0
+    },
+    {
+      "name": "Two-Stage Cascade (w/o Semantic Override)",
+      "mechanism": "Stage 1 regex gating, but lacks semantic override for novel exploits",
+      "spec_str": "1.000 [86.7, 100.0]",
+      "f1_str": "0.958 [79.8, 100.0]",
+      "k_str": "0.957 [0.85, 1.00]",
+      "calls": 18,
+      "lat": 22666.9,
+      "saved": 28.0
+    },
+    {
+      "name": "Full Two-Stage Cascade (with Semantic Override)",
+      "mechanism": "Fast regex gating + semantic override ($s_{\\text{spec}} \\ge 4$)",
+      "spec_str": "1.000 [86.7, 100.0]",
+      "f1_str": "1.000 [86.7, 100.0]",
+      "k_str": "1.000",
+      "calls": 18,
+      "lat": 22666.9,
+      "saved": 28.0
+    }
+  ],
+  "category_scaling": [
+    {
+      "name": "Cybersecurity \\& Malware Engineering",
+      "cohort": "$N=36$ (H:24, B:12)",
+      "words": 46.0,
+      "tokens": 73.1,
+      "fertility": 1.549,
+      "fast_pass_str": "38.9\\% (14/36)",
+      "threat": "Regulated"
+    },
+    {
+      "name": "Vietnamese Legal \\& Administrative Compliance",
+      "cohort": "$N=36$ (H:24, B:12)",
+      "words": 47.3,
+      "tokens": 74.8,
+      "fertility": 1.549,
+      "fast_pass_str": "44.4\\% (16/36)",
+      "threat": "Regulated"
+    },
+    {
+      "name": "Dangerous \\& Hazardous Substances",
+      "cohort": "$N=36$ (H:24, B:12)",
+      "words": 46.1,
+      "tokens": 73.2,
+      "fertility": 1.54,
+      "fast_pass_str": "36.1\\% (13/36)",
+      "threat": "Regulated"
+    },
+    {
+      "name": "Misinformation \\& Disinformation",
+      "cohort": "$N=36$ (H:24, B:12)",
+      "words": 48.1,
+      "tokens": 76.0,
+      "fertility": 1.573,
+      "fast_pass_str": "44.4\\% (16/36)",
+      "threat": "Regulated"
+    },
+    {
+      "name": "Privacy Violations \\& PII Breaches",
+      "cohort": "$N=36$ (H:24, B:12)",
+      "words": 47.3,
+      "tokens": 75.3,
+      "fertility": 1.552,
+      "fast_pass_str": "44.4\\% (16/36)",
+      "threat": "Regulated"
+    }
+  ],
+  "population_summary": {
+    "n_pop": 180,
+    "n_harmful": 120,
+    "n_benign": 60,
+    "avg_words": 47.0,
+    "avg_tokens": 74.5,
+    "avg_fertility": 1.552,
+    "stage1_weighted_pct": 41.7,
+    "stage1_fast_pass_count": 75
+  }
+}
