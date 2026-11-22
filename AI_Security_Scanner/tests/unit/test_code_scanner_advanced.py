@@ -43,28 +43,27 @@ class TestWhiteboxSampleSuite:
     def setup_method(self):
         self.scanner = AICodeScanner()
 
-    def test_support_ai_helper_obfuscated_vulns(self):
-        p = WHITEBOX_DIR / "support_ai_helper.py"
+    def test_amateur_chatbot_baseline_vulns(self):
+        p = WHITEBOX_DIR / "amateur_chatbot.py"
         res = self.scanner.scan_code_snippet(p.read_text(encoding="utf-8"), filename=p.name)
         findings = res["findings"]
         _assert_valid_schema(findings)
         rules = {f["rule_id"] for f in findings}
-        assert "AI-SAST-002" in rules, "Phải bắt được API key bị che bằng XOR (_RAW_BUFFER ^ _MASK)"
-        assert "AI-SAST-001" in rules, "Phải bắt được Prompt Injection qua PromptContext.attach() -> compile_payload()"
-        assert "AI-SAST-003" in rules, "Phải bắt được pickle.loads qua dynamic loader"
-        assert "AI-SAST-004" in rules, "Phải bắt được builtins.eval qua dynamic loader"
+        for expected in ("AI-SAST-001", "AI-SAST-002", "AI-SAST-003", "AI-SAST-004", "AI-SAST-006", "AI-SAST-007", "AI-SAST-009", "AI-SAST-010"):
+            assert expected in rules, f"Thiếu rule {expected} trên amateur_chatbot.py"
 
-    def test_rag_agent_worker_evasion_vulns(self):
-        p = WHITEBOX_DIR / "rag_agent_worker.py"
+    def test_enterprise_ai_copilot_evasion_and_zero_decoy_fp(self):
+        p = WHITEBOX_DIR / "enterprise_ai_copilot.py"
         res = self.scanner.scan_code_snippet(p.read_text(encoding="utf-8"), filename=p.name)
         findings = res["findings"]
         _assert_valid_schema(findings)
         rules = {f["rule_id"] for f in findings}
-        assert "AI-SAST-006" in rules, "Phải bắt được SSRF qua getattr(urllib.request, 'url'+'open')"
-        assert "AI-SAST-007" in rules, "Phải bắt được thiếu timeout ở urlopen alias"
-        assert "AI-SAST-004" in rules, "Phải bắt được subprocess.Popen(**exec_opts) với shell=bool(1)"
-        assert "AI-SAST-005" in rules, "Phải bắt được from_pretrained(**load_kwargs) với trust_remote_code=(1==1)"
-        assert "AI-SAST-001" in rules, "Phải bắt được Indirect Prompt Injection qua format_map"
+        assert len(findings) == 8, f"Kỳ vọng đúng 8 lỗ hổng AST, nhận được {len(findings)}: {findings}"
+        for expected in ("AI-SAST-001", "AI-SAST-002", "AI-SAST-003", "AI-SAST-004", "AI-SAST-005", "AI-SAST-006", "AI-SAST-007", "AI-SAST-008"):
+            assert expected in rules, f"Thiếu rule {expected} trên enterprise_ai_copilot.py"
+        # Bắt buộc 0 False Positive trên 4 hàm decoy an toàn (dòng 66–104)
+        for f in findings:
+            assert not (66 <= f["line"] <= 104), f"Báo động giả trên hàm decoy tại dòng {f['line']}: {f}"
 
     def test_advanced_agent_metaprog(self):
         p = WHITEBOX_DIR / "advanced_agent_metaprog.py"
@@ -95,22 +94,6 @@ class TestWhiteboxSampleSuite:
         p = WHITEBOX_DIR / "false_positive_trap.py"
         res = self.scanner.scan_code_snippet(p.read_text(encoding="utf-8"), filename=p.name)
         assert res["findings"] == [], f"BẮT BUỘC 0 False Positive, nhưng phát hiện: {res['findings']}"
-
-    def test_invoice_ai_copilot_seven_vulns_and_zero_decoy_fp(self):
-        p = WHITEBOX_DIR / "invoice_ai_copilot.py"
-        if not p.exists():
-            pytest.skip("invoice_ai_copilot.py chưa tồn tại")
-        res = self.scanner.scan_code_snippet(p.read_text(encoding="utf-8"), filename=p.name)
-        findings = res["findings"]
-        _assert_valid_schema(findings)
-        rules = {f["rule_id"] for f in findings}
-        # 7 lỗ hổng kỳ vọng
-        assert len(findings) == 7, f"Kỳ vọng đúng 7 lỗ hổng, nhận được {len(findings)}: {findings}"
-        for expected in ("AI-SAST-001", "AI-SAST-002", "AI-SAST-004", "AI-SAST-005", "AI-SAST-006", "AI-SAST-007", "AI-SAST-008"):
-            assert expected in rules, f"Thiếu rule {expected} trên invoice_ai_copilot.py"
-        # Không chạm vào 2 hàm decoy (dòng 46-70)
-        for f in findings:
-            assert not (46 <= f["line"] <= 70), f"Báo động giả trên hàm decoy tại dòng {f['line']}: {f}"
 
     def test_agent_config_yaml_anchors(self):
         p = WHITEBOX_DIR / "agent_config.yaml"
@@ -236,13 +219,12 @@ def run_job(llm_client, x):
     def test_hybrid_candidate_extraction_grounding_merge_and_fallback(self, monkeypatch):
         from modules.auxiliary.scanner.llm_sast_auditor import LLMSASTAuditor, merge_ast_and_llm_findings
 
-        code = (WHITEBOX_DIR / "invoice_ai_copilot.py").read_text(encoding="utf-8") if (WHITEBOX_DIR / "invoice_ai_copilot.py").exists() else ""
-        if code:
-            import ast as _ast
-            cands = self.scanner._extract_llm_candidates(code, _ast.parse(code))
-            assert len(cands) == 1, "File 112 dòng (<= 180) phải gộp thành đúng 1 chunk gửi sang Ollama"
-            assert len(cands[0]["numbered_code"].splitlines()) <= 180
-            assert cands[0]["numbered_code"].startswith("L1:")
+        code = (WHITEBOX_DIR / "enterprise_ai_copilot.py").read_text(encoding="utf-8")
+        import ast as _ast
+        cands = self.scanner._extract_llm_candidates(code, _ast.parse(code))
+        assert len(cands) == 1, "File <= 180 dòng phải gộp thành đúng 1 chunk gửi sang Ollama"
+        assert len(cands[0]["numbered_code"].splitlines()) <= 180
+        assert cands[0]["numbered_code"].startswith("L1:")
 
         # Kiểm tra Parse JSON linh hoạt cho model 8B (markdown fence, key vulnerabilities/issues, single object)
         parsed_md, ok_md = LLMSASTAuditor._parse_llm_json(
@@ -309,7 +291,7 @@ def run_job(llm_client, x):
         # 1. Skip config files already covered by dedicated parsers
         for cfg_name in ("Modelfile", "agent_config.yaml", "config.json", ".env", "requirements.txt", "ambient.d.ts"):
             assert is_config_file_for_llm_skip(cfg_name) is True
-        assert is_config_file_for_llm_skip("incident_ai_responder.py") is False
+        assert is_config_file_for_llm_skip("enterprise_ai_copilot.py") is False
 
         # 2. Selective mode skips AST-covered files without deep semantic hints, keeps 0-AST or semantic-hint files
         ok_zero, _ = is_llm_eligible_file("a.py", "client.chat.completions.create(messages=[])", ast_findings_count=0, hybrid_mode="selective")
