@@ -609,6 +609,12 @@ def build_arg_parser() -> argparse.ArgumentParser:
         help="Execute --rbst test cases against live LLM endpoint instead of calibrated benchmark oracle.",
     )
     parser.add_argument(
+        "--rbst-model",
+        metavar="MODEL",
+        default=None,
+        help="Target LLM model for --rbst-live (e.g. qwen2.5:latest or ollama/qwen2.5:latest).",
+    )
+    parser.add_argument(
         "--rbst-output",
         metavar="PATH",
         help="Optional output path to save full RBST-AI JSON compliance report.",
@@ -718,6 +724,7 @@ def _run_cli_rbst(
     tau: float,
     seed: int,
     live: bool,
+    rbst_model: str | None,
     output_path: str | None,
     as_json: bool,
 ) -> int:
@@ -739,13 +746,56 @@ def _run_cli_rbst(
     gt_vulns = None
     actual_sev = None
     if live:
+        raw_model = (rbst_model or cfg.get("scanner.target_model", "qwen2.5:latest")).strip()
+        provider = None
+        if "/" in raw_model and raw_model.split("/", 1)[0].lower() in ("ollama", "openai"):
+            provider, model_name = raw_model.split("/", 1)
+            provider = provider.lower()
+        else:
+            model_name = raw_model
+
+        api_url = cfg.get("scanner.target_url", "http://localhost:11434")
         client = SimpleLLMClient(
-            base_url=cfg.get("scanner.target_url", "http://localhost:11434"),
-            model=cfg.get("scanner.target_model", "llama3"),
-            timeout=cfg.get("scanner.timeout", 60),
+            api_url=api_url,
+            model_name=model_name,
+            timeout=cfg.get("scanner.timeout", 90),
             api_key=cfg.get("scanner.api_key", ""),
+            provider=provider,
         )
-        executor = LiveScannerExecutor(llm_client=client, seed=seed)
+        base_executor = LiveScannerExecutor(llm_client=client, seed=seed)
+
+        if not as_json:
+            console.print(
+                Panel(
+                    f"[bold yellow]⚡ RBST-AI LIVE CLOSED-LOOP EXECUTION (Algorithm 1)[/bold yellow]\n"
+                    f"Hồ sơ hệ thống: [cyan]{graph.name}[/cyan] ({len(pairs)} cặp rủi ro) | "
+                    f"Chiến lược: [green]{strategy}[/green] | Ngân sách B = [bold]{budget_B}[/bold]\n"
+                    f"Endpoint LIVE: [cyan]{api_url}[/cyan] | Mô hình đích: [bold green]{client.resolve_model_name()}[/bold green]",
+                    border_style="blue",
+                )
+            )
+
+            def _verbose_live_executor(tc, pair_state, step_idx):
+                console.print(
+                    f"  [bold cyan][Bước {step_idx}][/bold cyan] Chọn cặp [yellow]{pair_state.pair_id}[/yellow] "
+                    f"(M={pair_state.M:.2f}, K={tc.cost:.2f}) → Đang gửi LIVE tới [green]{client.model_name}[/green]..."
+                )
+                out = base_executor(tc, pair_state, step_idx)
+                verdict_str = (
+                    "[bold red]THỦNG (y=1)[/bold red]"
+                    if out.success
+                    else "[bold green]AN TOÀN (y=0)[/bold green]"
+                )
+                elapsed_s = out.metadata.get("elapsed_sec", 0.0)
+                snippet = repr((out.response or "")[:95])
+                console.print(
+                    f"           ↳ {verdict_str} ({elapsed_s:.1f}s, oracle={out.oracle_method}) | Phản hồi: {snippet}"
+                )
+                return out
+
+            executor = _verbose_live_executor
+        else:
+            executor = base_executor
     else:
         cs_key = str(graph.metadata.get("case_study", profile)).lower()
         true_asr, gt_vulns, actual_sev = default_ground_truth_for_case_study(cs_key, pairs)
@@ -765,6 +815,7 @@ def _run_cli_rbst(
     )
     metrics = evaluate_run(
         run_res,
+        n_min=2,
         ground_truth_vulns=gt_vulns,
         actual_severity_by_pair=actual_sev,
     )
@@ -839,6 +890,7 @@ def main(argv=None) -> int:
             tau=args.rbst_tau,
             seed=args.rbst_seed,
             live=args.rbst_live,
+            rbst_model=args.rbst_model,
             output_path=args.rbst_output,
             as_json=args.as_json,
         )
