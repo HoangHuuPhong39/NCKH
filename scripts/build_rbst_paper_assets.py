@@ -496,6 +496,21 @@ def _set_table_borders(table, color="94A3B8"):
     tblPr.append(borders)
 
 
+def _set_vn_run_font(run, font_name: str, size: float, bold: bool = False, italic: bool = False, color: RGBColor = BLACK):
+    run.font.name = font_name
+    run.font.size = Pt(size)
+    run.font.bold = bold
+    run.font.italic = italic
+    run.font.color.rgb = color
+    rPr = run._element.get_or_add_rPr()
+    rFonts = rPr.find(qn("w:rFonts"))
+    if rFonts is None:
+        rFonts = OxmlElement("w:rFonts")
+        rPr.insert(0, rFonts)
+    for attr in ("w:ascii", "w:hAnsi", "w:cs", "w:eastAsia"):
+        rFonts.set(qn(attr), font_name)
+
+
 def _add_p(doc: Document, text: str = "", color: RGBColor = BLACK, bold: bool = False, italic: bool = False,
            size: float = 11.5, align=WD_ALIGN_PARAGRAPH.JUSTIFY, space_before: float = 2, space_after: float = 5):
     p = doc.add_paragraph()
@@ -505,11 +520,7 @@ def _add_p(doc: Document, text: str = "", color: RGBColor = BLACK, bold: bool = 
     p.paragraph_format.line_spacing = 1.15
     if text:
         run = p.add_run(text)
-        run.font.name = "Times New Roman"
-        run.font.size = Pt(size)
-        run.font.bold = bold
-        run.font.italic = italic
-        run.font.color.rgb = color
+        _set_vn_run_font(run, "Times New Roman", size, bold=bold, italic=italic, color=color)
     return p
 
 
@@ -522,11 +533,7 @@ def _add_mixed_p(doc: Document, segments: list[tuple[str, RGBColor, bool, bool]]
     p.paragraph_format.line_spacing = 1.15
     for text, color, bold, italic in segments:
         r = p.add_run(text)
-        r.font.name = "Times New Roman"
-        r.font.size = Pt(size)
-        r.font.color.rgb = color
-        r.font.bold = bold
-        r.font.italic = italic
+        _set_vn_run_font(r, "Times New Roman", size, bold=bold, italic=italic, color=color)
     return p
 
 
@@ -552,10 +559,7 @@ def _add_styled_table(
         p.paragraph_format.space_before = Pt(3)
         p.paragraph_format.space_after = Pt(3)
         r = p.add_run(h)
-        r.font.name = "Times New Roman"
-        r.font.size = Pt(font_size)
-        r.font.bold = True
-        r.font.color.rgb = RED if text_color == RED else NAVY
+        _set_vn_run_font(r, "Times New Roman", font_size, bold=True, color=RED if text_color == RED else NAVY)
 
     # Body
     hi_rows = highlight_rows or set()
@@ -573,15 +577,22 @@ def _add_styled_table(
             p.paragraph_format.space_before = Pt(2)
             p.paragraph_format.space_after = Pt(2)
             r = p.add_run(val)
-            r.font.name = "Times New Roman"
-            r.font.size = Pt(font_size)
-            r.font.bold = is_hi
-            r.font.color.rgb = text_color
+            _set_vn_run_font(r, "Times New Roman", font_size, bold=is_hi, color=text_color)
     return tbl
 
 
 def build_docx(fig1: Path, fig2: Path, fig3: Path) -> Path:
     doc = Document()
+    normal_style = doc.styles["Normal"]
+    normal_style.font.name = "Times New Roman"
+    normal_style.font.size = Pt(11.5)
+    ns_rPr = normal_style._element.get_or_add_rPr()
+    ns_rFonts = ns_rPr.find(qn("w:rFonts"))
+    if ns_rFonts is None:
+        ns_rFonts = OxmlElement("w:rFonts")
+        ns_rPr.insert(0, ns_rFonts)
+    for attr in ("w:ascii", "w:hAnsi", "w:cs", "w:eastAsia"):
+        ns_rFonts.set(qn(attr), "Times New Roman")
 
     # Page margins (A4 academic layout)
     for sec in doc.sections:
@@ -943,8 +954,13 @@ def build_docx(fig1: Path, fig2: Path, fig3: Path) -> Path:
     )
 
     OUT_DOCX.parent.mkdir(parents=True, exist_ok=True)
-    doc.save(str(OUT_DOCX))
-    return OUT_DOCX
+    try:
+        doc.save(str(OUT_DOCX))
+        return OUT_DOCX
+    except PermissionError:
+        alt_out = OUT_DOCX.with_name("RBST_AI_Muc_5_6_Phong_Lam_Review_v2.docx")
+        doc.save(str(alt_out))
+        return alt_out
 
 
 def main() -> int:
