@@ -77,7 +77,7 @@ jobs:
 
       - name: Bandit High-Severity Security Scan
         run: |
-          bandit -r core modules web guard_proxy -ll --severity-level high -f json -o bandit-report.json
+          bandit -r core modules web guard_proxy --severity-level high -f json -o bandit-report.json
 
       - name: Upload Security Report
         if: always()

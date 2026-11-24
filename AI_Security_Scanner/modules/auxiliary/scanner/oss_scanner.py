@@ -1245,6 +1245,18 @@ class OpenSourceAIScanner(BaseExploitModule):
         artifacts_scanned: List[str] = []
         packages_scanned = 0
 
+        def _is_hf_config_name(name: str) -> bool:
+            low = name.lower()
+            return bool(re.match(r"^config(?:\s*\(\d+\)|[-_][\w.-]+)?\.json$", low))
+
+        def _is_dep_manifest_name(name: str) -> bool:
+            low = name.lower()
+            return bool(
+                re.match(r"^requirements(?:\s*\(\d+\)|[-_][\w.-]+)?\.txt$", low)
+                or re.match(r"^pyproject(?:\s*\(\d+\))?\.toml$", low)
+                or re.match(r"^package(?:\s*\(\d+\))?\.json$", low)
+            )
+
         files_to_check: List[Path] = []
         if root_path.is_file():
             files_to_check.append(root_path)
@@ -1257,8 +1269,10 @@ class OpenSourceAIScanner(BaseExploitModule):
                     ext_low = fp.suffix.lower()
                     if (
                         ext_low in {".pkl", ".pickle", ".pt", ".pth", ".bin", ".gguf", ".safetensors", ".yaml", ".yml"}
-                        or fn in ("Modelfile", "config.json", "requirements.txt", "pyproject.toml", "package.json", ".env")
+                        or fn in ("Modelfile", ".env")
                         or fn.startswith((".env.", "Modelfile."))
+                        or _is_hf_config_name(fn)
+                        or _is_dep_manifest_name(fn)
                     ):
                         files_to_check.append(fp)
 
@@ -1432,8 +1446,8 @@ class OpenSourceAIScanner(BaseExploitModule):
                 except Exception:
                     pass
 
-            # C. Quét HuggingFace config.json
-            elif fp.name == "config.json":
+            # C. Quét HuggingFace config.json (hỗ trợ cả tên tải trùng kiểu 'config (1).json')
+            elif _is_hf_config_name(fp.name):
                 try:
                     raw_text = fp.read_text(encoding="utf-8", errors="ignore")
                     lines = raw_text.splitlines()
@@ -1470,8 +1484,8 @@ class OpenSourceAIScanner(BaseExploitModule):
                 except Exception:
                     pass
 
-            # D. Quét tệp phụ thuộc (requirements.txt, pyproject.toml, package.json) khi bật include_requirements
-            elif include_requirements and fp.name in ("requirements.txt", "pyproject.toml", "package.json"):
+            # D. Quét tệp phụ thuộc (requirements.txt, pyproject.toml, package.json — gồm cả tên tải trùng) khi bật include_requirements
+            elif include_requirements and _is_dep_manifest_name(fp.name):
                 try:
                     req_txt = fp.read_text(encoding="utf-8", errors="ignore")
                     sca_sub = self.scan_dependencies(req_txt, source_name=rel_name)
@@ -1498,10 +1512,11 @@ class OpenSourceAIScanner(BaseExploitModule):
         target_url: str = "http://localhost:11434",
         project_dir: Optional[str] = None,
         requirements_text: Optional[str] = None,
+        scan_common_ports: bool = False,
     ) -> Dict[str, Any]:
         """
         Thực hiện quét toàn diện Hệ sinh thái AI Mã nguồn mở:
-          1. Quét Live Endpoint & Cổng dịch vụ AI mã nguồn mở (Ollama, Open-WebUI, vLLM, Ray, MLflow...).
+          1. Quét Live Endpoint (và tùy chọn cổng dịch vụ AI mã nguồn mở phổ biến khi scan_common_ports=True).
           2. Quét Model Checkpoint & Modelfile trong thư mục dự án.
           3. Quét Thư viện phụ thuộc AI mã nguồn mở (requirements.txt / SCA).
         """
@@ -1509,7 +1524,7 @@ class OpenSourceAIScanner(BaseExploitModule):
         all_findings: List[Dict[str, Any]] = []
 
         # 1. Quét Live Platform
-        plat_res = self.scan_oss_platforms(target_url=target_url, scan_common_ports=True)
+        plat_res = self.scan_oss_platforms(target_url=target_url, scan_common_ports=scan_common_ports)
         all_findings.extend(plat_res.get("findings", []))
 
         # 2. Quét Model Artifacts (chỉ quét thư mục dự án khi được cung cấp rõ ràng; không tự quét repo scanner)
@@ -1520,18 +1535,25 @@ class OpenSourceAIScanner(BaseExploitModule):
             all_findings.extend(art_res.get("findings", []))
             p_def = Path(project_dir)
             if p_def.is_dir():
-                for dname in ("requirements.txt", "pyproject.toml", "package.json"):
-                    dp = p_def / dname
-                    if dp.exists():
-                        dep_candidates.append(dp)
-            elif p_def.name in ("requirements.txt", "pyproject.toml", "package.json") and p_def.exists():
+                for child in sorted(p_def.iterdir()):
+                    if child.is_file() and (
+                        re.match(r"^requirements(?:\s*\(\d+\)|[-_][\w.-]+)?\.txt$", child.name.lower())
+                        or re.match(r"^pyproject(?:\s*\(\d+\))?\.toml$", child.name.lower())
+                        or re.match(r"^package(?:\s*\(\d+\))?\.json$", child.name.lower())
+                    ):
+                        dep_candidates.append(child)
+            elif p_def.is_file() and (
+                re.match(r"^requirements(?:\s*\(\d+\)|[-_][\w.-]+)?\.txt$", p_def.name.lower())
+                or re.match(r"^pyproject(?:\s*\(\d+\))?\.toml$", p_def.name.lower())
+                or re.match(r"^package(?:\s*\(\d+\))?\.json$", p_def.name.lower())
+            ):
                 dep_candidates.append(p_def)
 
         # 3. Quét Dependencies (SCA)
         total_pkgs_scanned = 0
-        if dep_candidates and (
-            not requirements_text or requirements_text.strip() == SAMPLE_VULNERABLE_REQUIREMENTS.strip()
-        ):
+        norm_req = (requirements_text or "").replace("\r\n", "\n").strip()
+        norm_sample = SAMPLE_VULNERABLE_REQUIREMENTS.replace("\r\n", "\n").strip()
+        if dep_candidates and (not norm_req or norm_req == norm_sample):
             for dp in dep_candidates:
                 sub_sca = self.scan_dependencies(dp.read_text(encoding="utf-8", errors="ignore"), source_name=dp.name)
                 total_pkgs_scanned += int(sub_sca.get("packages_scanned", 0))

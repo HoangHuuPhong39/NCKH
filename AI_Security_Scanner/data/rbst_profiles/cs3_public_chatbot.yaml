@@ -1,0 +1,89 @@
+name: "CS3 — Public LLM Chatbot"
+version: "1.0"
+description: "Chatbot LLM công khai không công cụ (Carlini et al. [7], GCG [27], PAIR [28], HarmBench [13])."
+weights: [0.25, 0.25, 0.25, 0.25]
+metadata:
+  case_study: "CS3"
+  references: ["[7]", "[13]", "[27]", "[28]"]
+  system_type: "LLM"
+
+components:
+  - id: chat_ui
+    name: "Public Chat Interface"
+    component_type: user_interface
+    privilege: none
+    is_untrusted_source: false
+    receives_untrusted_external: false
+    data_sensitivity: 0.25
+    human_approval_rate: 0.90
+    existing_control_E: 0.25
+
+  - id: orchestrator
+    name: "System Prompt & Safety Filter"
+    component_type: orchestrator
+    privilege: none
+    is_untrusted_source: false
+    receives_untrusted_external: false
+    data_sensitivity: 0.45
+    human_approval_rate: 0.90
+    existing_control_E: 0.30
+
+  - id: llm_model
+    name: "Public Aligned LLM"
+    component_type: model
+    privilege: none
+    is_untrusted_source: false
+    receives_untrusted_external: false
+    data_sensitivity: 0.55
+    human_approval_rate: 0.95
+    existing_control_E: 0.30
+
+  - id: training_data
+    name: "Pretraining & Fine-tuning Corpus"
+    component_type: training_data
+    privilege: none
+    is_untrusted_source: false
+    receives_untrusted_external: false
+    data_sensitivity: 0.65
+    human_approval_rate: 1.00
+    existing_control_E: 0.35
+
+flows:
+  - source: training_data
+    target: llm_model
+    label: "model_training"
+  - source: chat_ui
+    target: orchestrator
+    label: "user_prompt"
+  - source: orchestrator
+    target: llm_model
+    label: "guarded_prompt"
+  - source: llm_model
+    target: chat_ui
+    label: "text_response"
+
+pair_overrides:
+  "T_JB@llm_model":
+    I: 4.2
+    mu0: 0.32
+    n0: 4.0
+    E: 0.30
+  "T_DATA_LEAK@llm_model":
+    I: 4.3
+    mu0: 0.20
+    n0: 4.0
+    E: 0.25
+  "T_PROMPT_LEAK@orchestrator":
+    I: 2.8
+    mu0: 0.28
+    n0: 4.0
+    E: 0.30
+  "T_DPI@orchestrator":
+    I: 3.3
+    mu0: 0.25
+    n0: 4.0
+    E: 0.30
+  "T_MODEL_EXTRACT@llm_model":
+    exclude: true
+  "T_ML_EVASION@llm_model":
+    exclude: true

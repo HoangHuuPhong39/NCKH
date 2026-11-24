@@ -1,0 +1,78 @@
+name: "CS4 — Machine Learning Prediction API (MLaaS)"
+version: "1.0"
+description: "Dịch vụ học máy qua API dự đoán (Tramèr et al. [6], Goodfellow [3], Carlini & Wagner [4])."
+weights: [0.25, 0.25, 0.25, 0.25]
+metadata:
+  case_study: "CS4"
+  references: ["[3]", "[4]", "[6]"]
+  system_type: "ML_MODEL"
+
+components:
+  - id: prediction_api
+    name: "Public Prediction REST API"
+    component_type: api
+    privilege: read
+    is_untrusted_source: false
+    receives_untrusted_external: false
+    data_sensitivity: 0.80
+    human_approval_rate: 0.90
+    existing_control_E: 0.15
+
+  - id: ml_model
+    name: "Proprietary Classifier / Neural Network"
+    component_type: model
+    privilege: none
+    is_untrusted_source: false
+    receives_untrusted_external: false
+    data_sensitivity: 0.90
+    human_approval_rate: 0.95
+    existing_control_E: 0.20
+
+  - id: training_pipeline
+    name: "Offline Training Pipeline"
+    component_type: training_pipeline
+    privilege: none
+    is_untrusted_source: false
+    receives_untrusted_external: false
+    data_sensitivity: 0.85
+    human_approval_rate: 1.00
+    existing_control_E: 0.40
+
+flows:
+  - source: training_pipeline
+    target: ml_model
+    label: "trained_weights"
+  - source: prediction_api
+    target: ml_model
+    label: "feature_vector"
+  - source: ml_model
+    target: prediction_api
+    label: "confidence_scores"
+
+pair_overrides:
+  "T_MODEL_EXTRACT@prediction_api":
+    I: 4.8
+    mu0: 0.40
+    n0: 4.0
+    E: 0.15
+  "T_ML_EVASION@prediction_api":
+    I: 4.3
+    mu0: 0.35
+    n0: 4.0
+    E: 0.20
+  "T_ML_EVASION@ml_model":
+    I: 4.2
+    mu0: 0.32
+    n0: 4.0
+    E: 0.20
+  "T_DOS@prediction_api":
+    I: 2.8
+    mu0: 0.18
+    n0: 4.0
+    E: 0.35
+  "T_DPI@ml_model":
+    exclude: true
+  "T_JB@ml_model":
+    exclude: true
+  "T_PROMPT_LEAK@ml_model":
+    exclude: true

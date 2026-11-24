@@ -1548,6 +1548,10 @@
                 <button type="button" class="codescan-preset-chip" onclick="setOSSEndpoint('http://localhost:7860')">Langflow</button>
                 <button type="button" class="codescan-preset-chip" onclick="setOSSEndpoint('http://localhost:6333')">Qdrant</button>
               </div>
+              <label style="display:flex;align-items:center;gap:6px;margin-top:6px;font-size:11.5px;color:var(--text-secondary);cursor:pointer">
+                <input type="checkbox" id="chk-oss-scan-common-ports" style="accent-color:#38bdf8;cursor:pointer">
+                <span>Quét mở rộng tất cả cổng AI phổ biến trên host này</span>
+              </label>
             </div>
 
             <!-- Pillar 2: Model Checkpoints Upload -->
@@ -1571,6 +1575,9 @@
                   <button type="button" class="btn btn-outline btn-xs" onclick="clearOSSFileQueue()">Xóa</button>
                 </div>
                 <div class="codescan-file-chips" id="oss-file-chips"></div>
+                <button type="button" class="btn btn-success btn-sm" style="width:100%;margin-top:6px" id="btn-run-oss-upload-only" onclick="runOSSAIScan('models')">
+                  Quét Riêng File Model Đã Chọn (ModelScan)
+                </button>
               </div>
               <button type="button" class="codescan-link-toggle" onclick="const w=document.getElementById('oss-server-dir-wrap'); w.style.display=w.style.display==='none'?'block':'none';">
                 + Hoặc nhập đường dẫn Server / dùng thư mục mẫu

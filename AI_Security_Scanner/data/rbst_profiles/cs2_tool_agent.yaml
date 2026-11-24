@@ -1,0 +1,134 @@
+name: "CS2 — Tool-Using AI Agent (Email, Banking, Booking)"
+version: "1.0"
+description: "Tác tử AI dùng công cụ thực thi (InjecAgent [15], AgentDojo [14], OWASP Agentic [22])."
+weights: [0.25, 0.25, 0.25, 0.25]
+metadata:
+  case_study: "CS2"
+  references: ["[14]", "[15]", "[22]"]
+  system_type: "AGENT"
+
+components:
+  - id: untrusted_feeds
+    name: "Untrusted Feeds (Emails, Doctor Reviews, Attachments)"
+    component_type: context_source
+    privilege: read
+    is_untrusted_source: true
+    receives_untrusted_external: true
+    data_sensitivity: 0.85
+    human_approval_rate: 0.05
+    existing_control_E: 0.10
+
+  - id: orchestrator
+    name: "ReAct Agent Planner & Tool Router"
+    component_type: orchestrator
+    privilege: write
+    is_untrusted_source: false
+    receives_untrusted_external: false
+    data_sensitivity: 0.90
+    human_approval_rate: 0.05
+    existing_control_E: 0.15
+
+  - id: llm_model
+    name: "Agent Backbone LLM"
+    component_type: model
+    privilege: none
+    is_untrusted_source: false
+    receives_untrusted_external: false
+    data_sensitivity: 0.80
+    human_approval_rate: 0.10
+    existing_control_E: 0.25
+
+  - id: memory_store
+    name: "Agent Personal & Financial Memory"
+    component_type: context_source
+    privilege: read
+    is_untrusted_source: false
+    receives_untrusted_external: false
+    data_sensitivity: 0.90
+    human_approval_rate: 0.15
+    existing_control_E: 0.20
+
+  - id: tool_email
+    name: "Email Send/Read Tool"
+    component_type: tool
+    privilege: write
+    is_untrusted_source: false
+    receives_untrusted_external: false
+    data_sensitivity: 0.85
+    human_approval_rate: 0.10
+    existing_control_E: 0.15
+
+  - id: tool_booking
+    name: "Appointment Booking Tool"
+    component_type: tool
+    privilege: write
+    is_untrusted_source: false
+    receives_untrusted_external: false
+    data_sensitivity: 0.70
+    human_approval_rate: 0.10
+    existing_control_E: 0.20
+
+  - id: tool_banking
+    name: "Financial Transaction / Banking Tool"
+    component_type: tool
+    privilege: execute
+    is_untrusted_source: false
+    receives_untrusted_external: false
+    data_sensitivity: 0.95
+    human_approval_rate: 0.05
+    existing_control_E: 0.10
+
+flows:
+  - source: untrusted_feeds
+    target: orchestrator
+    label: "external_reviews_and_emails"
+    untrusted_channel: true
+  - source: memory_store
+    target: orchestrator
+    label: "personal_context"
+  - source: orchestrator
+    target: llm_model
+    label: "react_prompt"
+  - source: llm_model
+    target: orchestrator
+    label: "tool_call_plan"
+  - source: orchestrator
+    target: tool_email
+    label: "send_email_action"
+  - source: orchestrator
+    target: tool_booking
+    label: "book_appointment_action"
+  - source: orchestrator
+    target: tool_banking
+    label: "transfer_funds_action"
+
+pair_overrides:
+  "T_TOOL_ABUSE@orchestrator":
+    I: 5.0
+    mu0: 0.24
+    n0: 4.0
+    E: 0.15
+  "T_ASI01_GOAL_HIJACK@untrusted_feeds":
+    I: 4.9
+    mu0: 0.25
+    n0: 4.0
+    E: 0.10
+  "T_IPI@untrusted_feeds":
+    I: 4.8
+    mu0: 0.24
+    n0: 4.0
+    E: 0.10
+  "T_TOOL_ABUSE@tool_banking":
+    I: 5.0
+    mu0: 0.24
+    n0: 4.0
+    E: 0.10
+  "T_DATA_LEAK@memory_store":
+    I: 4.4
+    mu0: 0.20
+    n0: 4.0
+    E: 0.20
+  "T_MODEL_EXTRACT@llm_model":
+    exclude: true
+  "T_ML_EVASION@llm_model":
+    exclude: true

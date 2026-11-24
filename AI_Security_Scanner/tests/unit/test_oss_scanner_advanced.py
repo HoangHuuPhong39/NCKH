@@ -112,3 +112,21 @@ class TestOSSScannerUpgrades:
         assert "OSS-YAML-AI-SAST-004" in fids
         # HuggingFace config.json auto_map
         assert "OSS-HF-AUTOMAP-001" in fids
+
+    def test_chrome_renamed_config_and_clean_bin_zero_findings(self, tmp_path):
+        # 1. File sạch pytorch_model.bin (PyTorch ZIP chứa pickle thuần dict) -> bắt buộc 0 lỗi
+        clean_bin = tmp_path / "pytorch_model.bin"
+        with zipfile.ZipFile(clean_bin, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+            zf.writestr("archive/data.pkl", pickle.dumps({"weights": [0.1, 0.2, 0.3]}, protocol=4))
+
+        res_clean = self.scanner.scan_model_artifacts(str(clean_bin), include_requirements=True)
+        assert res_clean["success"] is True
+        assert "pytorch_model.bin" in res_clean["artifacts_scanned"]
+        assert res_clean["findings"] == [], f"File .bin sạch không được báo lỗi: {res_clean['findings']}"
+
+        # 2. File config (1).json (tên Chrome tự đổi khi tải trùng) chứa auto_map -> phải bắt được!
+        cfg_dup = tmp_path / "config (1).json"
+        cfg_dup.write_text('{"model_type": "phi3", "auto_map": {"AutoConfig": "configuration_phi3.Phi3Config"}}', encoding="utf-8")
+        res_dup = self.scanner.scan_model_artifacts(str(tmp_path), include_requirements=True)
+        assert "config (1).json" in res_dup["artifacts_scanned"]
+        assert any(f["finding_id"] == "OSS-HF-AUTOMAP-001" for f in res_dup["findings"])

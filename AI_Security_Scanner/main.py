@@ -576,10 +576,48 @@ def build_arg_parser() -> argparse.ArgumentParser:
         help="List all registered exploit and auxiliary scanner modules and exit.",
     )
     parser.add_argument(
+        "--rbst",
+        metavar="PROFILE",
+        help="Run RBST-AI Risk-Based Security Testing on a built-in case study (cs1..cs4) or custom YAML/JSON system graph.",
+    )
+    parser.add_argument(
+        "--rbst-strategy",
+        default="rbst_ai",
+        help="RBST-AI orchestration policy: rbst_ai, B0_random, B1_owasp, B2_static_rbst, B3_default_tool, B4_qualitative_rbt, A1_no_M, A2_no_bayes, A3_greedy.",
+    )
+    parser.add_argument(
+        "--rbst-budget",
+        type=float,
+        default=40.0,
+        help="Testing budget B for --rbst (default: 40.0).",
+    )
+    parser.add_argument(
+        "--rbst-tau",
+        type=float,
+        default=0.0,
+        help="Acceptable residual risk threshold tau for --rbst stopping criterion (0 disables early stop).",
+    )
+    parser.add_argument(
+        "--rbst-seed",
+        type=int,
+        default=42,
+        help="Random seed for reproducible --rbst execution (default: 42).",
+    )
+    parser.add_argument(
+        "--rbst-live",
+        action="store_true",
+        help="Execute --rbst test cases against live LLM endpoint instead of calibrated benchmark oracle.",
+    )
+    parser.add_argument(
+        "--rbst-output",
+        metavar="PATH",
+        help="Optional output path to save full RBST-AI JSON compliance report.",
+    )
+    parser.add_argument(
         "--json",
         action="store_true",
         dest="as_json",
-        help="Print scan results as formatted JSON (used with --sast or --oss).",
+        help="Print scan results as formatted JSON (used with --sast, --oss, or --rbst).",
     )
     return parser
 
@@ -673,6 +711,109 @@ def _run_cli_oss(target: str, as_json: bool) -> int:
     return 0
 
 
+def _run_cli_rbst(
+    profile: str,
+    strategy: str,
+    budget_B: float,
+    tau: float,
+    seed: int,
+    live: bool,
+    output_path: str | None,
+    as_json: bool,
+) -> int:
+    from core.rbst_adapter import (
+        EmpiricalCalibrationExecutor,
+        LiveScannerExecutor,
+        build_pipeline_for_case_study,
+        default_ground_truth_for_case_study,
+    )
+    from core.rbst_engine import RBSTOrchestrator
+    from core.rbst_metrics import RBSTComplianceReporter, evaluate_run
+
+    try:
+        graph, pairs, cases = build_pipeline_for_case_study(profile)
+    except Exception as exc:
+        console.print(f"[bold red]Failed to load RBST-AI profile '{profile}':[/bold red] {exc}")
+        return 1
+
+    gt_vulns = None
+    actual_sev = None
+    if live:
+        client = SimpleLLMClient(
+            base_url=cfg.get("scanner.target_url", "http://localhost:11434"),
+            model=cfg.get("scanner.target_model", "llama3"),
+            timeout=cfg.get("scanner.timeout", 60),
+            api_key=cfg.get("scanner.api_key", ""),
+        )
+        executor = LiveScannerExecutor(llm_client=client, seed=seed)
+    else:
+        cs_key = str(graph.metadata.get("case_study", profile)).lower()
+        true_asr, gt_vulns, actual_sev = default_ground_truth_for_case_study(cs_key, pairs)
+        executor = EmpiricalCalibrationExecutor(true_asr_by_pair=true_asr, seed=seed)
+
+    orchestrator = RBSTOrchestrator(
+        pairs=pairs,
+        test_cases=cases,
+        system_name=graph.name,
+    )
+    run_res = orchestrator.run(
+        executor=executor,
+        budget_B=budget_B,
+        threshold_tau=tau,
+        strategy=strategy,
+        seed=seed,
+    )
+    metrics = evaluate_run(
+        run_res,
+        ground_truth_vulns=gt_vulns,
+        actual_severity_by_pair=actual_sev,
+    )
+    reporter = RBSTComplianceReporter()
+    report = reporter.generate_report(run_res, metrics=metrics, system_version=graph.version)
+
+    if output_path:
+        saved = reporter.export_json(report, output_path)
+        if not as_json:
+            console.print(f"[green]Saved RBST-AI report to:[/green] {saved}")
+
+    if as_json:
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+        return 0
+
+    table = Table(
+        title=f"RBST-AI Risk-Based Security Testing — {graph.name} ({strategy})",
+        box=box.ROUNDED,
+    )
+    table.add_column("Cặp (t, c)", style="bold cyan")
+    table.add_column("OWASP", style="magenta", no_wrap=True)
+    table.add_column("M", justify="right")
+    table.add_column("n / s", justify="center")
+    table.add_column("θ_tb", justify="right")
+    table.add_column("R", justify="right")
+    table.add_column("R_res", justify="right", style="bold yellow")
+
+    for st in report["pair_risk_summary"]:
+        table.add_row(
+            st["pair_id"],
+            st["owasp_code"],
+            f"{st['M']:.2f}",
+            f"{st['n']} / {st['s']}",
+            f"{st['theta_tb']:.3f}",
+            f"{st['risk_R']:.2f}",
+            f"{st['residual_risk_R_res']:.2f}",
+        )
+    console.print(table)
+    console.print(
+        f"[bold green]APFD_R:[/bold green] {metrics['APFD_R']:.4f} | "
+        f"[bold green]RC:[/bold green] {metrics['RC']:.4f} | "
+        f"[bold green]CF:[/bold green] {metrics['CF']} | "
+        f"[bold green]Steps:[/bold green] {run_res.total_steps} | "
+        f"[bold green]Cost:[/bold green] {run_res.total_cost:.2f}/{budget_B:.2f} | "
+        f"[bold green]Stopped:[/bold green] {run_res.stopped_reason}"
+    )
+    return 0
+
+
 def main(argv=None) -> int:
     parser = build_arg_parser()
     args = parser.parse_args(argv)
@@ -690,6 +831,17 @@ def main(argv=None) -> int:
         )
     if args.oss:
         return _run_cli_oss(target=args.oss, as_json=args.as_json)
+    if args.rbst:
+        return _run_cli_rbst(
+            profile=args.rbst,
+            strategy=args.rbst_strategy,
+            budget_B=args.rbst_budget,
+            tau=args.rbst_tau,
+            seed=args.rbst_seed,
+            live=args.rbst_live,
+            output_path=args.rbst_output,
+            as_json=args.as_json,
+        )
 
     cli = AIScannerCLI()
     cli.run()

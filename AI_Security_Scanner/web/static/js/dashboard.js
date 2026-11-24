@@ -4246,7 +4246,12 @@ async function initCodeAndOSSPage() {
   setupDropzone(document.getElementById('oss-dropzone'), handleOSSFileSelect);
   setupDropzone(document.getElementById('oss-req-dropzone'), handleOSSReqFileUpload);
   await loadSampleSASTCode(false);
-  await loadSampleOSSConfig(false);
+  // Keep OSS SCA editor empty by default so uploading clean model files does not mix in demo CVE alerts.
+  // Users can still click "Mẫu" to load the vulnerable demo requirements explicitly.
+  const urlIn = document.getElementById('oss-target-url-input');
+  const mainUrl = document.getElementById('target-url-input')?.value;
+  if (urlIn && mainUrl) urlIn.value = mainUrl;
+  updateOSSReqCount();
 }
 
 async function loadSampleSASTCode(autoRun = false) {
@@ -4611,9 +4616,12 @@ function handleOSSFileSelect(fileList) {
     return !rel.includes('.git/') && !rel.includes('__pycache__/');
   });
   renderOSSFileQueue();
-  const reqFile = _ossQueuedFiles.find(f => f.name.toLowerCase() === 'requirements.txt');
+  const reqFile = _ossQueuedFiles.find(f => /^requirements(?:\s*\(\d+\))?\.txt$/i.test(f.name || ''));
   if (reqFile) {
     handleOSSReqFileUpload([reqFile]);
+  }
+  if (_ossQueuedFiles.length > 0) {
+    showToast('info', `Đã chọn ${_ossQueuedFiles.length} tệp — bấm "ModelScan" để chỉ quét tệp này, hoặc "Quét Toàn diện" để quét kèm Ollama & SCA.`);
   }
 }
 
@@ -4695,13 +4703,48 @@ async function loadSampleOSSConfig(autoRun = false) {
   }
 }
 
+let _ossLastMeta = { mode: 'full', artifacts: [], uploaded: [], servicesCount: 0 };
+
+function _isUploadedArtifactFinding(f) {
+  const fid = String(f.finding_id || '');
+  const cat = String(f.category || '');
+  return (
+    cat === 'OSS_MODEL_MALWARE' ||
+    fid.startsWith('OSS-HF-') ||
+    fid.startsWith('OSS-MF-') ||
+    fid.startsWith('OSS-YAML-') ||
+    fid.startsWith('OSS-ENV-') ||
+    fid.startsWith('OSS-MODELSCAN-')
+  );
+}
+
 function renderOSSResults() {
   const tblWrap = document.getElementById('oss-findings-table-wrap');
   if (!tblWrap) return;
-  const allFindings = _ossLastFindings || [];
+  const rawFindings = _ossLastFindings || [];
+  // Prioritize uploaded model/file artifact findings at the top so Ollama server alerts never hide them
+  const allFindings = [...rawFindings].sort((a, b) => {
+    const aFile = _isUploadedArtifactFinding(a) ? 0 : 1;
+    const bFile = _isUploadedArtifactFinding(b) ? 0 : 1;
+    return aFile - bFile;
+  });
+
+  const fileFindingsCount = allFindings.filter(_isUploadedArtifactFinding).length;
+  const depFindingsCount = allFindings.filter(f => String(f.category || '').includes('SCA') || String(f.category || '').includes('DEPENDENCY') || String(f.finding_id || '').startsWith('CVE-')).length;
+  const svcFindingsCount = Math.max(0, allFindings.length - fileFindingsCount - depFindingsCount);
+
+  const artifactsChecked = (_ossLastMeta.artifacts || []).length;
+  const breakdownHtml = artifactsChecked > 0 ? `
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;font-size:12px">
+      <span style="padding:5px 10px;border-radius:8px;font-weight:600;background:${fileFindingsCount === 0 ? 'rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.35);color:#34d399' : 'rgba(244,63,94,0.14);border:1px solid rgba(244,63,94,0.38);color:#fda4af'}">
+        File Model (${escapeHtml((_ossLastMeta.artifacts || []).join(', '))}): ${fileFindingsCount === 0 ? '0 lỗi (An toàn)' : `${fileFindingsCount} lỗi`}
+      </span>
+      ${_ossLastMeta.mode !== 'models' ? `<span style="padding:5px 10px;border-radius:8px;background:rgba(56,189,248,0.1);border:1px solid rgba(56,189,248,0.28);color:#7dd3fc">Dịch vụ AI Online: ${svcFindingsCount} cảnh báo</span>` : ''}
+      ${_ossLastMeta.mode !== 'models' ? `<span style="padding:5px 10px;border-radius:8px;background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.28);color:#c4b5fd">Thư viện SCA: ${depFindingsCount} lỗi</span>` : ''}
+    </div>` : '';
 
   if (allFindings.length === 0) {
-    tblWrap.innerHTML = `<div style="padding:20px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:10px;color:#34d399;text-align:center;font-weight:600">
+    tblWrap.innerHTML = `${breakdownHtml}<div style="padding:20px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:10px;color:#34d399;text-align:center;font-weight:600">
       Không phát hiện lỗ hổng nào trong thành phần mã nguồn mở vừa quét.
     </div>`;
     return;
@@ -4750,6 +4793,7 @@ function renderOSSResults() {
   }).join('');
 
   tblWrap.innerHTML = `
+    ${breakdownHtml}
     <div class="codescan-results-toolbar">
       <div style="font-size:12.5px;color:var(--text-secondary)">
         Phát hiện <strong style="color:var(--text-primary)">${allFindings.length}</strong> vấn đề bảo mật OSS / Chuỗi cung ứng
@@ -4773,6 +4817,7 @@ async function runOSSAIScan(mode = 'full') {
   const projectDir = document.getElementById('oss-model-dir-input')?.value || '';
   const reqText = document.getElementById('oss-requirements-editor')?.value || '';
   const saveToDb = document.getElementById('chk-sast-save-db')?.checked ?? true;
+  const scanCommonPorts = document.getElementById('chk-oss-scan-common-ports')?.checked ?? false;
   const useUploadedModels = _ossQueuedFiles.length > 0 && (mode === 'full' || mode === 'models');
 
   if (tblWrap) {
@@ -4796,6 +4841,7 @@ async function runOSSAIScan(mode = 'full') {
       fd.append('target_url', targetUrl);
       fd.append('requirements_text', reqText);
       fd.append('save_to_db', saveToDb ? 'true' : 'false');
+      fd.append('scan_common_ports', scanCommonPorts ? 'true' : 'false');
       res = await fetch('/api/oss-scan/upload', { method: 'POST', body: fd }).then(r => r.json());
     } else {
       res = await fetch('/api/oss-scan/run', {
@@ -4806,7 +4852,8 @@ async function runOSSAIScan(mode = 'full') {
           target_url: targetUrl,
           project_dir: projectDir,
           requirements_text: reqText,
-          save_to_db: saveToDb
+          save_to_db: saveToDb,
+          scan_common_ports: scanCommonPorts
         })
       }).then(r => r.json());
     }
@@ -4836,11 +4883,21 @@ async function runOSSAIScan(mode = 'full') {
             <span class="badge badge-low">PORT ${sv.port} OPEN</span>
           </div>
         `).join('');
+      } else if (mode === 'platforms' || (mode === 'full' && !useUploadedModels && !reqText.trim())) {
+        svcWrap.innerHTML = `<div style="padding:12px 16px;background:rgba(148,163,184,0.08);border:1px solid rgba(148,163,184,0.25);border-radius:10px;color:var(--text-secondary);font-size:12.5px;margin-bottom:8px">
+          Không phát hiện dịch vụ AI nào đang mở tại <code style="color:#e2e8f0">${escapeHtml(targetUrl)}</code> (cổng đang đóng hoặc dịch vụ chưa khởi chạy).
+        </div>`;
       } else {
         svcWrap.innerHTML = '';
       }
     }
 
+    _ossLastMeta = {
+      mode: mode,
+      artifacts: res.artifacts_scanned || [],
+      uploaded: res.uploaded_files || [],
+      servicesCount: services.length,
+    };
     _ossLastFindings = findings;
     _ossActiveSevFilter = 'ALL';
     renderOSSResults();

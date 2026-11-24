@@ -260,13 +260,15 @@ def api_oss_scan_run():
             return jsonify({"success": False, "error": u_err}), 400
     project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     default_sample_dir = os.path.join(project_root, "data", "samples", "vulnerable_oss_ai_app")
-    project_dir = (data.get("project_dir") or "").strip() or default_sample_dir
+    raw_project_dir = (data.get("project_dir") or "").strip()
+    project_dir = raw_project_dir or (default_sample_dir if mode == "models" else None)
     requirements_text = data.get("requirements_text")
     save_to_db = bool(data.get("save_to_db", True))
+    scan_common_ports = bool(data.get("scan_common_ports", False))
 
     scanner = OpenSourceAIScanner()
     if mode == "platforms":
-        plat_res = scanner.scan_oss_platforms(target_url=target_url, scan_common_ports=True)
+        plat_res = scanner.scan_oss_platforms(target_url=target_url, scan_common_ports=scan_common_ports)
         findings = plat_res.get("findings", [])
         by_sev = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0, "INFO": 0}
         for f in findings:
@@ -343,6 +345,7 @@ def api_oss_scan_run():
             target_url=target_url,
             project_dir=project_dir,
             requirements_text=requirements_text,
+            scan_common_ports=scan_common_ports,
         )
 
     findings = res.get("findings", [])
@@ -378,6 +381,7 @@ def api_oss_scan_upload():
             return jsonify({"success": False, "error": u_err}), 400
     requirements_text = request.form.get("requirements_text")
     save_to_db = str(request.form.get("save_to_db", "true")).lower() in ("true", "1", "yes")
+    scan_common_ports = str(request.form.get("scan_common_ports", "false")).lower() in ("true", "1", "yes")
 
     scanner = OpenSourceAIScanner()
     with tempfile.TemporaryDirectory(prefix="ai_oss_upload_") as tmpdir:
@@ -414,6 +418,7 @@ def api_oss_scan_upload():
                 target_url=target_url,
                 project_dir=tmpdir,
                 requirements_text=requirements_text,
+                scan_common_ports=scan_common_ports,
             )
         res["uploaded_files"] = saved
 

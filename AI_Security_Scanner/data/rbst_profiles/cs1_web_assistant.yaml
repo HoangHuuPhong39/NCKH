@@ -1,0 +1,103 @@
+name: "CS1 — Web-Search Integrated Chat Assistant"
+version: "1.0"
+description: "Trợ lý chat tích hợp tìm kiếm web (Greshake et al. [1], Open-Prompt-Injection [2])."
+weights: [0.25, 0.25, 0.25, 0.25]
+metadata:
+  case_study: "CS1"
+  references: ["[1]", "[2]"]
+  system_type: "RAG"
+
+components:
+  - id: web_context
+    name: "Web Search Context Source"
+    component_type: context_source
+    privilege: read
+    is_untrusted_source: true
+    receives_untrusted_external: true
+    data_sensitivity: 0.55
+    human_approval_rate: 0.45
+    existing_control_E: 0.15
+
+  - id: chat_ui
+    name: "User Chat Interface"
+    component_type: user_interface
+    privilege: none
+    is_untrusted_source: false
+    receives_untrusted_external: false
+    data_sensitivity: 0.50
+    human_approval_rate: 0.70
+    existing_control_E: 0.20
+
+  - id: orchestrator
+    name: "Prompt Orchestrator & Retrieval Guardrail"
+    component_type: orchestrator
+    privilege: read
+    is_untrusted_source: false
+    receives_untrusted_external: false
+    data_sensitivity: 0.60
+    human_approval_rate: 0.50
+    existing_control_E: 0.25
+
+  - id: llm_model
+    name: "Foundation LLM (GPT-4 / Local LLM)"
+    component_type: model
+    privilege: none
+    is_untrusted_source: false
+    receives_untrusted_external: false
+    data_sensitivity: 0.55
+    human_approval_rate: 0.55
+    existing_control_E: 0.30
+
+  - id: chat_history
+    name: "Conversation History Store"
+    component_type: context_source
+    privilege: read
+    is_untrusted_source: false
+    receives_untrusted_external: false
+    data_sensitivity: 0.65
+    human_approval_rate: 0.60
+    existing_control_E: 0.25
+
+flows:
+  - source: web_context
+    target: orchestrator
+    label: "retrieved_web_pages"
+    untrusted_channel: true
+  - source: chat_ui
+    target: orchestrator
+    label: "user_query"
+  - source: chat_history
+    target: orchestrator
+    label: "session_history"
+  - source: orchestrator
+    target: llm_model
+    label: "assembled_prompt"
+  - source: llm_model
+    target: chat_ui
+    label: "assistant_reply"
+
+pair_overrides:
+  "T_IPI@web_context":
+    I: 4.5
+    mu0: 0.30
+    n0: 4.0
+    E: 0.15
+  "T_DATA_LEAK@chat_history":
+    I: 4.0
+    mu0: 0.22
+    n0: 4.0
+    E: 0.20
+  "T_DPI@orchestrator":
+    I: 3.4
+    mu0: 0.25
+    n0: 4.0
+    E: 0.25
+  "T_JB@llm_model":
+    I: 3.2
+    mu0: 0.24
+    n0: 4.0
+    E: 0.35
+  "T_MODEL_EXTRACT@llm_model":
+    exclude: true
+  "T_ML_EVASION@llm_model":
+    exclude: true
