@@ -25,6 +25,7 @@ import argparse
 import json
 from pathlib import Path
 import sys
+import urllib.request
 
 from rich import box
 from rich.console import Console
@@ -175,10 +176,19 @@ def main() -> int:
         )
         exact_user_prompt = rec["prompt"]
 
+        live_base_url = "http://127.0.0.1:11434"
+        try:
+            with urllib.request.urlopen("http://127.0.0.1:11435/_monitor_ping", timeout=0.08) as ping_resp:
+                if ping_resp.status == 200:
+                    live_base_url = "http://127.0.0.1:11435"
+        except Exception:
+            pass
+
         live_res = call_ollama_chat(
             model=args.model,
             system_prompt=sys_prompt,
             user_prompt=exact_user_prompt,
+            base_url=live_base_url,
             num_predict=96,
             temperature=0.0,
         )

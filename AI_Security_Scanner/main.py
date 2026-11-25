@@ -755,6 +755,14 @@ def _run_cli_rbst(
             model_name = raw_model
 
         api_url = cfg.get("scanner.target_url", "http://localhost:11434")
+        if "11434" in api_url:
+            import urllib.request
+            try:
+                with urllib.request.urlopen("http://127.0.0.1:11435/_monitor_ping", timeout=0.08) as ping_resp:
+                    if ping_resp.status == 200:
+                        api_url = "http://127.0.0.1:11435"
+            except Exception:
+                pass
         client = SimpleLLMClient(
             api_url=api_url,
             model_name=model_name,
