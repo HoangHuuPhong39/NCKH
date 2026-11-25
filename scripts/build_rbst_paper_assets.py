@@ -803,7 +803,7 @@ def build_docx(fig1: Path, fig2: Path, fig3: Path) -> Path:
             ["Đồ thị (|C|, |D|); ranh giới", "(5, 5); 1 ranh giới", "(7, 7); 1 ranh giới", "(4, 4); 0 ranh giới", "(3, 3); 0 ranh giới"],
             ["Số cặp (t, c) khả dĩ", "17", "25", "12", "8"],
             ["Hệ số M (min / tb / max)", "1,28 / 1,40 / 1,61", "1,57 / 1,72 / 1,95", "1,09 / 1,13 / 1,16", "1,30 / 1,31 / 1,32"],
-            ["Cặp ưu tiên đầu (R₀ max)", "T_IPI@web_context", "T_ASI01@untrusted_feeds", "T_JB@llm_model", "T_MODEL_EXTRACT@api"],
+            ["Cặp ưu tiên đầu (R₀ max)", "T_IPI@web_context", "T_ASI01_GOAL_HIJACK@untrusted_feeds", "T_JB@llm_model", "T_MODEL_EXTRACT@prediction_api"],
             ["Số ca chuẩn / vượt rào", "51 / 32 (ASR 62,7%)", "75 / 55 (ASR 73,3%)", "36 / 12 (ASR 33,3%)", "24 / 8 (ASR 33,3%)"],
             ["Tổng lỗ hổng phân biệt", "15", "21", "9 (gồm cả S3)", "5"],
             ["Độ trễ thực thi TB (ms)", "14.209,0", "25.737,8", "26.991,8", "35,6"],
@@ -954,13 +954,20 @@ def build_docx(fig1: Path, fig2: Path, fig3: Path) -> Path:
     )
 
     OUT_DOCX.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        doc.save(str(OUT_DOCX))
-        return OUT_DOCX
-    except PermissionError:
-        alt_out = OUT_DOCX.with_name("RBST_AI_Muc_5_6_Phong_Lam_Review_v2.docx")
-        doc.save(str(alt_out))
-        return alt_out
+    saved_paths = []
+    for candidate in (
+        OUT_DOCX,
+        OUT_DOCX.with_name("RBST_AI_Muc_5_6_Phong_Lam_Review_v2.docx"),
+        OUT_DOCX.with_name("RBST_AI_Muc_5_6_Phong_Lam_Review_v3.docx"),
+    ):
+        try:
+            doc.save(str(candidate))
+            saved_paths.append(candidate)
+            if len(saved_paths) >= 2:
+                break
+        except PermissionError:
+            continue
+    return saved_paths[-1]
 
 
 def main() -> int:
