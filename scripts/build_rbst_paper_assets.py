@@ -963,8 +963,7 @@ def build_docx(fig1: Path, fig2: Path, fig3: Path) -> Path:
         try:
             doc.save(str(candidate))
             saved_paths.append(candidate)
-            if len(saved_paths) >= 2:
-                break
+            break
         except PermissionError:
             continue
     return saved_paths[-1]
