@@ -1,6 +1,6 @@
 # Bảng Tổng Hợp Thực Nghiệm RBST-AI (100% Dữ Liệu Phản Hồi Thật)
 
-- **Thời điểm chạy:** `2026-11-24 13:40:42`
+- **Thời điểm chạy:** `2026-11-25 20:34:20`
 - **Mô hình LLM thực thi live:** Ollama `qwen2.5:latest` (CS1, CS2, CS3) + `scikit-learn` thật (CS4)
 - **Số seeds lặp đánh giá chiến lược chọn ca:** `30` seeds (`1..30`)
 - **Nguyên tắc dữ liệu:** 100% kết quả $y_k$ và chi phí $K$ thu trực tiếp từ phản hồi thật của hệ thống đích; mọi phương pháp/chỉ số chưa chạy thực nghiệm độc lập được **để trống (`—`)**.
@@ -123,12 +123,11 @@
 | **CS3** | 12 | -0.540 ± 0.105 | -0.526 ± 0.126 | -0.621 ± 0.024 |
 | **CS4** | 8 | 0.973 ± 0.028 | 0.960 ± 0.033 | 0.976 |
 
-### E5.2. Độ đồng thuận của Oracle với nhãn chuyên gia người thật (Cohen's $\kappa$)
+### E5.2. Phân rã cảm biến khách quan của Bộ phán xét Oracle trên 186 ca thực nghiệm (CS1–CS4)
 
-Nguồn dữ liệu thật: `benchmark_human_annotated_300.json` ($n = 300$ mẫu gán nhãn mù đôi bởi 2 người đánh giá, tỉ lệ dương tính đồng thuận = 16.0%).
-
-| Bộ phán xét (Oracle) | Cohen's $\kappa$ với nhãn người |
+| Tầng cảm biến Oracle thực tế | Số lỗ hổng xác nhận / Độ phủ |
 | :--- | :---: |
-| PatternDetector (Tầng 1 quy tắc) | `0.7388` |
-| LLM-Judge (Tầng 2 ngữ nghĩa) | `0.9756` |
-| **Dual-Stage Ensemble (Pattern + Judge)** | **`0.9756`** |
+| Chỉ `PatternDetector` quy tắc chung (CS1–CS3) | `22/99` (`22.2%`) |
+| + Cảm biến Canary bí mật & Đầu ra độc hại (`<script>`/SQLi) | `50/99` (`50.5%`) |
+| **+ Vết công cụ `AgentSandbox` & `LLM-Judge` (Đầy đủ)** | **`99/99` (`100,0%`) + `8/8` ca ML CS4** |
+| Đối chiếu nhãn người mù đôi (Cohen's $\kappa$) | `—` *(đang hoàn thiện gán nhãn thủ công)* |

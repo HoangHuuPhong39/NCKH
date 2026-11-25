@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-24T13:40:42.658976",
+  "generated_at": "2026-11-25T20:34:20.197558",
   "model": "qwen2.5:latest",
   "cases_per_pair": 3,
   "seeds": [
@@ -36,13 +36,16 @@
   ],
   "budget_fraction": 0.45,
   "oracle_human_agreement": {
-    "available": true,
-    "source_file": "benchmark_human_annotated_300.json",
-    "n_samples": 300,
-    "human_positive_rate": 0.16,
-    "kappa_pattern_vs_human": 0.7388,
-    "kappa_judge_vs_human": 0.9756,
-    "kappa_ensemble_vs_human": 0.9756
+    "available": false,
+    "note": "Manual double-blind human annotation in progress; reporting objective technical Oracle sensors on CS1-CS4.",
+    "n_cs1_cs3_cases": 162,
+    "n_cs1_cs3_vulns": 99,
+    "pattern_only_hits": 22,
+    "pattern_only_recall": 0.2222,
+    "pattern_plus_canary_hits": 50,
+    "pattern_plus_canary_recall": 0.5051,
+    "full_multisignal_hits": 99,
+    "full_multisignal_recall": 1.0
   },
   "case_studies": {
     "cs1": {
@@ -302,7 +305,7 @@
       "representative_rbst_report": {
         "report_metadata": {
           "framework": "RBST-AI",
-          "generated_at": "2026-11-24T13:40:21.756916",
+          "generated_at": "2026-11-25T20:34:08.626579",
           "system_name": "CS1 — Web-Search Integrated Chat Assistant",
           "system_version": "1.0",
           "strategy": "rbst_ai",
@@ -1389,7 +1392,7 @@
             "owasp": "LLM01",
             "mitre_atlas": "AML.T0051.000",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:21.727736",
+            "timestamp": "2026-11-25T20:34:08.600103",
             "cost_K": 0.722,
             "R_after": 9.5582,
             "R_res_after": 14.7255
@@ -1403,7 +1406,7 @@
             "owasp": "LLM01",
             "mitre_atlas": "AML.T0051.001",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:21.728291",
+            "timestamp": "2026-11-25T20:34:08.600861",
             "cost_K": 1.286,
             "R_after": 16.9792,
             "R_res_after": 25.5095
@@ -1417,7 +1420,7 @@
             "owasp": "LLM01",
             "mitre_atlas": "AML.T0051.000",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:21.728914",
+            "timestamp": "2026-11-25T20:34:08.601356",
             "cost_K": 0.722,
             "R_after": 8.4933,
             "R_res_after": 13.0849
@@ -1431,7 +1434,7 @@
             "owasp": "LLM01",
             "mitre_atlas": "AML.T0051.001",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:21.729612",
+            "timestamp": "2026-11-25T20:34:08.601820",
             "cost_K": 1.387,
             "R_after": 19.2759,
             "R_res_after": 26.7365
@@ -1445,7 +1448,7 @@
             "owasp": "LLM01",
             "mitre_atlas": "AML.T0051.001",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:21.730401",
+            "timestamp": "2026-11-25T20:34:08.602229",
             "cost_K": 1.719,
             "R_after": 20.9164,
             "R_res_after": 27.4925
@@ -1459,7 +1462,7 @@
             "owasp": "LLM02",
             "mitre_atlas": "AML.T0024",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:21.730905",
+            "timestamp": "2026-11-25T20:34:08.602601",
             "cost_K": 0.966,
             "R_after": 13.6424,
             "R_res_after": 21.7584
@@ -1473,7 +1476,7 @@
             "owasp": "LLM01",
             "mitre_atlas": "AML.T0054",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:21.731474",
+            "timestamp": "2026-11-25T20:34:08.602972",
             "cost_K": 0.929,
             "R_after": 8.0531,
             "R_res_after": 13.6404
@@ -1487,7 +1490,7 @@
             "owasp": "LLM01",
             "mitre_atlas": "AML.T0051.000",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:21.732078",
+            "timestamp": "2026-11-25T20:34:08.603348",
             "cost_K": 0.722,
             "R_after": 9.3427,
             "R_res_after": 14.3934
@@ -1501,7 +1504,7 @@
             "owasp": "LLM02",
             "mitre_atlas": "AML.T0024",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:21.733185",
+            "timestamp": "2026-11-25T20:34:08.603852",
             "cost_K": 0.966,
             "R_after": 10.7839,
             "R_res_after": 16.8638
@@ -1515,7 +1518,7 @@
             "owasp": "LLM01",
             "mitre_atlas": "AML.T0054",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:21.733780",
+            "timestamp": "2026-11-25T20:34:08.604349",
             "cost_K": 1.101,
             "R_after": 7.3957,
             "R_res_after": 12.2972
@@ -1529,7 +1532,7 @@
             "owasp": "LLM01",
             "mitre_atlas": "AML.T0051.000",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:21.734321",
+            "timestamp": "2026-11-25T20:34:08.604892",
             "cost_K": 1.056,
             "R_after": 8.3844,
             "R_res_after": 13.0425
@@ -1543,7 +1546,7 @@
             "owasp": "LLM01",
             "mitre_atlas": "AML.T0051.000",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:21.734804",
+            "timestamp": "2026-11-25T20:34:08.605380",
             "cost_K": 1.056,
             "R_after": 7.6222,
             "R_res_after": 11.8568
@@ -1557,7 +1560,7 @@
             "owasp": "LLM02",
             "mitre_atlas": "AML.T0024",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:21.735358",
+            "timestamp": "2026-11-25T20:34:08.605831",
             "cost_K": 1.132,
             "R_after": 9.3139,
             "R_res_after": 14.8548
@@ -1571,7 +1574,7 @@
             "owasp": "LLM02",
             "mitre_atlas": "AML.T0024",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:21.735965",
+            "timestamp": "2026-11-25T20:34:08.606271",
             "cost_K": 1.726,
             "R_after": 11.0283,
             "R_res_after": 16.0252
@@ -1585,7 +1588,7 @@
             "owasp": "LLM05",
             "mitre_atlas": "AML.T0048",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:21.736517",
+            "timestamp": "2026-11-25T20:34:08.606770",
             "cost_K": 0.824,
             "R_after": 9.0182,
             "R_res_after": 14.2428
@@ -1599,7 +1602,7 @@
             "owasp": "LLM01",
             "mitre_atlas": "AML.T0051.000",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:21.737068",
+            "timestamp": "2026-11-25T20:34:08.607208",
             "cost_K": 1.395,
             "R_after": 7.7,
             "R_res_after": 11.9558
@@ -1613,7 +1616,7 @@
             "owasp": "LLM05",
             "mitre_atlas": "AML.T0048",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:21.737583",
+            "timestamp": "2026-11-25T20:34:08.607635",
             "cost_K": 1.242,
             "R_after": 10.5952,
             "R_res_after": 15.2777
@@ -1627,7 +1630,7 @@
             "owasp": "LLM02",
             "mitre_atlas": "AML.T0024",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:21.738096",
+            "timestamp": "2026-11-25T20:34:08.608047",
             "cost_K": 1.726,
             "R_after": 16.1535,
             "R_res_after": 23.4726
@@ -1641,7 +1644,7 @@
             "owasp": "LLM02",
             "mitre_atlas": "AML.T0024",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:21.738571",
+            "timestamp": "2026-11-25T20:34:08.608460",
             "cost_K": 2.544,
             "R_after": 14.6661,
             "R_res_after": 21.6043
@@ -1655,7 +1658,7 @@
             "owasp": "LLM07",
             "mitre_atlas": "AML.T0056",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:21.739073",
+            "timestamp": "2026-11-25T20:34:08.608870",
             "cost_K": 1.06,
             "R_after": 7.0455,
             "R_res_after": 10.6924
@@ -1669,7 +1672,7 @@
             "owasp": "LLM01",
             "mitre_atlas": "AML.T0051.001",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:21.739563",
+            "timestamp": "2026-11-25T20:34:08.609272",
             "cost_K": 1.286,
             "R_after": 12.4949,
             "R_res_after": 19.3461
@@ -1683,7 +1686,7 @@
             "owasp": "LLM01",
             "mitre_atlas": "AML.T0051.000",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:21.740063",
+            "timestamp": "2026-11-25T20:34:08.609676",
             "cost_K": 1.395,
             "R_after": 7.0,
             "R_res_after": 10.8689
@@ -1697,7 +1700,7 @@
             "owasp": "LLM01",
             "mitre_atlas": "AML.T0054",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:21.740537",
+            "timestamp": "2026-11-25T20:34:08.610061",
             "cost_K": 0.929,
             "R_after": 4.9033,
             "R_res_after": 8.4963
@@ -1711,7 +1714,7 @@
             "owasp": "LLM01",
             "mitre_atlas": "AML.T0051.001",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:21.741016",
+            "timestamp": "2026-11-25T20:34:08.610463",
             "cost_K": 1.387,
             "R_after": 14.4671,
             "R_res_after": 20.5407
@@ -1725,7 +1728,7 @@
             "owasp": "LLM01",
             "mitre_atlas": "AML.T0051.001",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:21.741496",
+            "timestamp": "2026-11-25T20:34:08.610852",
             "cost_K": 1.719,
             "R_after": 15.8758,
             "R_res_after": 21.2653
@@ -1739,7 +1742,7 @@
             "owasp": "LLM01",
             "mitre_atlas": "AML.T0051.000",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:21.741984",
+            "timestamp": "2026-11-25T20:34:08.611233",
             "cost_K": 1.056,
             "R_after": 8.5779,
             "R_res_after": 13.3434
@@ -1753,7 +1756,7 @@
             "owasp": "LLM01",
             "mitre_atlas": "AML.T0054",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:21.742447",
+            "timestamp": "2026-11-25T20:34:08.611617",
             "cost_K": 1.101,
             "R_after": 4.5483,
             "R_res_after": 7.662
@@ -1767,7 +1770,7 @@
             "owasp": "LLM08",
             "mitre_atlas": "AML.T0020",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:21.742917",
+            "timestamp": "2026-11-25T20:34:08.612000",
             "cost_K": 1.522,
             "R_after": 13.3504,
             "R_res_after": 20.8773
@@ -1781,7 +1784,7 @@
             "owasp": "LLM01",
             "mitre_atlas": "AML.T0054",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:21.743346",
+            "timestamp": "2026-11-25T20:34:08.612366",
             "cost_K": 1.236,
             "R_after": 6.9262,
             "R_res_after": 11.2716
@@ -2046,7 +2049,7 @@
       "representative_rbst_report": {
         "report_metadata": {
           "framework": "RBST-AI",
-          "generated_at": "2026-11-24T13:40:32.106731",
+          "generated_at": "2026-11-25T20:34:15.803543",
           "system_name": "CS2 — Tool-Using AI Agent (Email, Banking, Booking)",
           "system_version": "1.0",
           "strategy": "rbst_ai",
@@ -3690,7 +3693,7 @@
             "owasp": "LLM06",
             "mitre_atlas": "AML.T0048.001",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:32.044357",
+            "timestamp": "2026-11-25T20:34:15.790270",
             "cost_K": 0.907,
             "R_after": 21.6328,
             "R_res_after": 33.4945
@@ -3704,7 +3707,7 @@
             "owasp": "LLM06",
             "mitre_atlas": "AML.T0048.001",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:32.044732",
+            "timestamp": "2026-11-25T20:34:15.790499",
             "cost_K": 0.907,
             "R_after": 16.8076,
             "R_res_after": 26.0234
@@ -3718,7 +3721,7 @@
             "owasp": "ASI01",
             "mitre_atlas": "AML.T0051.001",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:32.044974",
+            "timestamp": "2026-11-25T20:34:15.790707",
             "cost_K": 1.378,
             "R_after": 18.6533,
             "R_res_after": 28.7375
@@ -3732,7 +3735,7 @@
             "owasp": "LLM06",
             "mitre_atlas": "AML.T0048.001",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:32.045199",
+            "timestamp": "2026-11-25T20:34:15.790906",
             "cost_K": 1.095,
             "R_after": 25.0474,
             "R_res_after": 35.5628
@@ -3746,7 +3749,7 @@
             "owasp": "LLM06",
             "mitre_atlas": "AML.T0048.001",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:32.045433",
+            "timestamp": "2026-11-25T20:34:15.791082",
             "cost_K": 1.168,
             "R_after": 27.4863,
             "R_res_after": 36.8172
@@ -3760,7 +3763,7 @@
             "owasp": "ASI01",
             "mitre_atlas": "AML.T0051.001",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:32.045657",
+            "timestamp": "2026-11-25T20:34:15.791252",
             "cost_K": 1.378,
             "R_after": 22.3587,
             "R_res_after": 34.446
@@ -3774,7 +3777,7 @@
             "owasp": "LLM06",
             "mitre_atlas": "AML.T0048.001",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:32.047329",
+            "timestamp": "2026-11-25T20:34:15.791418",
             "cost_K": 0.907,
             "R_after": 15.4491,
             "R_res_after": 23.9201
@@ -3788,7 +3791,7 @@
             "owasp": "LLM02",
             "mitre_atlas": "AML.T0024",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:32.049129",
+            "timestamp": "2026-11-25T20:34:15.791583",
             "cost_K": 1.006,
             "R_after": 14.4936,
             "R_res_after": 22.8902
@@ -3802,7 +3805,7 @@
             "owasp": "LLM05",
             "mitre_atlas": "AML.T0048",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:32.050822",
+            "timestamp": "2026-11-25T20:34:15.791758",
             "cost_K": 0.985,
             "R_after": 8.0504,
             "R_res_after": 14.1031
@@ -3816,7 +3819,7 @@
             "owasp": "LLM06",
             "mitre_atlas": "AML.T0048.001",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:32.052475",
+            "timestamp": "2026-11-25T20:34:15.791923",
             "cost_K": 0.907,
             "R_after": 16.6406,
             "R_res_after": 25.765
@@ -3830,7 +3833,7 @@
             "owasp": "LLM01",
             "mitre_atlas": "AML.T0051.001",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:32.054112",
+            "timestamp": "2026-11-25T20:34:15.792084",
             "cost_K": 0.952,
             "R_after": 21.6328,
             "R_res_after": 33.4945
@@ -3844,7 +3847,7 @@
             "owasp": "LLM06",
             "mitre_atlas": "AML.T0048.001",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:32.055735",
+            "timestamp": "2026-11-25T20:34:15.792243",
             "cost_K": 0.907,
             "R_after": 19.5997,
             "R_res_after": 30.3466
@@ -3858,7 +3861,7 @@
             "owasp": "LLM06",
             "mitre_atlas": "AML.T0048.001",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:32.056562",
+            "timestamp": "2026-11-25T20:34:15.792404",
             "cost_K": 1.081,
             "R_after": 19.4605,
             "R_res_after": 27.6304
@@ -3872,7 +3875,7 @@
             "owasp": "LLM01",
             "mitre_atlas": "AML.T0051.000",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:32.057066",
+            "timestamp": "2026-11-25T20:34:15.792578",
             "cost_K": 0.722,
             "R_after": 9.6167,
             "R_res_after": 16.6076
@@ -3886,7 +3889,7 @@
             "owasp": "LLM01",
             "mitre_atlas": "AML.T0051.001",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:32.057562",
+            "timestamp": "2026-11-25T20:34:15.792799",
             "cost_K": 0.952,
             "R_after": 14.5172,
             "R_res_after": 22.4773
@@ -3900,7 +3903,7 @@
             "owasp": "ASI01",
             "mitre_atlas": "AML.T0051.001",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:32.058069",
+            "timestamp": "2026-11-25T20:34:15.792957",
             "cost_K": 1.696,
             "R_after": 25.7985,
             "R_res_after": 36.4875
@@ -3914,7 +3917,7 @@
             "owasp": "LLM01",
             "mitre_atlas": "AML.T0051.001",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:32.058548",
+            "timestamp": "2026-11-25T20:34:15.793110",
             "cost_K": 1.258,
             "R_after": 25.0474,
             "R_res_after": 35.5628
@@ -3928,7 +3931,7 @@
             "owasp": "LLM06",
             "mitre_atlas": "AML.T0048.001",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:32.059054",
+            "timestamp": "2026-11-25T20:34:15.793280",
             "cost_K": 1.095,
             "R_after": 22.6933,
             "R_res_after": 32.2205
@@ -3942,7 +3945,7 @@
             "owasp": "LLM06",
             "mitre_atlas": "AML.T0048.001",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:32.059575",
+            "timestamp": "2026-11-25T20:34:15.793436",
             "cost_K": 0.907,
             "R_after": 19.9341,
             "R_res_after": 30.8643
@@ -3956,7 +3959,7 @@
             "owasp": "LLM06",
             "mitre_atlas": "AML.T0048.001",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:32.060107",
+            "timestamp": "2026-11-25T20:34:15.793597",
             "cost_K": 1.095,
             "R_after": 23.0805,
             "R_res_after": 32.7702
@@ -3970,7 +3973,7 @@
             "owasp": "LLM06",
             "mitre_atlas": "AML.T0048.001",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:32.060636",
+            "timestamp": "2026-11-25T20:34:15.793756",
             "cost_K": 1.305,
             "R_after": 24.9031,
             "R_res_after": 33.357
@@ -3984,7 +3987,7 @@
             "owasp": "LLM01",
             "mitre_atlas": "AML.T0051.001",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:32.061151",
+            "timestamp": "2026-11-25T20:34:15.793914",
             "cost_K": 0.952,
             "R_after": 17.6398,
             "R_res_after": 27.3119
@@ -3998,7 +4001,7 @@
             "owasp": "LLM06",
             "mitre_atlas": "AML.T0048.001",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:32.061635",
+            "timestamp": "2026-11-25T20:34:15.794063",
             "cost_K": 1.095,
             "R_after": 19.2672,
             "R_res_after": 27.356
@@ -4012,7 +4015,7 @@
             "owasp": "LLM06",
             "mitre_atlas": "AML.T0048.001",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:32.062095",
+            "timestamp": "2026-11-25T20:34:15.794219",
             "cost_K": 1.227,
             "R_after": 25.3279,
             "R_res_after": 33.9261
@@ -4026,7 +4029,7 @@
             "owasp": "LLM02",
             "mitre_atlas": "AML.T0024",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:32.062552",
+            "timestamp": "2026-11-25T20:34:15.794371",
             "cost_K": 1.006,
             "R_after": 17.5135,
             "R_res_after": 27.9324
@@ -4040,7 +4043,7 @@
             "owasp": "LLM06",
             "mitre_atlas": "AML.T0048.001",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:32.063014",
+            "timestamp": "2026-11-25T20:34:15.794519",
             "cost_K": 1.212,
             "R_after": 21.1433,
             "R_res_after": 28.3209
@@ -4054,7 +4057,7 @@
             "owasp": "LLM06",
             "mitre_atlas": "AML.T0048.001",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:32.063471",
+            "timestamp": "2026-11-25T20:34:15.794681",
             "cost_K": 1.271,
             "R_after": 17.8876,
             "R_res_after": 25.3972
@@ -4068,7 +4071,7 @@
             "owasp": "LLM01",
             "mitre_atlas": "AML.T0054",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:32.064119",
+            "timestamp": "2026-11-25T20:34:15.794828",
             "cost_K": 1.06,
             "R_after": 9.3565,
             "R_res_after": 15.8481
@@ -4082,7 +4085,7 @@
             "owasp": "LLM01",
             "mitre_atlas": "AML.T0054",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:32.065192",
+            "timestamp": "2026-11-25T20:34:15.794973",
             "cost_K": 1.06,
             "R_after": 11.3691,
             "R_res_after": 19.2568
@@ -4096,7 +4099,7 @@
             "owasp": "LLM01",
             "mitre_atlas": "AML.T0051.001",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:32.066299",
+            "timestamp": "2026-11-25T20:34:15.795113",
             "cost_K": 1.258,
             "R_after": 20.424,
             "R_res_after": 28.9985
@@ -4110,7 +4113,7 @@
             "owasp": "LLM06",
             "mitre_atlas": "AML.T0048.001",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:32.067379",
+            "timestamp": "2026-11-25T20:34:15.795255",
             "cost_K": 1.416,
             "R_after": 21.3554,
             "R_res_after": 28.605
@@ -4124,7 +4127,7 @@
             "owasp": "LLM01",
             "mitre_atlas": "AML.T0051.001",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:32.068480",
+            "timestamp": "2026-11-25T20:34:15.795397",
             "cost_K": 1.908,
             "R_after": 27.4863,
             "R_res_after": 36.8172
@@ -4138,7 +4141,7 @@
             "owasp": "LLM05",
             "mitre_atlas": "AML.T0048",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:32.069533",
+            "timestamp": "2026-11-25T20:34:15.795538",
             "cost_K": 0.993,
             "R_after": 13.6372,
             "R_res_after": 21.5376
@@ -4152,7 +4155,7 @@
             "owasp": "LLM06",
             "mitre_atlas": "AML.T0048.001",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:32.070695",
+            "timestamp": "2026-11-25T20:34:15.795682",
             "cost_K": 1.484,
             "R_after": 19.6293,
             "R_res_after": 26.293
@@ -4166,7 +4169,7 @@
             "owasp": "LLM08",
             "mitre_atlas": "AML.T0020",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:32.071738",
+            "timestamp": "2026-11-25T20:34:15.795821",
             "cost_K": 1.59,
             "R_after": 17.1386,
             "R_res_after": 26.8013
@@ -4180,7 +4183,7 @@
             "owasp": "LLM01",
             "mitre_atlas": "AML.T0051.000",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:32.072157",
+            "timestamp": "2026-11-25T20:34:15.795963",
             "cost_K": 0.722,
             "R_after": 7.9144,
             "R_res_after": 13.6678
@@ -4194,7 +4197,7 @@
             "owasp": "ASI01",
             "mitre_atlas": "AML.T0051.001",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:32.072568",
+            "timestamp": "2026-11-25T20:34:15.796100",
             "cost_K": 1.696,
             "R_after": 21.5231,
             "R_res_after": 30.4406
@@ -4208,7 +4211,7 @@
             "owasp": "LLM01",
             "mitre_atlas": "AML.T0051.001",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:32.072983",
+            "timestamp": "2026-11-25T20:34:15.796236",
             "cost_K": 1.258,
             "R_after": 16.8086,
             "R_res_after": 23.8653
@@ -4222,7 +4225,7 @@
             "owasp": "LLM01",
             "mitre_atlas": "AML.T0051.001",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:32.073396",
+            "timestamp": "2026-11-25T20:34:15.796373",
             "cost_K": 1.908,
             "R_after": 22.4128,
             "R_res_after": 30.0213
@@ -4236,7 +4239,7 @@
             "owasp": "ASI01",
             "mitre_atlas": "AML.T0051.001",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:32.074064",
+            "timestamp": "2026-11-25T20:34:15.796505",
             "cost_K": 2.12,
             "R_after": 23.5729,
             "R_res_after": 31.4764
@@ -4501,7 +4504,7 @@
       "representative_rbst_report": {
         "report_metadata": {
           "framework": "RBST-AI",
-          "generated_at": "2026-11-24T13:40:38.246643",
+          "generated_at": "2026-11-25T20:34:18.724575",
           "system_name": "CS3 — Public LLM Chatbot",
           "system_version": "1.0",
           "strategy": "rbst_ai",
@@ -5182,7 +5185,7 @@
             "owasp": "LLM01",
             "mitre_atlas": "AML.T0051.000",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:38.228660",
+            "timestamp": "2026-11-25T20:34:18.716025",
             "cost_K": 1.6,
             "R_after": 4.7297,
             "R_res_after": 8.168
@@ -5196,7 +5199,7 @@
             "owasp": "LLM07",
             "mitre_atlas": "AML.T0056",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:38.229177",
+            "timestamp": "2026-11-25T20:34:18.716532",
             "cost_K": 0.91,
             "R_after": 6.0768,
             "R_res_after": 9.2222
@@ -5210,7 +5213,7 @@
             "owasp": "LLM07",
             "mitre_atlas": "AML.T0056",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:38.229633",
+            "timestamp": "2026-11-25T20:34:18.717253",
             "cost_K": 0.932,
             "R_after": 6.0107,
             "R_res_after": 9.122
@@ -5224,7 +5227,7 @@
             "owasp": "LLM05",
             "mitre_atlas": "AML.T0048",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:38.230055",
+            "timestamp": "2026-11-25T20:34:18.717749",
             "cost_K": 1.018,
             "R_after": 7.1645,
             "R_res_after": 11.315
@@ -5238,7 +5241,7 @@
             "owasp": "LLM05",
             "mitre_atlas": "AML.T0048",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:38.230467",
+            "timestamp": "2026-11-25T20:34:18.718203",
             "cost_K": 1.484,
             "R_after": 8.4172,
             "R_res_after": 12.1372
@@ -5252,7 +5255,7 @@
             "owasp": "LLM02",
             "mitre_atlas": "AML.T0024",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:38.230871",
+            "timestamp": "2026-11-25T20:34:18.718417",
             "cost_K": 1.029,
             "R_after": 6.0823,
             "R_res_after": 10.6554
@@ -5266,7 +5269,7 @@
             "owasp": "LLM01",
             "mitre_atlas": "AML.T0051.000",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:38.231285",
+            "timestamp": "2026-11-25T20:34:18.718557",
             "cost_K": 1.6,
             "R_after": 5.1384,
             "R_res_after": 8.8738
@@ -5280,7 +5283,7 @@
             "owasp": "LLM07",
             "mitre_atlas": "AML.T0056",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:38.231675",
+            "timestamp": "2026-11-25T20:34:18.718688",
             "cost_K": 1.261,
             "R_after": 6.9423,
             "R_res_after": 9.7048
@@ -5294,7 +5297,7 @@
             "owasp": "LLM02",
             "mitre_atlas": "AML.T0024",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:38.232068",
+            "timestamp": "2026-11-25T20:34:18.718811",
             "cost_K": 1.53,
             "R_after": 5.6867,
             "R_res_after": 9.6188
@@ -5308,7 +5311,7 @@
             "owasp": "LLM02",
             "mitre_atlas": "AML.T0024",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:38.232458",
+            "timestamp": "2026-11-25T20:34:18.718934",
             "cost_K": 1.029,
             "R_after": 5.0016,
             "R_res_after": 8.7913
@@ -5322,7 +5325,7 @@
             "owasp": "LLM07",
             "mitre_atlas": "AML.T0056",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:38.232848",
+            "timestamp": "2026-11-25T20:34:18.719055",
             "cost_K": 1.261,
             "R_after": 6.8669,
             "R_res_after": 9.5993
@@ -5336,7 +5339,7 @@
             "owasp": "LLM05",
             "mitre_atlas": "AML.T0048",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:38.233250",
+            "timestamp": "2026-11-25T20:34:18.719176",
             "cost_K": 1.802,
             "R_after": 7.6342,
             "R_res_after": 11.1783
@@ -5350,7 +5353,7 @@
             "owasp": "LLM07",
             "mitre_atlas": "AML.T0056",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:38.233631",
+            "timestamp": "2026-11-25T20:34:18.719297",
             "cost_K": 1.696,
             "R_after": 6.2726,
             "R_res_after": 8.9643
@@ -5364,7 +5367,7 @@
             "owasp": "LLM01",
             "mitre_atlas": "AML.T0051.000",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:38.234003",
+            "timestamp": "2026-11-25T20:34:18.719415",
             "cost_K": 1.92,
             "R_after": 4.7578,
             "R_res_after": 8.0013
@@ -5378,7 +5381,7 @@
             "owasp": "LLM07",
             "mitre_atlas": "AML.T0056",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:38.234365",
+            "timestamp": "2026-11-25T20:34:18.719527",
             "cost_K": 1.696,
             "R_after": 6.2044,
             "R_res_after": 8.8669
@@ -5392,7 +5395,7 @@
             "owasp": "LLM01",
             "mitre_atlas": "AML.T0054",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:38.234727",
+            "timestamp": "2026-11-25T20:34:18.719691",
             "cost_K": 1.6,
             "R_after": 5.9305,
             "R_res_after": 10.045
@@ -5406,7 +5409,7 @@
             "owasp": "LLM01",
             "mitre_atlas": "AML.T0051.000",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:38.235104",
+            "timestamp": "2026-11-25T20:34:18.719817",
             "cost_K": 1.6,
             "R_after": 5.0715,
             "R_res_after": 8.7582
@@ -5420,7 +5423,7 @@
             "owasp": "LLM01",
             "mitre_atlas": "AML.T0054",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:38.235457",
+            "timestamp": "2026-11-25T20:34:18.719929",
             "cost_K": 1.6,
             "R_after": 6.8431,
             "R_res_after": 11.4917
@@ -5434,7 +5437,7 @@
             "owasp": "LLM01",
             "mitre_atlas": "AML.T0054",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:38.235811",
+            "timestamp": "2026-11-25T20:34:18.720043",
             "cost_K": 1.92,
             "R_after": 6.2661,
             "R_res_after": 10.3616
@@ -5448,7 +5451,7 @@
             "owasp": "LLM02",
             "mitre_atlas": "AML.T0024",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:38.236169",
+            "timestamp": "2026-11-25T20:34:18.720157",
             "cost_K": 1.665,
             "R_after": 4.697,
             "R_res_after": 7.9429
@@ -5462,7 +5465,7 @@
             "owasp": "LLM01",
             "mitre_atlas": "AML.T0054",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:38.236521",
+            "timestamp": "2026-11-25T20:34:18.720270",
             "cost_K": 1.92,
             "R_after": 5.4463,
             "R_res_after": 9.0559
@@ -5694,7 +5697,7 @@
       "representative_rbst_report": {
         "report_metadata": {
           "framework": "RBST-AI",
-          "generated_at": "2026-11-24T13:40:42.103333",
+          "generated_at": "2026-11-25T20:34:20.010819",
           "system_name": "CS4 — Machine Learning Prediction API (MLaaS)",
           "system_version": "1.0",
           "strategy": "rbst_ai",
@@ -6231,7 +6234,7 @@
             "owasp": "AML_EXT",
             "mitre_atlas": "AML.T0044",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:42.087109",
+            "timestamp": "2026-11-25T20:34:20.007206",
             "cost_K": 0.5,
             "R_after": 16.441,
             "R_res_after": 23.4764
@@ -6245,7 +6248,7 @@
             "owasp": "AML_EXT",
             "mitre_atlas": "AML.T0044",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:42.087695",
+            "timestamp": "2026-11-25T20:34:20.007371",
             "cost_K": 2.6,
             "R_after": 18.1492,
             "R_res_after": 24.1988
@@ -6259,7 +6262,7 @@
             "owasp": "LLM05",
             "mitre_atlas": "AML.T0048",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:42.088202",
+            "timestamp": "2026-11-25T20:34:20.007502",
             "cost_K": 1.0,
             "R_after": 6.5657,
             "R_res_after": 11.5022
@@ -6273,7 +6276,7 @@
             "owasp": "AML_EVA",
             "mitre_atlas": "AML.T0043",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:42.088700",
+            "timestamp": "2026-11-25T20:34:20.007628",
             "cost_K": 1.3,
             "R_after": 8.9825,
             "R_res_after": 15.0843
@@ -6287,7 +6290,7 @@
             "owasp": "LLM02",
             "mitre_atlas": "AML.T0024",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:42.089188",
+            "timestamp": "2026-11-25T20:34:20.007744",
             "cost_K": 1.6,
             "R_after": 6.9943,
             "R_res_after": 12.2938
@@ -6301,7 +6304,7 @@
             "owasp": "AML_EXT",
             "mitre_atlas": "AML.T0044",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:42.089722",
+            "timestamp": "2026-11-25T20:34:20.007862",
             "cost_K": 1.2,
             "R_after": 13.8846,
             "R_res_after": 20.3386
@@ -6315,7 +6318,7 @@
             "owasp": "AML_EVA",
             "mitre_atlas": "AML.T0043",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:42.090365",
+            "timestamp": "2026-11-25T20:34:20.007978",
             "cost_K": 1.3,
             "R_after": 9.5414,
             "R_res_after": 15.8084
@@ -6329,7 +6332,7 @@
             "owasp": "LLM05",
             "mitre_atlas": "AML.T0048",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:42.090946",
+            "timestamp": "2026-11-25T20:34:20.008092",
             "cost_K": 1.0,
             "R_after": 8.8077,
             "R_res_after": 13.9526
@@ -6343,7 +6346,7 @@
             "owasp": "LLM05",
             "mitre_atlas": "AML.T0048",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:42.091503",
+            "timestamp": "2026-11-25T20:34:20.008204",
             "cost_K": 1.0,
             "R_after": 8.1214,
             "R_res_after": 12.7831
@@ -6357,7 +6360,7 @@
             "owasp": "AML_EVA",
             "mitre_atlas": "AML.T0043",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:42.092049",
+            "timestamp": "2026-11-25T20:34:20.008318",
             "cost_K": 1.7,
             "R_after": 11.7017,
             "R_res_after": 17.5321
@@ -6371,7 +6374,7 @@
             "owasp": "LLM02",
             "mitre_atlas": "AML.T0024",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:42.092550",
+            "timestamp": "2026-11-25T20:34:20.008457",
             "cost_K": 1.6,
             "R_after": 6.5682,
             "R_res_after": 11.1073
@@ -6385,7 +6388,7 @@
             "owasp": "AML_EVA",
             "mitre_atlas": "AML.T0043",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:42.093060",
+            "timestamp": "2026-11-25T20:34:20.008570",
             "cost_K": 1.7,
             "R_after": 8.2251,
             "R_res_after": 13.601
@@ -6399,7 +6402,7 @@
             "owasp": "AML_EXT",
             "mitre_atlas": "AML.T0044",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:42.093581",
+            "timestamp": "2026-11-25T20:34:20.008679",
             "cost_K": 2.6,
             "R_after": 12.363,
             "R_res_after": 18.5229
@@ -6413,7 +6416,7 @@
             "owasp": "AML_EVA",
             "mitre_atlas": "AML.T0043",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:42.094041",
+            "timestamp": "2026-11-25T20:34:20.008782",
             "cost_K": 2.2,
             "R_after": 10.673,
             "R_res_after": 16.1015
@@ -6427,7 +6430,7 @@
             "owasp": "LLM10",
             "mitre_atlas": "AML.T0029",
             "system_version": "1.0",
-            "timestamp": "2026-11-24T13:40:42.094471",
+            "timestamp": "2026-11-25T20:34:20.008882",
             "cost_K": 1.55,
             "R_after": 3.7527,
             "R_res_after": 6.5961

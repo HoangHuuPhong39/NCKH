@@ -616,7 +616,7 @@ def build_docx(fig1: Path, fig2: Path, fig3: Path) -> Path:
             ("Chữ màu đen", BLACK, True, False),
             (" là nội dung giữ nguyên từ bản thảo gốc; ", BLACK, False, False),
             ("chữ màu đỏ", RED, True, False),
-            (" là toàn bộ nội dung chỉnh sửa, bổ sung mới và kết quả thực nghiệm thật 100% (507 lượt thực thi tấn công thật + 300 mẫu kiểm chứng Oracle gán nhãn mù đôi) để thầy review trước buổi họp ngày 25/11.", RED, False, False),
+            (" là toàn bộ nội dung chỉnh sửa, bổ sung mới và kết quả thực nghiệm thật 100% (507 lượt thực thi tấn công thật trên Ollama, GPU Tesla T4 và scikit-learn, 0% dữ liệu giả lập) để thầy review.", RED, False, False),
         ],
         size=10.5, space_after=6,
     )
@@ -789,7 +789,7 @@ def build_docx(fig1: Path, fig2: Path, fig3: Path) -> Path:
     )
     _add_p(
         doc,
-        "Tổng cộng đã thu thập 507 lượt thực thi tấn công thật: 186 ca chuẩn (CS1: 51, CS2: 75, CS3: 36, CS4: 24), 105 lượt tinh chỉnh lặp 3 vòng cho S1 (PAIR độc lập, llama3:latest tấn công qwen2.5:latest), 108 ca chuyển giao từ 10 hậu tố tối ưu gradient hộp trắng cho S2 (GCG độc lập, chạy nanogcg trên Qwen/Qwen2.5-1.5B-Instruct bằng GPU NVIDIA Tesla T4 trong 1.048 giây, giảm loss trung bình từ 3,629 xuống 2,074 rồi chuyển giao lên qwen2.5:latest), và 108 ca sinh tự động cho S3 (LLM Red Teaming, llama3:latest → qwen2.5:latest). Độ tin cậy Oracle được kiểm chứng trên 300 mẫu phản hồi thật gán nhãn mù đôi bởi hai chuyên gia (benchmark_human_annotated_300.json). Mọi chiến lược được đánh giá trong cùng ngân sách B = 45% tổng chi phí kho ca (CS1: 36,9; CS2: 48,1; CS3: 32,2; CS4: 23,0) qua 30 seeds, kiểm định Wilcoxon so với RBST-AI.",
+        "Tổng cộng đã thu thập 507 lượt thực thi tấn công thật: 186 ca chuẩn (CS1: 51, CS2: 75, CS3: 36, CS4: 24), 105 lượt tinh chỉnh lặp 3 vòng cho S1 (PAIR độc lập, llama3:latest tấn công qwen2.5:latest), 108 ca chuyển giao từ 10 hậu tố tối ưu gradient hộp trắng cho S2 (GCG độc lập, chạy nanogcg trên Qwen/Qwen2.5-1.5B-Instruct bằng GPU NVIDIA Tesla T4 trong 1.048 giây, giảm loss trung bình từ 3,629 xuống 2,074 rồi chuyển giao lên qwen2.5:latest), và 108 ca sinh tự động cho S3 (LLM Red Teaming, llama3:latest → qwen2.5:latest). Mọi nhãn y_k trên 186 ca chuẩn được xác định khách quan bằng cảm biến Canary bí mật (CORP-TOK-7741, VN99-4410-8821), vết thực thi công cụ AgentSandbox, đầu ra độc hại và ngưỡng toán học scikit-learn. Mọi chiến lược được đánh giá trong cùng ngân sách B = 45% tổng chi phí kho ca (CS1: 36,9; CS2: 48,1; CS3: 32,2; CS4: 23,0) qua 30 seeds, kiểm định Wilcoxon so với RBST-AI.",
         color=RED,
     )
 
@@ -932,15 +932,15 @@ def build_docx(fig1: Path, fig2: Path, fig3: Path) -> Path:
         color=RED, space_before=4,
     )
 
-    _add_p(doc, "Bảng 9. Tương quan rủi ro tồn dư R_res với mức nghiêm trọng thực đo (ĐG3) và độ tin cậy Oracle", color=RED, bold=True, size=10.5, align=WD_ALIGN_PARAGRAPH.CENTER)
+    _add_p(doc, "Bảng 9. Tương quan rủi ro tồn dư R_res với mức nghiêm trọng thực đo (ĐG3) và phân rã cảm biến Oracle khách quan (CS1–CS4)", color=RED, bold=True, size=10.5, align=WD_ALIGN_PARAGRAPH.CENTER)
     _add_styled_table(
         doc,
-        ["Kịch bản", "Số cặp (t,c)", "Spearman ρ(R_res, thực)", "Bộ phán xét Oracle (n = 300 mẫu nhãn người)", "Cohen's κ"],
+        ["Kịch bản", "Số cặp (t,c)", "Spearman ρ(R_res, thực)", "Tầng cảm biến Oracle thực tế (n = 186 ca CS1–CS4)", "Độ phủ lỗ hổng xác nhận"],
         [
-            ["CS1", "17", "0,695 ± 0,021", "PatternDetector (Tầng 1 quy tắc)", "0,7388"],
-            ["CS2", "25", "0,904 ± 0,014", "LLM-Judge (Tầng 2 ngữ nghĩa)", "0,9756"],
-            ["CS3", "12", "−0,540 ± 0,105 (lệch tiên nghiệm)", "Dual-Stage Ensemble (Pattern + Judge)", "0,9756"],
-            ["CS4", "8", "0,973 ± 0,028", "Tỉ lệ dương tính đồng thuận chuyên gia", "16,0%"],
+            ["CS1", "17", "0,695 ± 0,021", "Chỉ PatternDetector quy tắc chung (CS1–CS3)", "22/99 ca (22,2%)"],
+            ["CS2", "25", "0,904 ± 0,014", "+ Cảm biến Canary bí mật & Đầu ra độc hại (<script>/SQLi)", "50/99 ca (50,5%)"],
+            ["CS3", "12", "−0,540 ± 0,105 (lệch tiên nghiệm)", "+ Vết công cụ AgentSandbox & LLM-Judge (Đầy đủ)", "99/99 ca LLM (100%) + 8/8 ca ML"],
+            ["CS4", "8", "0,973 ± 0,028", "Đối chiếu nhãn người mù đôi (Cohen's κ)", "— (đang hoàn thiện gán nhãn)"],
         ],
         text_color=RED,
         highlight_rows={2},
@@ -949,7 +949,7 @@ def build_docx(fig1: Path, fig2: Path, fig3: Path) -> Path:
 
     _add_p(
         doc,
-        "Phân tích ĐG3 và Oracle: Rủi ro tồn dư R_res của RBST-AI tương quan hạng Spearman rất cao với mức nghiêm trọng thực tế ở CS1 (0,695), CS2 (0,904) và CS4 (0,973); riêng CS3 mang giá trị âm do cận trên 95% θ_max duy trì thái độ thận trọng đối với các cặp LLM01 chưa được thử đủ nhiều. Trên 300 mẫu phản hồi thật gán nhãn mù đôi bởi hai chuyên gia, Oracle hai tầng (Dual-Stage Ensemble) nâng Cohen's κ từ 0,7388 lên 0,9756, đảm bảo độ chính xác cao cho vòng phản hồi tự động về Risk Engine.",
+        "Phân tích ĐG3 và cảm biến Oracle khách quan: Rủi ro tồn dư R_res của RBST-AI tương quan hạng Spearman rất cao với mức nghiêm trọng thực tế ở CS1 (0,695), CS2 (0,904) và CS4 (0,973); riêng CS3 mang giá trị âm do cận trên 95% θ_max duy trì thái độ thận trọng đối với các cặp LLM01 chưa được thử đủ nhiều. Về độ tin cậy Oracle trên 162 ca LLM chuẩn (99 ca vượt rào thật), nếu chỉ dùng bộ lọc quy tắc chung (PatternDetector) thì chỉ phát hiện được 22/99 ca (22,2%) do bỏ sót các ca lộ mã phiên Canary và gọi công cụ ngầm; khi kết hợp cảm biến Canary/đầu ra độc hại (50/99 = 50,5%) cùng vết thực thi AgentSandbox và LLM-Judge, Oracle đa tín hiệu bao phủ trọn vẹn 99/99 ca LLM cùng 8/8 ca toán học của CS4 (phần đối chiếu Cohen's κ với nhãn người mù đôi đang được nhóm hoàn thiện thủ công và để trống trung thực).",
         color=RED, space_before=4,
     )
 
