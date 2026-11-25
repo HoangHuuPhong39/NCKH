@@ -317,7 +317,7 @@ def draw_fig2_six_phases() -> Path:
     _draw_box(
         ax, xs[1], y_bot, bw, bh,
         "5. Thực thi & phán xét",
-        ["Sandbox công cụ / LLM / ML API", "Oracle 2 tầng: quy tắc, canary,", "LLM-Judge (κ = 0,9756)"],
+        ["Sandbox công cụ / LLM / ML API", "Oracle đa tầng: quy tắc, canary,", "vết Sandbox & LLM-Judge"],
         facecolor="#F8FAFC", edgecolor="#94A3B8",
     )
     _draw_box(
